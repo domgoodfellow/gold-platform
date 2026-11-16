@@ -46,6 +46,11 @@ export type CallingOptions = {
   defaultNumber: OutboundLine | null;
   unavailableReason: string | null;
   blocker: CallingBlocker | null;
+  /**
+   * Whether this member may type in any number (`call.dial_manual`). Without it they call contacts
+   * at their recorded numbers; the database refuses anything else when the call is placed.
+   */
+  manualDialing?: boolean;
 };
 
 /**
@@ -72,9 +77,10 @@ const ACCOUNT_BLOCKER: Record<'absent' | 'provisioning' | 'failed' | 'suspended'
  * The numbers are the database resolver's own candidates (`outbound_number_options`), never a list
  * filtered here, so the Dialer, the pop-out window and a placed call agree on what is allowed.
  */
-export async function loadCallingOptions(db: Db, input: { organizationId: string; mayCall: boolean }): Promise<CallingOptions> {
+export async function loadCallingOptions(db: Db, input: { organizationId: string; mayCall: boolean; mayDialManually?: boolean }): Promise<CallingOptions> {
+  const manualDialing = input.mayCall && !!input.mayDialManually;
   const blocked = (kind: CallingBlocker['kind'], code: CallingBlockerCode, reason: string, setup: CallingBlocker['setup'] = null): CallingOptions =>
-    ({ numbers: [], defaultNumber: null, unavailableReason: reason, blocker: { kind, code, reason, setup } });
+    ({ numbers: [], defaultNumber: null, unavailableReason: reason, blocker: { kind, code, reason, setup }, manualDialing });
 
   if (!input.mayCall) return blocked('restricted', 'no-permission', 'Your role cannot place calls.');
   const states = await organizationResolvedFeatureStates(db, { organizationId: input.organizationId });
@@ -98,5 +104,5 @@ export async function loadCallingOptions(db: Db, input: { organizationId: string
     group: source === 'shared' || source === 'organization_default' ? 'shared' : 'assigned',
   }));
   const automatic = options.findIndex(option => option.automatic);
-  return { numbers, defaultNumber: numbers[automatic] ?? null, unavailableReason: null, blocker: null };
+  return { numbers, defaultNumber: numbers[automatic] ?? null, unavailableReason: null, blocker: null, manualDialing };
 }

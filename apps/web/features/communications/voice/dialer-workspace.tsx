@@ -3,16 +3,16 @@
 import { formatPhoneForDisplay } from '@/lib/display/phone';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { ArrowDownLeft, CircleAlert, ExternalLink, Lock, MoreHorizontal, PanelLeft, PanelRight, Search, Settings2 } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition, type CSSProperties, type ReactNode } from 'react';
+import { toast } from 'sonner';
+import { ArrowDownLeft, CircleAlert, ExternalLink, Lock, MoreHorizontal, PanelLeft, PanelRight, Settings2 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@gold/ui/components/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@gold/ui/components/dropdown-menu';
 import { tabListStyles, tabTriggerStyles } from '@gold/ui/components/tab-styles';
 import { surfaceVariants } from '@gold/ui/design-system';
 import { Button, ButtonLink } from '@/components/controls/button';
-import { TextInput } from '@/components/controls/inputs';
-import { cx, FOCUS_RING } from '@/components/class-names';
-import { CompactEmptyState, OperationalPanel, OwnerIdentity, PanelState, StatePill } from '@/components/operational/primitives';
+import { cx } from '@/components/class-names';
+import { CompactEmptyState, OperationalPanel, OwnerIdentity, StatePill } from '@/components/operational/primitives';
 import type { CallingBlocker, CallingOptions } from '@/lib/application/communications/calling-options';
 import type { DialerQueueEntry } from '@/lib/application/communications/dialer-queue';
 import type { CallOutcome } from '@/lib/domain/reception/outcomes';
@@ -20,13 +20,19 @@ import { ActiveCallDock } from './active-call-dock';
 import { BrowserPhone } from './browser-phone';
 import { NewCallForm } from './new-call-form';
 import { AddToCallList } from './add-to-call-list';
-import { CallListEntryActions } from './remove-from-call-list';
+import { ScheduleCallback } from './call-list-entry-actions';
+import { CallListPanel, contactBusiness as business, contactInitials as initials } from './call-list-panel';
+import { useCallingSession, type CallingSession } from './calling-session';
+import { useCallList } from './use-call-list';
 import { WrapUpCallSheet } from './wrap-up-sheet';
 import { useTelephoneDevice } from './telephone-device';
 import { useDialerPopout } from './dialer-popout-context';
 import { RecentCallRows } from './recent-call-rows';
 import { callContactContext, endedCallRecord, matchDialerContact, type CallContactContext, type EndedCallRecord } from '@/app/organizations/[organizationId]/calls/actions';
+import { callListEntryAction, completeCallTaskAction, nextCallListEntryAction } from '@/app/organizations/[organizationId]/calls/call-list-actions';
 import type { CallContact } from '@/lib/domain/reception/calls';
+import type { CallListCounts } from '@/lib/domain/tasks/call-list-views';
+import type { RecentCallRow } from './format';
 
 type Mode = 'standard' | 'focus';
 type Region = 'queue' | 'call' | 'context';
@@ -35,7 +41,7 @@ type Draft = { toNumber: string; phoneNumberId: string };
  * What the calling workspace is showing. Exactly one at a time, decided from the one telephone
  * session and the draft, in this order: a call always outranks whatever is being prepared.
  */
-export type CallingState = 'popped-out' | 'incoming' | 'live' | 'ended' | 'contact' | 'manual';
+export type CallingState = 'popped-out' | 'incoming' | 'live' | 'ended' | 'contact' | 'complete' | 'manual' | 'idle';
 
 const FORM_ID = 'dialer-call-form';
 const BLOCKER_ICON = { restricted: Lock, 'not-configured': Settings2, unavailable: CircleAlert } as const;
@@ -54,17 +60,6 @@ const UNSETTLED = new Set(['queued', 'initiated', 'ringing', 'in_progress']);
 const SETTLE_WAITS_MS = [...Array<number>(6).fill(2_500), ...Array<number>(6).fill(10_000), ...Array<number>(8).fill(30_000)];
 /** What a finished call that was never answered is called, by its recorded status. */
 const UNANSWERED_LABEL: Record<string, string> = { no_answer: 'No answer', busy: 'Busy', failed: 'Failed' };
-
-function initials(name: string): string {
-  const words = name.replace(/[^\p{L}\s]/gu, '').trim().split(/\s+/).filter(Boolean);
-  return words.length ? words.slice(0, 2).map(word => word[0]).join('').toUpperCase() : '#';
-}
-
-/** The business a person belongs to, with their title there. A company is its own business, so it has none to add. */
-function business(contact: CallContact | null | undefined): string | null {
-  if (!contact?.companyName || contact.companyId === contact.id) return null;
-  return contact.title ? `${contact.title}, ${contact.companyName}` : contact.companyName;
-}
 
 function clock(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
@@ -126,8 +121,18 @@ function useAvailableHeight() {
  * **Attribution follows the number.** A call is tied to a contact only while the number is the one
  * that contact was resolved from; dialing another number clears it.
  *
- * **The call list search covers only the calls loaded here** (the first page, earliest due
- * first), and says so when that is not the whole list.
+ * **The call list is the server's.** Its view, search, counts and pages are read from the server
+ * (`useCallList`); nothing is filtered here. The selected entry is read again whenever the list
+ * is, so an entry someone else completed, removed or cancelled is cleared rather than called.
+ *
+ * **A calling session is a way through the list, not a second telephone session**
+ * (`calling-session.ts`). Preview: the operator chooses each contact. Auto-advance: once a call's
+ * outcome is resolved, the next eligible contact in the current view is chosen for them. Neither
+ * ever dials: Call is always pressed. Nothing advances while a call is live. Skipping sets an
+ * entry aside for the session and changes no task; hanging up completes no task.
+ *
+ * **Typing a number is its own permission** (`options.manualDialing`). Without it the workspace
+ * offers no number field; the database refuses such a call whatever a screen offers.
  *
  * On screen this is the call list. In the code each row is an open CRM task of kind Call; a
  * follow-up is only one reason a call is on the list, never the list's name.
@@ -141,6 +146,7 @@ export function DialerWorkspace({
   timezone,
   queue,
   queueTotal,
+  queueCounts,
   queueAvailable,
   options,
   prefill = '',
@@ -148,18 +154,21 @@ export function DialerWorkspace({
   settings = [],
   wrapUp,
   outcomes,
-  recentCalls = {},
   setup = null,
   mayAddToList = false,
   mayCreateContacts = false,
   mayRemoveFromList = false,
+  mayManageTasks = false,
   mayMatchContacts = false,
   mayViewContacts = true,
 }: {
   organizationId: string;
   timezone: string;
+  /** The first page of the call list's default view (all calls, earliest due first), as the route read it. */
   queue: DialerQueueEntry[];
   queueTotal: number;
+  /** How many calls each view holds, read with that page. */
+  queueCounts: CallListCounts;
   queueAvailable: boolean;
   options: CallingOptions;
   /** A number to dial, from a link such as Call back. Chosen over the call list only when no one in it is selected. */
@@ -171,8 +180,6 @@ export function DialerWorkspace({
   wrapUp?: ReactNode;
   /** The business's call outcomes, passed only when the viewer may wrap up calls. */
   outcomes?: CallOutcome[];
-  /** Each listed contact's recent calls, drawn on the server, by contact id. */
-  recentCalls?: Record<string, ReactNode>;
   /** Where a calling blocker is fixed or its state can be seen, when the viewer may open it. */
   setup?: { href: string; label: string } | null;
   /** Offers Add to list (pick contacts; each becomes an open Call task) when the viewer may manage tasks. */
@@ -181,6 +188,8 @@ export function DialerWorkspace({
   mayCreateContacts?: boolean;
   /** Offers Remove from list on each call list entry, for a member who holds `call_list.remove`. */
   mayRemoveFromList?: boolean;
+  /** Offers Reschedule, Reassign, Schedule callback and Complete call task, for a member who may manage tasks. */
+  mayManageTasks?: boolean;
   mayMatchContacts?: boolean;
   /** Links into Contacts, for a member who holds `customer.read`; without it the list still shows each entry's name and number. */
   mayViewContacts?: boolean;
@@ -190,16 +199,21 @@ export function DialerWorkspace({
   const refreshPage = useRef(() => {});
   useEffect(() => { refreshPage.current = () => router.refresh(); });
   const first = prefill ? undefined : queue[0];
-  const [selectedId, setSelectedId] = useState<string | null>(first?.task.id ?? null);
+  const [chosen, setChosen] = useState<DialerQueueEntry | null>(first ?? null);
+  const [session, updateSession] = useCallingSession(organizationId);
+  const manualDialing = options.manualDialing ?? false;
+  // A session that asks for Manual is Preview for a member who may not type a number.
+  const callingMode = session.mode === 'manual' && !manualDialing ? 'preview' : session.mode;
+  const [sessionOver, setSessionOver] = useState(false);
+  const [gone, setGone] = useState<string | null>(null);
+  const [entryInfo, setEntryInfo] = useState<{ taskId: string; recentCalls: RecentCallRow[] } | null>(null);
+  const [advancing, startAdvance] = useTransition();
   const [mode, setMode] = useState<Mode>('standard');
   const [showQueue, setShowQueue] = useState(true);
   const [showContext, setShowContext] = useState(true);
   const [region, setRegion] = useState<Region>('call');
-  const [search, setSearch] = useState('');
-  const [dueOnly, setDueOnly] = useState(false);
-  const [now] = useState(() => Date.now());
   const [returned, setReturned] = useState<(Draft & { at: number }) | null>(null);
-  const [numberDraft, setNumberDraft] = useState(first ? first.customer?.phone ?? '' : prefill);
+  const [numberDraft, setNumberDraft] = useState(first ? first.customer.phone ?? '' : prefill);
   const [lookup, setLookup] = useState<{ number: string; result: Awaited<ReturnType<typeof matchDialerContact>> } | null>(null);
   const [dialed, setDialed] = useState<CallContact | null>(null);
   const [record, setRecord] = useState<EndedCallRecord | null>(null);
@@ -209,6 +223,24 @@ export function DialerWorkspace({
   const draft = useRef<Draft>({ toNumber: '', phoneNumberId: '' });
   const onDraftChange = useCallback((next: Draft) => { draft.current = next; setNumberDraft(next.toNumber); }, []);
   const { activeCall, incoming, ended = null, dismissEnded } = useTelephoneDevice();
+
+  // --- The call list ---------------------------------------------------------------------------
+  const initialList = useMemo(() => ({ items: queue, counts: queueCounts, total: queueTotal }), [queue, queueCounts, queueTotal]);
+  // What a read of the list found for the selected entry: the entry as it now stands, or that it has gone.
+  const onSelectedRead = useCallback((entry: DialerQueueEntry | null) => {
+    setChosen(current => {
+      if (!current) return current;
+      if (entry) return entry.task.id === current.task.id ? entry : current;
+      setGone(current.customer.name);
+      return null;
+    });
+  }, []);
+  const list = useCallList({
+    organizationId, initial: initialList, enabled: queueAvailable,
+    query: { view: session.view, search: session.search, skipped: session.skipped },
+    selectedId: chosen?.task.id ?? null, onSelected: onSelectedRead,
+  });
+  const reloadList = list.reload;
   const popout = useDialerPopout();
   const setInlineHost = popout?.setInlineHost;
   const grid = useAvailableHeight();
@@ -226,11 +258,14 @@ export function DialerWorkspace({
   const blocker = options.blocker ?? (options.unavailableReason ? { kind: 'unavailable', code: 'service-unavailable', reason: options.unavailableReason, setup: null } satisfies CallingBlocker : null);
 
   // --- What is being prepared --------------------------------------------------------------
-  const selected = queue.find(entry => entry.task.id === selectedId);
-  const customerPhone = selected?.customer?.phone ?? null;
+  // In Manual nobody is selected, by definition. Otherwise the entry as the list last read it.
+  const selected = callingMode === 'manual' ? undefined : chosen ? list.items.find(entry => entry.task.id === chosen.task.id) ?? chosen : undefined;
+  const selectedId = selected?.task.id ?? null;
+  const customerPhone = selected?.customer.phone ?? null;
   const formNumber = returned?.toNumber ?? (selected ? customerPhone ?? '' : prefill);
-  // The list entry stays the subject only while the number is still theirs.
-  const selectedTask = selected && numberDraft === (customerPhone ?? '') ? selected : null;
+  // The list entry stays the subject only while the number is still theirs: the one the list now
+  // reads for them, or the one held from when they were chosen, until the form takes the new one.
+  const selectedTask = selected && (numberDraft === (customerPhone ?? '') || numberDraft === (chosen?.customer.phone ?? '')) ? selected : null;
   const formCustomer = selected?.customer && customerPhone && formNumber === customerPhone ? selected.customer : undefined;
   const currentLookup = !selectedTask && lookup?.number === numberDraft ? lookup.result : null;
   const draftContact: CallContact | null = selectedTask ? selectedTask.customer : currentLookup?.state === 'matched' ? currentLookup.contact : null;
@@ -246,8 +281,10 @@ export function DialerWorkspace({
   // --- Who a call is with, from the call itself ----------------------------------------------
   // The call's own record is the authority. What this page already holds for the same contact (a
   // list entry, the contact just dialed) only fills the moment before that read returns.
-  const contactById = (id: string | null | undefined): CallContact | null => (id ? [...queue.map(entry => entry.customer), dialed].find(contact => contact?.id === id) ?? null : null);
-  const state: CallingState = poppedOut ? 'popped-out' : incoming ? 'incoming' : activeCall ? 'live' : ended ? 'ended' : selectedTask ? 'contact' : 'manual';
+  const contactById = (id: string | null | undefined): CallContact | null => (id ? [...list.items.map(entry => entry.customer), selected?.customer, dialed].find(contact => contact?.id === id) ?? null : null);
+  const mayType = manualDialing || !!returned;
+  const state: CallingState = poppedOut ? 'popped-out' : incoming ? 'incoming' : activeCall ? 'live' : ended ? 'ended' : selectedTask ? 'contact'
+    : sessionOver && callingMode === 'auto' ? 'complete' : mayType || prefill ? 'manual' : 'idle';
   const callId = activeCall ? activeCall.callId : ended?.callId ?? null;
   const afterCall = live || state === 'ended';
   useEffect(() => {
@@ -259,9 +296,22 @@ export function DialerWorkspace({
   const callContext = callInfo && callInfo.callId === callId ? callInfo : null;
   const callCustomerId = callContext ? callContext.contact?.id ?? null : activeCall ? activeCall.customerId : ended?.customerId;
   const callContactNow = callContext ? callContext.contact : contactById(callCustomerId);
-  const taskFor = (id: string | null | undefined) => (id && selected?.customer?.id === id ? selected : null);
+  // The call's own open Call task, as the server found it by the contact; until that read returns, the selected entry when it is theirs.
+  const taskFor = (id: string | null | undefined) => (callContext?.task !== undefined ? callContext.task : id && selected?.customer.id === id ? selected : null);
   const contextCustomer = afterCall ? (incoming ? null : callContactNow) : draftContact;
   const task = afterCall ? (incoming ? null : taskFor(callCustomerId)) : selectedTask;
+
+  // The selected entry is read again when it is chosen: its recent calls, and whether it is still on the list.
+  useEffect(() => {
+    if (!selectedId || !queueAvailable) return undefined;
+    let active = true;
+    void callListEntryAction(organizationId, selectedId).then(result => {
+      if (!active || !result || result.error) return;
+      if (!result.entry) { onSelectedRead(null); void reloadList(); return; }
+      setEntryInfo({ taskId: selectedId, recentCalls: result.recentCalls });
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, [organizationId, selectedId, queueAvailable, onSelectedRead, reloadList]);
   const contextShown = showContext && !focus && !!contextCustomer;
 
   // After a call: bring the page's own figures up to date, and learn how the call was recorded.
@@ -312,35 +362,59 @@ export function DialerWorkspace({
 
   const columns = [queueShown && 'minmax(15rem,1fr)', 'minmax(0,2.4fr)', contextShown && 'minmax(15rem,1fr)'].filter(Boolean).join(' ');
 
-  const dayKey = (value: Date | number) => new Intl.DateTimeFormat('en-CA', { timeZone: timezone, dateStyle: 'short' }).format(value);
-  const timeOf = new Intl.DateTimeFormat('en', { timeZone: timezone, hour: 'numeric', minute: '2-digit' });
-  const dayOf = new Intl.DateTimeFormat('en', { timeZone: timezone, month: 'short', day: 'numeric' });
   const fullDate = new Intl.DateTimeFormat('en', { timeZone: timezone, dateStyle: 'medium', timeStyle: 'short' });
-  const isDue = (dueAt: string) => new Date(dueAt).getTime() <= now;
-  const dueLabel = (dueAt: string) => {
-    const due = new Date(dueAt);
-    return dayKey(due) === dayKey(now) ? timeOf.format(due) : dayOf.format(due);
-  };
 
-  const needle = search.trim().toLowerCase();
-  const dueCount = queue.filter(({ task: entry }) => isDue(entry.dueAt)).length;
-  const visible = queue.filter(({ task: entry, customer }) => {
-    if (dueOnly && !isDue(entry.dueAt)) return false;
-    if (!needle) return true;
-    return [entry.customerName, entry.title, entry.ownerName, customer?.phone, customer?.companyName].filter(Boolean).join(' ').toLowerCase().includes(needle);
-  });
-
-  const choose = (id: string) => {
-    setSelectedId(id);
+  // --- Choosing, skipping and moving on ----------------------------------------------------------
+  const prepare = (entry: DialerQueueEntry | null) => {
+    setChosen(entry);
     setReturned(null);
-    setNumberDraft(queue.find(entry => entry.task.id === id)?.customer?.phone ?? '');
+    setGone(null);
+    setNumberDraft(entry ? entry.customer.phone ?? '' : prefill);
+  };
+  const choose = (entry: DialerQueueEntry) => {
+    prepare(entry);
+    setSessionOver(false);
+    if (callingMode === 'manual') updateSession({ mode: 'preview' });
     setRegion('call');
     if (!live) dismissEnded?.();
   };
   const dialAnother = () => {
-    setSelectedId(null);
-    setReturned(null);
-    setNumberDraft(prefill);
+    prepare(null);
+    updateSession({ mode: 'manual' });
+  };
+  /**
+   * Moves to the next eligible contact in the current view, read from the server at this moment.
+   * Never while a call is live, and it only prepares the call: the operator still presses Call.
+   */
+  const advance = (also: { skipped?: string } = {}) => {
+    if (live || !queueAvailable) return;
+    const skipped = [...session.skipped, ...(also.skipped ? [also.skipped] : [])];
+    startAdvance(async () => {
+      const result = await nextCallListEntryAction(organizationId, { view: session.view, search: session.search, skipped }, session.called).catch(() => null);
+      if (!result || result.error) { toast.error(result?.error ?? 'The next call could not be loaded.'); return; }
+      dismissEnded?.();
+      prepare(result.entry);
+      setSessionOver(!result.entry);
+      setRegion('call');
+    });
+  };
+  const changeSession = (change: Partial<CallingSession>) => {
+    updateSession(change);
+    setSessionOver(false);
+    if (change.mode === 'manual') prepare(null);
+  };
+  const skip = (entry: DialerQueueEntry) => {
+    updateSession(current => ({ skipped: [...current.skipped, entry.task.id] }));
+    if (selectedId !== entry.task.id) return;
+    // The entry being prepared was set aside: in Auto-advance the next one takes its place.
+    if (callingMode === 'auto' && !live) advance({ skipped: entry.task.id });
+    else prepare(null);
+  };
+  const listChanged = () => { refreshPage.current(); void reloadList(); };
+  /** A call's outcome is resolved: in Auto-advance, move on; otherwise the operator chooses. */
+  const outcomeResolved = () => {
+    void reloadList();
+    if (callingMode === 'auto') advance();
   };
   const choosePresentation = (next: Mode) => {
     if (poppedOut) popout?.close();
@@ -357,6 +431,7 @@ export function DialerWorkspace({
       phoneNumberId: current.phoneNumberId,
       customerId: forCustomer ? draftContact.id : undefined,
       customerName: forCustomer ? draftContact.name : undefined,
+      manualDialing,
       blocker: blocker ? { kind: blocker.kind, reason: blocker.reason, setup: blocker.setup ? setup : null } : null,
       onReturn: (back) => { setReturned({ ...back, at: Date.now() }); setNumberDraft(back.toNumber); },
     });
@@ -381,12 +456,16 @@ export function DialerWorkspace({
   const pad = 'p-4 @sm/calling:p-5';
   const callForm = (
     <NewCallForm
-      key={returned ? `returned-${returned.at}` : selected?.task.id ?? `manual-${prefill}`}
+      key={returned ? `returned-${returned.at}` : selected ? `${selected.task.id}:${customerPhone ?? ''}` : `manual-${prefill}`}
       formId={FORM_ID}
-      destination={selectedTask ? 'contact' : 'entry'}
-      onChangeNumber={dialAnother}
+      destination={selectedTask || !mayType ? 'contact' : 'entry'}
+      onChangeNumber={manualDialing && selectedTask ? dialAnother : undefined}
       onDraftChange={onDraftChange}
-      onDial={(contact) => setDialed(contact && draftContact?.id === contact.id ? draftContact : null)}
+      onDial={(contact) => {
+        setDialed(contact && draftContact?.id === contact.id ? draftContact : null);
+        // Called this session: still listed, and not offered again by Auto-advance.
+        if (selectedTask) updateSession(current => ({ called: [...current.called.filter(id => id !== selectedTask.task.id), selectedTask.task.id] }));
+      }}
       onRefused={() => refreshPage.current()}
       organizationId={organizationId}
       numbers={options.numbers}
@@ -405,6 +484,19 @@ export function DialerWorkspace({
       }
     />
   );
+
+  // What may still follow a call for its contact's task: scheduling a callback, or completing the task.
+  const nextAction = mayManageTasks && queueAvailable && !!callContactNow && !!ended?.callId;
+  const [completing, startCompleting] = useTransition();
+  const completeTask = (entry: DialerQueueEntry) => startCompleting(async () => {
+    const result = await completeCallTaskAction(organizationId, entry.task.id).catch(() => ({ error: 'The call task could not be completed.' }));
+    if (result.error) { toast.error(result.error); void reloadList(); return; }
+    toast.success(`Call task completed for ${entry.customer.name}.`);
+    if (chosen?.task.id === entry.task.id) setChosen(null);
+    if (callId) void callContactContext(organizationId, callId).then(next => { if (next) setCallInfo(next); }).catch(() => undefined);
+    refreshPage.current();
+    outcomeResolved();
+  });
 
   let surface: ReactNode;
   if (state === 'popped-out') {
@@ -448,9 +540,22 @@ export function DialerWorkspace({
           </div>
         ) : null}
         <div className="flex flex-wrap items-center gap-2">
-          {outcomes && endedRecord?.status === 'completed' ? <WrapUpCallSheet organizationId={organizationId} call={endedRecord} outcomes={outcomes} prominent /> : null}
+          {outcomes && endedRecord?.status === 'completed' ? (
+            <WrapUpCallSheet organizationId={organizationId} call={endedRecord} outcomes={outcomes} prominent onSaved={() => {
+              toast.success('Outcome saved.');
+              setRecheck(value => value + 1);
+              // With a task still to settle, the operator decides what follows; otherwise the outcome is the last step.
+              if (!nextAction) outcomeResolved();
+            }} />
+          ) : null}
+          {nextAction && ended.callId && callContactNow ? (
+            <ScheduleCallback organizationId={organizationId} timezone={timezone} callId={ended.callId} name={callContactNow.name} hasOpenTask={!!task} onScheduled={() => { refreshPage.current(); outcomeResolved(); }} />
+          ) : null}
+          {mayManageTasks && task ? <Button type="button" tone="secondary" disabled={completing} onClick={() => completeTask(task)}>Complete call task</Button> : null}
           {ended.callId ? <ButtonLink href={`/organizations/${organizationId}/calls/${ended.callId}`} tone="secondary">Open call record</ButtonLink> : null}
-          <Button type="button" tone="secondary" onClick={() => dismissEnded?.()}>Done</Button>
+          {callingMode === 'auto' && queueAvailable
+            ? <Button type="button" tone="secondary" disabled={advancing} onClick={() => advance()}>Next call</Button>
+            : <Button type="button" tone="secondary" onClick={() => dismissEnded?.()}>Done</Button>}
         </div>
       </div>
     );
@@ -468,7 +573,8 @@ export function DialerWorkspace({
             {business(selectedTask.customer) ? <p className="truncate text-sm text-muted">{business(selectedTask.customer)}</p> : null}
             <p className="mt-0.5 text-sm">{selectedTask.task.title}</p>
             <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-              {isDue(selectedTask.task.dueAt) ? <StatePill tone="warning">Due now</StatePill> : null}
+              {selectedTask.standing.overdue ? <StatePill tone="danger">Overdue</StatePill> : selectedTask.standing.due ? <StatePill tone="warning">Due now</StatePill> : null}
+              {selectedTask.standing.callback ? <StatePill>Callback</StatePill> : null}
               <span className="text-muted tabular-nums">Due {fullDate.format(new Date(selectedTask.task.dueAt))}</span>
             </p>
           </div>
@@ -476,6 +582,19 @@ export function DialerWorkspace({
         {callForm}
       </div>
     );
+  } else if (state === 'complete') {
+    surface = (
+      <div className={cx(pad, 'flex flex-col gap-3')}>
+        <h2 className="text-base font-semibold tracking-tight">No more calls in this view</h2>
+        <p className="text-sm text-muted">{session.skipped.length ? `${session.skipped.length} skipped this session.` : 'Every call here has been called or has no phone number.'}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          {session.skipped.length ? <Button type="button" tone="secondary" onClick={() => changeSession({ skipped: [] })}>Restore skipped</Button> : null}
+          {session.called.length ? <Button type="button" tone="secondary" onClick={() => changeSession({ called: [] })}>Start again</Button> : null}
+        </div>
+      </div>
+    );
+  } else if (state === 'idle') {
+    surface = <div className={pad}><p className="text-sm text-muted">Select a contact from the call list.</p></div>;
   } else {
     surface = (
       <div className={cx(pad, 'flex flex-col gap-4')}>
@@ -518,63 +637,33 @@ export function DialerWorkspace({
   ) : null;
 
   // --- Call list -------------------------------------------------------------------------------
-  const partial = queueTotal > queue.length;
-  const addToList = mayAddToList && queueAvailable ? <AddToCallList organizationId={organizationId} mayCreateContacts={mayCreateContacts} /> : null;
+  const nobodyListed = list.counts.all === 0 && !session.search.trim() && session.skipped.length === 0;
   const queuePanel = (
-    <OperationalPanel
-      title="Call list"
-      count={queueAvailable ? queueTotal : undefined}
-      density="compact"
-      body="edge-to-edge"
-      fill={queueAvailable && queue.length > 0}
-      href={queueAvailable && queueTotal > 0 ? `/organizations/${organizationId}/crm/tasks?status=open&kind=call` : undefined}
-      hrefLabel="All call tasks"
-      action={queue.length > 0 ? addToList : undefined}
-      className="min-h-0 flex-1"
-    >
-      {!queueAvailable ? <PanelState kind="not-configured">Tasks are not included for this business, so there is no call list.</PanelState> : queue.length === 0 ? (
-        <div className="space-y-3 p-3">
-          <p className="text-sm text-muted">No contacts on the call list.</p>
-          {addToList}
-          {mayViewContacts ? <ButtonLink tone="text" size="small" href={`/organizations/${organizationId}/crm/contacts`}>Open Contacts</ButtonLink> : null}
-        </div>
-      ) : <>
-        <div className="shrink-0 space-y-2 border-b border-border p-3">
-          <div className="relative">
-            <Search aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted" />
-            <TextInput type="search" aria-label="Search call list" placeholder="Search name or number" value={search} onChange={event => setSearch(event.target.value)} className="pl-8" />
-          </div>
-          <div role="group" aria-label="Call list filter" data-slot="tabs-list" data-variant="segmented" className={cx(tabListStyles(), 'w-full')}>
-            <button type="button" data-slot="tabs-trigger" aria-pressed={!dueOnly} className={cx(tabTriggerStyles, 'flex-1')} onClick={() => setDueOnly(false)}>All <span className="text-xs tabular-nums text-muted">{queue.length}</span></button>
-            <button type="button" data-slot="tabs-trigger" aria-pressed={dueOnly} className={cx(tabTriggerStyles, 'flex-1')} onClick={() => setDueOnly(true)}>Due now <span className="text-xs tabular-nums text-muted">{dueCount}</span></button>
-          </div>
-        </div>
-        {visible.length === 0 ? <PanelState>No calls match.</PanelState> : (
-          <ul className="min-h-0 flex-1 divide-y divide-border overflow-y-auto" aria-label="Calls">
-            {visible.map(({ task: entry, customer }) => {
-              const name = customer?.name ?? entry.customerName;
-              const chosen = selectedTask?.task.id === entry.id;
-              return <li key={entry.id} className={cx('flex items-start', chosen && 'bg-selected')}>
-                <button type="button" aria-pressed={chosen} onClick={() => choose(entry.id)} className={cx('flex min-w-0 flex-1 items-start gap-3 border-l-2 px-3 py-2.5 text-left transition-colors', chosen ? 'border-accent' : 'border-transparent hover:bg-hover', FOCUS_RING)}>
-                  <Avatar className="mt-0.5 size-9 shrink-0"><AvatarFallback className="bg-secondary text-xs font-semibold text-muted">{initials(name)}</AvatarFallback></Avatar>
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-baseline justify-between gap-2">
-                      <span className="flex min-w-0 items-center gap-2"><span className="truncate text-sm font-semibold">{name}</span>{customer?.archived ? <StatePill tone="warning">Archived</StatePill> : null}</span>
-                      {isDue(entry.dueAt) ? <span className="shrink-0 text-xs font-medium text-warning">Due now</span> : <span className="shrink-0 text-xs tabular-nums text-muted">{dueLabel(entry.dueAt)}</span>}
-                    </span>
-                    {business(customer) ? <span data-slot="contact-business" className="block truncate text-xs">{business(customer)}</span> : null}
-                    <span className="block truncate text-xs text-muted">{entry.title}</span>
-                    <span className="block truncate text-xs tabular-nums text-muted">{customer?.phone ? formatPhoneForDisplay(customer.phone) : 'No phone number'}{entry.ownerName ? ` · ${entry.ownerName}` : ''}</span>
-                  </span>
-                </button>
-                {mayRemoveFromList ? <div className="shrink-0 py-2 pr-1"><CallListEntryActions organizationId={organizationId} taskId={entry.id} name={name} /></div> : null}
-              </li>;
-            })}
-          </ul>
-        )}
-        {partial ? <p className="shrink-0 border-t border-border px-3 py-2 text-xs text-muted">Showing the first {queue.length} of {queueTotal} calls, earliest due first. Search covers these only.</p> : null}
-      </>}
-    </OperationalPanel>
+    <CallListPanel
+      organizationId={organizationId}
+      timezone={timezone}
+      available={queueAvailable}
+      items={list.items}
+      counts={list.counts}
+      total={list.total}
+      loading={list.loading}
+      loadingMore={list.loadingMore}
+      error={list.error}
+      onLoadMore={() => void list.loadMore()}
+      onRetry={() => void reloadList()}
+      session={session}
+      onSession={changeSession}
+      mode={callingMode}
+      manualDialing={manualDialing}
+      selectedId={selectedTask?.task.id ?? null}
+      onChoose={choose}
+      onSkip={skip}
+      onChanged={listChanged}
+      addToList={mayAddToList && queueAvailable ? <AddToCallList organizationId={organizationId} mayCreateContacts={mayCreateContacts} /> : null}
+      mayViewContacts={mayViewContacts}
+      mayManageTasks={mayManageTasks && queueAvailable}
+      mayRemoveFromList={mayRemoveFromList}
+    />
   );
 
   // --- Contact context -----------------------------------------------------------------------------
@@ -604,7 +693,8 @@ export function DialerWorkspace({
           </dl>
           <div>
             <h3 className="mb-2 text-sm font-medium">Recent calls</h3>
-            {(afterCall && callContext?.contact?.id === contextCustomer.id ? <RecentCallRows organizationId={organizationId} rows={callContext.recentCalls} /> : null) ?? recentCalls[contextCustomer.id] ?? (mayViewContacts ? <ButtonLink tone="text" size="small" href={`/organizations/${organizationId}/crm/contacts/${contextCustomer.id}?section=activity&view=calls`}>Open call history</ButtonLink> : <p className="text-sm text-muted">No recent calls.</p>)}
+            {(afterCall && callContext?.contact?.id === contextCustomer.id ? <RecentCallRows organizationId={organizationId} rows={callContext.recentCalls} /> : null)
+              ?? (!afterCall && selectedTask && entryInfo?.taskId === selectedTask.task.id ? <RecentCallRows organizationId={organizationId} rows={entryInfo.recentCalls} /> : null) ?? (mayViewContacts ? <ButtonLink tone="text" size="small" href={`/organizations/${organizationId}/crm/contacts/${contextCustomer.id}?section=activity&view=calls`}>Open call history</ButtonLink> : <p className="text-sm text-muted">No recent calls.</p>)}
           </div>
           {mayViewContacts ? <ButtonLink href={`/organizations/${organizationId}/crm/contacts/${contextCustomer.id}`} tone="secondary" size="small" className="w-full">Open contact</ButtonLink> : null}
         </div>
@@ -643,6 +733,7 @@ export function DialerWorkspace({
       </div>
     </div>
     {popout?.error ? <p role="alert" className="text-sm text-danger">{popout.error}</p> : null}
+    {gone ? <p role="status" className="text-sm text-muted">{gone} is no longer on the call list.</p> : null}
 
     {/* Below desktop width one region is shown at a time; a live call is never out of reach. */}
     {!focus ? <div role="group" aria-label="Dialer region" data-slot="tabs-list" data-variant="segmented" className={cx(tabListStyles(), 'w-full @min-[64rem]/dialer:hidden')}>
@@ -658,7 +749,7 @@ export function DialerWorkspace({
       className="grid min-w-0 gap-3 @min-[64rem]/dialer:max-h-(--dialer-available) @min-[64rem]/dialer:grid-cols-(--dialer-columns) @min-[64rem]/dialer:grid-rows-[minmax(0,1fr)]"
       style={{ '--dialer-columns': columns } as CSSProperties}
     >
-      <div className={cx(regionClass('queue', queueShown), 'min-h-0 min-w-0 flex-col', !queue.length && 'self-start')}>{queuePanel}</div>
+      <div className={cx(regionClass('queue', queueShown), 'min-h-0 min-w-0 flex-col', nobodyListed && 'self-start')}>{queuePanel}</div>
       {/* The same shared surface as the panels beside it, so Appearance presets reach all three alike. */}
       <div data-slot="operational-panel" data-surface-variant="default" className={cx(focus ? 'flex' : region === 'call' ? 'flex' : 'hidden', surfaceVariants.default, '@container/calling min-h-0 min-w-0 flex-col self-start overflow-hidden rounded-lg border border-border bg-surface @min-[64rem]/dialer:flex @min-[64rem]/dialer:max-h-full @min-[64rem]/dialer:overflow-y-auto', focus && 'mx-auto w-full max-w-4xl')}>
         {readiness}

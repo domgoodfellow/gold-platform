@@ -31,7 +31,7 @@ const GROUPS: readonly { label: string; capabilities: readonly Capability[] }[] 
     label: 'Locations / assets / resources',
     capabilities: ['location.create', 'asset.create', 'resource.create', 'resource.update'],
   },
-  { label: 'Communications', capabilities: ['call.place', 'call_list.remove', 'message.send'] },
+  { label: 'Communications', capabilities: ['call.place', 'call.dial_manual', 'call_list.remove', 'message.send'] },
   { label: 'Marketing', capabilities: ['marketing.read', 'marketing.manage'] },
   {
     label: 'Support',

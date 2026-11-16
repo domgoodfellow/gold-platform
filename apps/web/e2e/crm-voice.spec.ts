@@ -68,25 +68,21 @@ test.describe('CRM reference vertical', () => {
 test.describe('Voice reference vertical', () => {
   test.use({ storageState: OWNER_STORAGE_STATE });
 
-  test('renders call history, wrap-up, outcomes, and outbound identity setup', async ({ page }) => {
+  test('opens the Dialer with its call list, calling workspace and call history, and its calling settings one menu away', async ({ page }) => {
     const ctx = loadDemoContext();
     await page.goto(`/organizations/${ctx.organizationId}/calls`);
 
-    await expect(page.locator('main').getByRole('heading', { name: 'Voice' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Recent calls' })).toBeVisible();
-    await expect(page.getByRole('table').getByText('Outbound')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Dialer', level: 1 })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Calling console' })).toBeVisible();
+    // Below the console's three-column width the call list is one press away in the region switcher.
+    const switcher = page.getByRole('group', { name: 'Dialer region' });
+    if (await switcher.isVisible()) await switcher.getByRole('button', { name: 'Call list', exact: true }).click();
+    await expect(page.getByRole('region', { name: 'Call list' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Call history', level: 2 })).toBeVisible();
 
-    await page.getByRole('link', { name: 'Needs wrap-up' }).click();
-    await expect(page.getByRole('heading', { name: 'Every call' })).toBeVisible();
-    await page.getByRole('button', { name: 'Wrap up' }).first().click();
-    await expect(page.getByRole('dialog', { name: 'Wrap up call' })).toBeVisible();
-    await page.getByRole('button', { name: 'Close' }).click();
-
-    await page.goto(`/organizations/${ctx.organizationId}/calls`);
-    await page.getByRole('button', { name: 'Voice settings' }).click();
-    const settings = page.getByRole('dialog', { name: 'Voice settings' });
-    await expect(settings.getByRole('heading', { name: 'Call outcomes' })).toBeVisible();
-    await expect(settings.getByText('Spoke', { exact: true })).toBeVisible();
-    await expect(settings.getByLabel('The number this business dials from')).toBeVisible();
+    // Calling configuration sits behind the toolbar's More menu, never on the working surface.
+    await page.getByRole('button', { name: 'More Dialer actions' }).click();
+    await page.getByRole('menuitem', { name: 'Calling & routing' }).click();
+    await expect(page).toHaveURL(`/organizations/${ctx.organizationId}/comms/configuration/calling`);
   });
 });

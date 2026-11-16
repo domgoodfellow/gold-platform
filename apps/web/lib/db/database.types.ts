@@ -2623,6 +2623,7 @@ export type Database = {
       }
       crm_tasks: {
         Row: {
+          callback_of_call_id: string | null
           completed_at: string | null
           completed_by: string | null
           created_at: string
@@ -2639,6 +2640,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          callback_of_call_id?: string | null
           completed_at?: string | null
           completed_by?: string | null
           created_at?: string
@@ -2655,6 +2657,7 @@ export type Database = {
           title: string
         }
         Update: {
+          callback_of_call_id?: string | null
           completed_at?: string | null
           completed_by?: string | null
           created_at?: string
@@ -2725,6 +2728,13 @@ export type Database = {
             columns: ["organization_id", "owner_membership_id"]
             isOneToOne: false
             referencedRelation: "memberships"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_tasks_callback_call"
+            columns: ["organization_id", "callback_of_call_id"]
+            isOneToOne: false
+            referencedRelation: "calls"
             referencedColumns: ["organization_id", "id"]
           },
         ]
@@ -15979,6 +15989,56 @@ export type Database = {
           title: string
         }[]
       }
+      call_list_counts: {
+        Args: {
+          p_exclude?: string[]
+          p_organization_id: string
+          p_search?: string
+        }
+        Returns: {
+          all_calls: number
+          callbacks: number
+          due: number
+          mine: number
+          overdue: number
+          upcoming: number
+        }[]
+      }
+      call_list_page: {
+        Args: {
+          p_callable_only?: boolean
+          p_exclude?: string[]
+          p_limit?: number
+          p_offset?: number
+          p_organization_id: string
+          p_search?: string
+          p_task_ids?: string[]
+          p_view?: string
+        }
+        Returns: {
+          callback_of_call_id: string
+          company_id: string
+          company_name: string
+          contact_archived: boolean
+          contact_email: string
+          contact_name: string
+          contact_phone: string
+          contact_title: string
+          contact_type: string
+          created_at: string
+          customer_id: string
+          due_at: string
+          id: string
+          is_due: boolean
+          is_mine: boolean
+          is_overdue: boolean
+          notes: string
+          opportunity_id: string
+          opportunity_title: string
+          owner_membership_id: string
+          title: string
+        }[]
+      }
       call_recording_reference: {
         Args: { p_call_id: string; p_organization_id: string }
         Returns: string
@@ -18792,6 +18852,15 @@ export type Database = {
           title: string
           work_item_id: string
         }[]
+      }
+      schedule_callback: {
+        Args: {
+          p_call_id: string
+          p_due_at: string
+          p_organization_id: string
+          p_reason?: string
+        }
+        Returns: string
       }
       schedule_work_item: {
         Args: {

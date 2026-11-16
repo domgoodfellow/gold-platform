@@ -4,7 +4,7 @@ import { PageHeader } from '@/components/headers/page-header';
 import { CallFilters, callFilterFromParams, callsHref, parseCallParams } from '@/features/communications/voice/call-filters';
 import { CallHistory } from '@/features/communications/voice/call-history';
 import { CallHistoryDisclosure } from '@/features/communications/voice/call-history-disclosure';
-import { DialerRecentCalls, DialerWrapUp } from '@/features/communications/voice/dialer-context';
+import { DialerWrapUp } from '@/features/communications/voice/dialer-context';
 import { VoiceCounters } from '@/features/communications/voice/voice-overview';
 import { workspaceConfigureDoors } from '@/features/settings/workspace-configure';
 import { WrapUpCallSheet } from '@/features/communications/voice/wrap-up-sheet';
@@ -17,10 +17,11 @@ import { areaLabel, workspaceAncestry } from '@/lib/navigation';
 import { requireOperatingArea } from '@/lib/route/workspace-configuration';
 
 import { callingSetupDoor, loadCallingOptions } from '@/lib/application/communications/calling-options';
-import { loadDialerQueue } from '@/lib/application/communications/dialer-queue';
+import { loadCallList } from '@/lib/application/communications/dialer-queue';
 import { followUpsAvailable } from '@/lib/application/crm/follow-ups';
 import { DialerWorkspace } from '@/features/communications/voice/dialer-workspace';
 import { callListAvailable, callListRemovalAvailable } from '@/lib/application/communications/call-list';
+import { DomainError } from '@/lib/domain/errors';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,6 +36,7 @@ export default async function CallsPage({ params, searchParams }: PageProps<'/or
   const prefill = typeof query.to === 'string' && /^\+[1-9][0-9]{7,14}$/.test(query.to) ? query.to : '';
   const day = zonedDayRange(todayInZone(organization.timezone), organization.timezone);
   const mayCall = organization.capabilities.includes('call.place');
+  const mayDialManually = mayCall && organization.capabilities.includes('call.dial_manual');
   const [mayAddToList, mayRemoveFromList] = await Promise.all([callListAvailable(db, organization), callListRemovalAvailable(db, organization)]);
   const base = `/organizations/${organizationId}/calls`;
 
@@ -45,18 +47,21 @@ export default async function CallsPage({ params, searchParams }: PageProps<'/or
     listCallOutcomes(db, { organizationId }),
     listPhoneNumbers(db, { organizationId }),
     listMembers(db, { organizationId }),
-    loadCallingOptions(db, { organizationId, mayCall }),
+    loadCallingOptions(db, { organizationId, mayCall, mayDialManually }),
     followUpsAvailable(db, organizationId),
     workspaceConfigureDoors(organizationId, 'communications'),
     mayCall ? listCallPage(db, { organizationId, filter: { needsWrapUp: true }, limit: WRAP_UP_PREVIEW }) : null,
   ]);
 
   const numberById = new Map(numbers.map((entry) => [entry.id, { e164: entry.e164, label: entry.label }]));
-  const queue = queueAvailable ? await loadDialerQueue(db, organizationId) : { items: [], total: 0 };
+  // The first page of the default view. Any other view, a search or a further page is read by the list itself.
+  const noCalls = { items: [], total: 0, counts: { all: 0, mine: 0, due: 0, overdue: 0, upcoming: 0, callbacks: 0 } };
+  const queue = queueAvailable ? await loadCallList(db, organizationId).catch((error: unknown) => {
+    // A member who may neither place calls nor view contacts is shown no list rather than an error page.
+    if (error instanceof DomainError && error.code === 'call_list.forbidden') return noCalls;
+    throw error;
+  }) : noCalls;
   const filtered = Object.keys(callParams).length > 0;
-  const recentCalls = Object.fromEntries(queue.items.flatMap(({ customer, recentCalls: calls }) => customer
-    ? [[customer.id, <DialerRecentCalls key={customer.id} organizationId={organizationId} timeZone={organization.timezone} calls={calls} />]]
-    : []));
 
   return (
     <AppPage>
@@ -66,14 +71,15 @@ export default async function CallsPage({ params, searchParams }: PageProps<'/or
         timezone={organization.timezone}
         queue={queue.items}
         queueTotal={queue.total}
+        queueCounts={queue.counts}
         queueAvailable={queueAvailable}
         options={options}
         prefill={prefill}
         setup={callingSetupDoor(options.blocker, doors)}
-        recentCalls={recentCalls}
         mayAddToList={mayAddToList}
         mayCreateContacts={organization.capabilities.includes('customer.create')}
         mayRemoveFromList={mayRemoveFromList}
+        mayManageTasks={organization.capabilities.includes('follow_up.manage')}
         mayMatchContacts={mayCall}
         mayViewContacts={organization.capabilities.includes('customer.read')}
         actions={<ButtonLink href="#call-history" tone="secondary">Call history</ButtonLink>}

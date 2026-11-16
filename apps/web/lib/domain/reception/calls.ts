@@ -451,6 +451,10 @@ export async function getCall(
  * wants to use, and `resolve_outbound_number` answers whether this person may; a number nobody
  * resolved is never dialled from. The browser supplies a recipient and, at most, a number's id.
  *
+ * **Which numbers may be rung is decided by the database too.** `open_call` refuses a number that
+ * is neither a contact's recorded number nor one the business received a call from, unless the
+ * member holds `call.dial_manual`. No screen's hidden field is the rule.
+ *
  * **The room is written down before anybody is rung.** `open_call` creates the call and both
  * expected legs in one transaction, so a conference can never exist at the carrier with nobody
  * recorded as being in it — and if the carrier then refuses, what is left is a call row that
@@ -515,6 +519,13 @@ export async function placeCall(
   if (error) {
     // Refused by the policy on `calls`, which is where `call.place` is actually enforced —
     // `open_call` is security invoker and adds no authority of its own.
+    // A member who may place calls but not dial any number is told which rule refused them.
+    if (error.code === '42501' && error.message.includes('manual dialing')) {
+      throw new DomainError(
+        'Your role cannot dial this number. It can call contacts at their recorded numbers and return calls this business received.',
+        'calls.manual_dialing_forbidden',
+      );
+    }
     throw new DomainError(
       error.code === '42501'
         ? 'Your role cannot place calls here.'

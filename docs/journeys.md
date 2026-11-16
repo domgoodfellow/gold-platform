@@ -79,6 +79,7 @@ Dashboard attention links open `/organizations/{org}/work/dispatch` with the mat
 ## Gaps
 
 - One open Call task per contact: a contact cannot have several independently scheduled calls on the Dialer list at once.
+- The Dialer applies no calling-hours, do-not-call or consent rule: contacts record no such status and numbers no location. The business remains responsible for them.
 - Telephony provisioning is manual; neither onboarding path provisions a carrier binding/number.
 - Accepted configuration is recorded at handoff, not automatically applied to the new business. An agreed starting template becomes a draft the owner applies, but no screen yet records a template on a proposal (ADR-051 retired the platform-plan proposal builder).
 - Who a business serves (`organization_identity.serves`: people, companies or both) is stored and set from Business information or a setup, but nothing yet changes behaviour on it. A portal link belongs to one contact, so several people at one company cannot each have their own portal access.

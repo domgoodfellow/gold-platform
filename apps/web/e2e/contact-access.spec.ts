@@ -156,7 +156,12 @@ test('contact permissions: each role sees and does only what it holds, and delet
       await expect(entry).toBeVisible({ timeout: 1_000 });
     }).toPass({ timeout: 15_000 });
     await expect(calling.getByRole('button', { name: 'Add to list', exact: true })).toHaveCount(0);
-    await expect(calling.getByRole('button', { name: 'Actions for Listed Lena' })).toHaveCount(0);
+    // This caller manages tasks, so the entry can be rescheduled; nothing in its menu opens Contacts or removes it.
+    await calling.getByRole('button', { name: 'Actions for Listed Lena', exact: true }).click();
+    await expect(calling.getByRole('menuitem', { name: 'Skip for this session' })).toBeVisible();
+    await expect(calling.getByRole('menuitem', { name: 'Reschedule' })).toBeVisible();
+    for (const item of ['Open contact', 'Task details', 'Remove from list']) await expect(calling.getByRole('menuitem', { name: item })).toHaveCount(0);
+    await calling.keyboard.press('Escape');
     await expect(calling.getByRole('link', { name: 'Open contact' })).toHaveCount(0);
     expect(await fitsWidth(calling)).toBe(true);
     await calling.screenshot({ path: testInfo.outputPath('caller-dialer-390.png') });
@@ -165,7 +170,10 @@ test('contact permissions: each role sees and does only what it holds, and delet
     const tasking = await as(browser, tasker);
     await tasking.goto(`${base}/calls`);
     await expect(tasking.getByRole('button', { name: /Listed Lena.*Renewal call/ })).toBeVisible();
-    await expect(tasking.getByRole('button', { name: 'Actions for Listed Lena' })).toHaveCount(0);
+    await tasking.getByRole('button', { name: 'Actions for Listed Lena', exact: true }).click();
+    await expect(tasking.getByRole('menuitem', { name: 'Reschedule' })).toBeVisible();
+    await expect(tasking.getByRole('menuitem', { name: 'Remove from list' })).toHaveCount(0);
+    await tasking.keyboard.press('Escape');
     const keeping = await as(browser, remover, 768);
     await keeping.goto(`${base}/calls`);
     const actions = keeping.getByRole('button', { name: 'Actions for Listed Lena', exact: true });

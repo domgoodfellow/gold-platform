@@ -12,6 +12,8 @@ import { requireOrganization } from '@/lib/route/organization';
 import { requireOperatingArea } from '@/lib/route/workspace-configuration';
 import { callContact, callTiming, dialerContactCandidates, getCall, listCallPage, type CallContact } from '@/lib/domain/reception/calls';
 import { recentCallRows, type RecentCallRow } from '@/features/communications/voice/format';
+import { listTasks } from '@/lib/domain/tasks/tasks';
+import { listCallListEntries, type CallListEntry } from '@/lib/domain/tasks/call-list';
 
 export async function matchDialerContact(organizationId: string, number: string): Promise<{ state: 'matched'; contact: CallContact } | { state: 'none' | 'ambiguous' | 'unavailable' }> {
   try {
@@ -40,7 +42,13 @@ export async function endedCallRecord(organizationId: string, callId: string): P
 const CALL_CONTEXT_RECENT = 3;
 
 /** Who a call is with, and their recent calls. `contact` is null for a call linked to nobody. */
-export type CallContactContext = { callId: string; contact: CallContact | null; recentCalls: RecentCallRow[] };
+export type CallContactContext = {
+  callId: string;
+  contact: CallContact | null;
+  recentCalls: RecentCallRow[];
+  /** The contact's open Call task, when they have one: a contact has at most one. */
+  task?: CallListEntry | null;
+};
 
 /**
  * The contact a call is linked to, read from the call itself as the viewer. It does not depend on
@@ -51,9 +59,14 @@ export async function callContactContext(organizationId: string, callId: string)
   try {
     const { db, organization } = await requireOperatingArea(organizationId, 'calls');
     const contact = await callContact(db, { organizationId, callId });
-    if (!contact) return { callId, contact: null, recentCalls: [] };
-    const recent = await listCallPage(db, { organizationId, filter: { customerId: contact.id }, limit: CALL_CONTEXT_RECENT });
-    return { callId, contact, recentCalls: recentCallRows(recent.items, organization.timezone) };
+    if (!contact) return { callId, contact: null, recentCalls: [], task: null };
+    const [recent, open] = await Promise.all([
+      listCallPage(db, { organizationId, filter: { customerId: contact.id }, limit: CALL_CONTEXT_RECENT }),
+      // Their open Call task is found by the contact (there is at most one), not by what is highlighted.
+      listTasks(db, { organizationId, customerId: contact.id, status: 'open', kind: 'call', limit: 1 }),
+    ]);
+    const [task] = open[0] ? await listCallListEntries(db, { organizationId, taskIds: [open[0].id], limit: 1 }) : [];
+    return { callId, contact, recentCalls: recentCallRows(recent.items, organization.timezone), task: task ?? null };
   } catch (error) { if (error instanceof DomainError) return null; throw error; }
 }
 

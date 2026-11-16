@@ -16,7 +16,7 @@ export type DialerOptions = CallingOptions & { setup: { href: string; label: str
 export async function loadDialerAction(organizationId: string): Promise<DialerOptions> {
   try {
     const { db, organization } = await requireOrganization(organizationId);
-    const options = await loadCallingOptions(db, { organizationId, mayCall: organization.capabilities.includes('call.place') });
+    const options = await loadCallingOptions(db, { organizationId, mayCall: organization.capabilities.includes('call.place'), mayDialManually: organization.capabilities.includes('call.dial_manual') });
     const setup = options.blocker?.setup ? callingSetupDoor(options.blocker, await workspaceConfigureDoors(organizationId, 'communications')) : null;
     return { ...options, setup };
   } catch (error) {

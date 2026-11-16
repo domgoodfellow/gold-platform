@@ -25,7 +25,7 @@ vi.mock('@/app/organizations/[organizationId]/calls/conference-actions', () => (
   listCallParticipantsAction: vi.fn().mockResolvedValue({ ok: true, data: { participants: [], ownMembershipId: null } }),
 }));
 vi.mock('@/app/organizations/[organizationId]/calls/actions', () => ({ matchDialerContact: vi.fn().mockResolvedValue({ state: 'none' }), endedCallRecord: vi.fn().mockResolvedValue(null), callContactContext: vi.fn().mockResolvedValue(null) }));
-vi.mock('@/app/organizations/[organizationId]/calls/call-list-actions', () => ({ removeFromCallListAction: vi.fn() }));
+vi.mock('@/app/organizations/[organizationId]/calls/call-list-actions', () => ({ removeFromCallListAction: vi.fn(), loadCallListAction: vi.fn(), nextCallListEntryAction: vi.fn(), callListEntryAction: vi.fn(), completeCallTaskAction: vi.fn() }));
 vi.mock('@/features/communications/voice/add-to-call-list', () => ({ AddToCallList: () => null }));
 vi.mock('@/features/communications/voice/wrap-up-sheet', () => ({ WrapUpCallSheet: () => null }));
 vi.mock('next/navigation', async (original) => ({ ...(await original<typeof import('next/navigation')>()), useRouter: () => ({ refresh: vi.fn() }) }));
@@ -38,7 +38,9 @@ const device: TelephoneDeviceContextValue = {
   register: vi.fn(), unregister: vi.fn(), connectToRoom: vi.fn(),
   hangUp: vi.fn(), toggleMute: vi.fn(), sendDigits: vi.fn(),
 };
-const options = { numbers: [number], defaultNumber: number, unavailableReason: null, blocker: null };
+// A member who may type in any number, as these cases dial numbers by hand.
+const options = { numbers: [number], defaultNumber: number, unavailableReason: null, blocker: null, manualDialing: true };
+const noCalls = { all: 0, mine: 0, due: 0, overdue: 0, upcoming: 0, callbacks: 0 };
 
 /** The organization layout's providers around the header's phone button, a page and the dock. */
 function App({ value = device, showDialer = true }: { value?: TelephoneDeviceContextValue; showDialer?: boolean }) {
@@ -46,7 +48,7 @@ function App({ value = device, showDialer = true }: { value?: TelephoneDeviceCon
     <TelephoneDeviceContext.Provider value={value}>
       <DialerPopoutProvider organizationId="org-1">
         <DialerTrigger />
-        {showDialer ? <DialerWorkspace organizationId="org-1" timezone="America/Toronto" queue={[]} queueTotal={0} queueAvailable options={options} /> : <h1>Another workspace</h1>}
+        {showDialer ? <DialerWorkspace organizationId="org-1" timezone="America/Toronto" queue={[]} queueTotal={0} queueCounts={noCalls} queueAvailable options={options} /> : <h1>Another workspace</h1>}
         <ActiveCallDock organizationId="org-1" />
       </DialerPopoutProvider>
     </TelephoneDeviceContext.Provider>
@@ -95,7 +97,7 @@ describe('compact dialer pop-out', () => {
     render(
       <TelephoneDeviceContext.Provider value={device}>
         <DialerPopoutProvider organizationId="org-1">
-          <DialerWorkspace organizationId="org-1" timezone="America/Toronto" queue={[]} queueTotal={0} queueAvailable options={{ ...options, numbers: [number, shared] }} />
+          <DialerWorkspace organizationId="org-1" timezone="America/Toronto" queue={[]} queueTotal={0} queueCounts={noCalls} queueAvailable options={{ ...options, numbers: [number, shared] }} />
         </DialerPopoutProvider>
       </TelephoneDeviceContext.Provider>,
     );
@@ -140,7 +142,7 @@ describe('compact dialer pop-out', () => {
     render(
       <TelephoneDeviceContext.Provider value={device}>
         <DialerPopoutProvider organizationId="org-1">
-          <DialerWorkspace organizationId="org-1" timezone="America/Toronto" queue={[]} queueTotal={0} queueAvailable options={blocked} />
+          <DialerWorkspace organizationId="org-1" timezone="America/Toronto" queue={[]} queueTotal={0} queueCounts={noCalls} queueAvailable options={blocked} />
         </DialerPopoutProvider>
       </TelephoneDeviceContext.Provider>,
     );

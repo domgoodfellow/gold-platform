@@ -84,6 +84,12 @@ async function newTenant(label: string): Promise<Tenant> {
   return { db: owner, organizationId, membershipId: (await currentMembershipId(owner as never, { organizationId }))! };
 }
 
+/**
+ * The callers here ring numbers that belong to no contact, so they hold manual dialing as well as
+ * placing calls. Which numbers a caller without it may ring is `call-list-workflow.test.ts`'s.
+ */
+const DIALS_ANY_NUMBER = ['call.place', 'call.dial_manual'];
+
 /** Another member of the business with exactly these capabilities, signed in after the membership exists. */
 async function colleague(tenant: Tenant, capabilities: string[]): Promise<Person> {
   const email = `colleague-${randomUUID().slice(0, 8)}@example.test`;
@@ -187,7 +193,7 @@ describe('choosing a number', () => {
 
   beforeAll(async () => {
     tenant = await newTenant('choose');
-    caller = await colleague(tenant, ['call.place']);
+    caller = await colleague(tenant, DIALS_ANY_NUMBER);
     [own, second, colleagues, pooled] = await Promise.all([seedNumber(tenant), seedNumber(tenant), seedNumber(tenant), seedNumber(tenant)]);
     await assign(tenant, own, caller, true);
     await assign(tenant, second, caller);
@@ -230,7 +236,7 @@ describe('shared numbers', () => {
   it('are shared only by someone who manages the business, and only within it', async () => {
     const tenant = await newTenant('share-manage');
     const stranger = await newTenant('share-stranger');
-    const caller = await colleague(tenant, ['call.place']);
+    const caller = await colleague(tenant, DIALS_ANY_NUMBER);
     const number = await seedNumber(tenant);
     await expect(share({ ...tenant, db: caller.db }, number)).rejects.toMatchObject({ code: 'numbers.sharing_failed', message: 'Your role cannot change who may call from this number.' });
     await expect(setOutboundSharing(db(stranger), { organizationId: tenant.organizationId, phoneNumberId: number.id, shared: true })).rejects.toMatchObject({ code: 'numbers.sharing_failed' });
@@ -248,7 +254,7 @@ describe('shared numbers', () => {
 
   it('are open to members who may place calls, and to nobody who may not', async () => {
     const tenant = await newTenant('share-who');
-    const caller = await colleague(tenant, ['call.place']);
+    const caller = await colleague(tenant, DIALS_ANY_NUMBER);
     const viewer = await colleague(tenant, []);
     const number = await seedNumber(tenant);
     await share(tenant, number);
@@ -287,7 +293,7 @@ describe('shared numbers', () => {
 describe('a selection made earlier stops working when the authority behind it ends', () => {
   it('refuses a released assignment at once, though the browser still names the number', async () => {
     const tenant = await newTenant('stale-release');
-    const caller = await colleague(tenant, ['call.place']);
+    const caller = await colleague(tenant, DIALS_ANY_NUMBER);
     const [kept, taken] = await Promise.all([seedNumber(tenant), seedNumber(tenant)]);
     await assign(tenant, kept, caller, true);
     await assign(tenant, taken, caller);
@@ -301,7 +307,7 @@ describe('a selection made earlier stops working when the authority behind it en
 
   it('does not let a preference outlive the assignment it was made from', async () => {
     const tenant = await newTenant('stale-preference');
-    const caller = await colleague(tenant, ['call.place']);
+    const caller = await colleague(tenant, DIALS_ANY_NUMBER);
     const [fallback, preferred] = await Promise.all([seedNumber(tenant), seedNumber(tenant)]);
     await assign(tenant, fallback, caller, true);
     await assign(tenant, preferred, caller);
@@ -316,7 +322,7 @@ describe('a selection made earlier stops working when the authority behind it en
 
   it('refuses a number at once when the business stops sharing it', async () => {
     const tenant = await newTenant('stale-share');
-    const caller = await colleague(tenant, ['call.place']);
+    const caller = await colleague(tenant, DIALS_ANY_NUMBER);
     const number = await seedNumber(tenant);
     await share(tenant, number);
     expect((await place(caller, tenant, number.id)).fromNumber).toBe(number.e164);
@@ -328,7 +334,7 @@ describe('a selection made earlier stops working when the authority behind it en
 
   it('refuses a caller whose role stops placing calls, even from their own assigned number', async () => {
     const tenant = await newTenant('stale-role');
-    const caller = await colleague(tenant, ['call.place']);
+    const caller = await colleague(tenant, DIALS_ANY_NUMBER);
     const number = await seedNumber(tenant);
     await assign(tenant, number, caller, true);
     await place(caller, tenant);
@@ -414,7 +420,7 @@ describe('who a call is with', () => {
     tenant = await newTenant('contact');
     const number = await seedNumber(tenant);
     await share(tenant, number);
-    caller = await colleague(tenant, ['call.place']);
+    caller = await colleague(tenant, DIALS_ANY_NUMBER);
     company = await createContact(db(tenant), { organizationId: tenant.organizationId, name: 'Northwind Supply', phone: phone(), contactType: 'company' });
     person = await createContact(db(tenant), { organizationId: tenant.organizationId, name: 'Zed Okafor', phone: phone(), email: 'zed@example.test', contactType: 'person', companyId: company, affiliationTitle: 'Purchasing lead' });
   }, 90_000);

@@ -42,6 +42,7 @@ export const CAPABILITIES = [
   'report.read',
   'report.manage',
   'call.place',
+  'call.dial_manual',
   'call_list.remove',
   'message.send',
   'integration.manage',
@@ -125,6 +126,8 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   'report.manage': 'Save reports and choose which roles see them',
   /** Its own authority for the same reason as `assistant.ask` — placing a call spends money and shares this business's number. */
   'call.place': 'Place calls and record their outcome',
+  /** Its own authority, not part of `call.place`: placing calls reaches contacts at their recorded numbers and returns calls the business received; this adds any other number, typed in. It is for business calls, such as testing a line, and every call still records who placed it and to which number. */
+  'call.dial_manual': 'Dial any phone number',
   /** Its own authority, not part of `follow_up.manage`: whoever fills the call list is not necessarily who decides someone comes off it. Removing cancels the open Call task; the contact and their history stay. */
   'call_list.remove': 'Remove contacts from call list',
   /** Its own authority for the same reason as `call.place` — a receptionist may message without ever placing a call, and the reverse. */

@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useEffect, useRef } from 'react';
 import { Button } from '@/components/controls/button';
 import { ErrorText, TextArea, TextInput } from '@/components/controls/inputs';
 import type { CallOutcome } from '@/lib/domain/reception/outcomes';
@@ -26,14 +26,24 @@ export function WrapUpCallForm({
   outcomes,
   note,
   outcomeId,
+  onSaved,
 }: {
   organizationId: string;
   callId: string;
   outcomes: CallOutcome[];
   note: string;
   outcomeId: string | null;
+  /** Told once each time the outcome is saved. */
+  onSaved?: () => void;
 }) {
   const [state, formAction, pending] = useActionState(wrapUpCallAction, INITIAL);
+  // Each submission answers with a new state object; a saved one has no error.
+  const reported = useRef<FormState>(INITIAL);
+  useEffect(() => {
+    if (state === reported.current) return;
+    reported.current = state;
+    if (!state.error) onSaved?.();
+  }, [state, onSaved]);
 
   return (
     <form action={formAction} className="mt-2 flex flex-col gap-2">

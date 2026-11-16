@@ -13,6 +13,8 @@ export type PopoutCallDraft = {
   phoneNumberId: string;
   customerId?: string;
   customerName?: string;
+  /** Whether this member may type in any number. Without it the window calls only the number it was opened with. */
+  manualDialing?: boolean;
   /** Why calling cannot start, when whoever opened the window already knows. */
   blocker?: PopoutBlocker | null;
   onReturn?: (draft: { toNumber: string; phoneNumberId: string }) => void;

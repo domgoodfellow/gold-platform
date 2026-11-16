@@ -62,7 +62,7 @@ export function DialerPopoutProvider({ organizationId, children }: { organizatio
     if (!draft) {
       void loadDialerAction(organizationId).then(options => {
         if (popupWindow.current !== child || child.closed) return;
-        const next = { numbers: options.numbers, defaultNumber: options.defaultNumber, toNumber: '', phoneNumberId: '' };
+        const next = { numbers: options.numbers, defaultNumber: options.defaultNumber, toNumber: '', phoneNumberId: '', manualDialing: options.manualDialing ?? false };
         draftRef.current = next;
         setDraft(next);
         setLoadedBlocker(options.blocker ? { kind: options.blocker.kind, reason: options.blocker.reason, setup: options.setup } : null);
@@ -159,11 +159,14 @@ export function DialerPopoutProvider({ organizationId, children }: { organizatio
                   {blocker.setup ? <a href={blocker.setup.href} target="_blank" rel="noreferrer" className="underline underline-offset-4">{blocker.setup.label}</a> : null}
                 </div>
               ) : null}
-              {draft ? (
+              {draft && draft.manualDialing === false && !draft.toNumber && !blocker ? (
+                <p className="text-sm text-muted">Select a contact from the call list in GildOps.</p>
+              ) : draft ? (
                 <NewCallForm
                   key={organizationId}
                   organizationId={organizationId}
                   presentation="window"
+                  destination={draft.manualDialing === false && !blocker ? 'contact' : 'entry'}
                   numbers={draft.numbers}
                   defaultNumber={draft.defaultNumber}
                   toNumber={draft.toNumber}

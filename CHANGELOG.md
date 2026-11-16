@@ -32,6 +32,13 @@ Entries describe the product or operational change, not every file touched.
 
 ---
 
+## 2026-11-16
+
+- The Dialer's call list is searched, filtered, counted and paged by the server, so search reaches every call, not only the first 25. Views are All calls, My calls, Due now, Overdue (before today in the business's timezone), Upcoming and Callbacks, each with its count; rows show the business and title, reason, due time with Due now or Overdue, number and owner.
+- Each call list entry can be rescheduled or reassigned (the same task, never a copy), skipped for this calling session without changing the task, or opened as a contact or task, by members permitted to.
+- Calling modes: Preview, Auto-advance (once a call's outcome is resolved, the next eligible call in the current view is prepared, never dialed, and nothing advances during a call) and Manual. After a call, members who manage tasks can schedule a callback, which moves the contact's one open call task and marks it as a callback, or complete the call task; hanging up completes nothing.
+- Dialing any number is now its own permission, Dial any phone number (`call.dial_manual`), held by unrestricted administrators and granted to other roles explicitly. Placing calls still reaches contacts at their recorded numbers and returns calls the business received; the database refuses other numbers without the new permission.
+
 ## 2026-11-15
 
 - Call from now says which number a call will use and why. Automatic is the default and shows the number the server resolves for the member, with the reason; members with more than one number can choose among Your numbers and Shared numbers. A business can share a number with everyone who places calls, from the number's page under Numbers & assignments. The Dialer, the pop-out window and a placed call read one resolver, so a number that is offered is never refused and a released assignment or ended sharing stops working at once. A preference no longer outlives the assignment it was made from.
