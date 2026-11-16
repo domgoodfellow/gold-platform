@@ -34,6 +34,8 @@ Entries describe the product or operational change, not every file touched.
 
 ## 2026-11-16
 
+- GildOps' public marketing site now uses cool porcelain, charcoal and metallic gold. Fixed Kintsugi seams connect the homepage sections, with a gentle reflection and static reduced-motion treatment; published copy, product availability and consultation paths are preserved.
+
 - The organization header now opens recent Activity in an independent responsive panel. It reuses timeline descriptions and attribution with server-side source/record checks, canonical links, bounded loading and explicit empty/error states; page Activity and Agent retain their own state. No unread or notification lifecycle is introduced.
 
 - Calendar is now a shared primary destination beside Home, Search and Library, with workspace/source filters, explicit native-event workspace selection and legacy redirects. The CRM agenda and Work shortcuts target the same Calendar; Work Schedule remains the resource authority.

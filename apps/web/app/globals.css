@@ -178,26 +178,31 @@
   }
 }
 
-/* GildOps' own marketing frame (`MarketingShell`, `data-marketing-site`): charcoal lettering on warm
-   ivory, gold for the primary action and for links, and steel blue for the technical details that
+/* GildOps' own marketing frame (`MarketingShell`, `data-marketing-site`): charcoal on cool
+   porcelain, metallic gold for actions and seams, and cobalt for the technical details that
    `--subtle` carries (step numbers, eyebrows, times). Scoped to that frame, so a business's
    published website, Studio's canvas and every operator surface keep the neutral roles above. An
    accent GildOps saves in Studio still wins: `BrandStyle` writes `--accent` after this sheet. The
    neutral roles are literal here and every alias is declared again, because an alias resolves
    where it is written, not where it is read. */
 [data-marketing-site] {
-  --background: #f8f5ee;
-  --foreground: #1b1a17;
-  --surface: #fffdf8;
-  --secondary: #efeadf;
-  --border: rgb(27 26 23 / 0.14);
-  --muted: rgb(27 26 23 / 0.72);
-  --subtle: #4d6a86;
-  --ring: rgb(27 26 23 / 0.45);
-  --accent: #c0901c;
-  --on-accent: #1b1a17;
-  --accent-text: #7a5a0c;
-  --accent-indicator: #a87c14;
+  --background: #f5f7fa;
+  --foreground: #15191f;
+  --surface: #ffffff;
+  --secondary: #e9edf3;
+  --border: rgb(21 25 31 / 0.15);
+  --muted: #59616d;
+  --subtle: #2447a6;
+  --ring: rgb(21 25 31 / 0.45);
+  --accent: #d6ac43;
+  --on-accent: #15191f;
+  --accent-text: #785518;
+  --accent-indicator: #87601d;
+  --marketing-gold: #d6ac43;
+  --marketing-gold-reflection: #ffe6a0;
+  --marketing-gold-shadow: #87601d;
+  --marketing-groove: rgb(67 48 17 / 0.22);
+  --marketing-dark: #11151d;
   --accent-foreground: var(--on-accent);
   --card: var(--surface);
   --card-foreground: var(--foreground);
@@ -216,19 +221,164 @@
 
 @media (prefers-color-scheme: dark) {
   [data-marketing-site] {
-    --background: #171613;
-    --foreground: #efe9dc;
-    --surface: #1f1e1a;
-    --secondary: #28261f;
-    --border: rgb(239 233 220 / 0.16);
-    --muted: rgb(239 233 220 / 0.72);
-    --subtle: #8fb0cf;
-    --ring: rgb(239 233 220 / 0.45);
-    --accent: #d6ab3c;
-    --on-accent: #171613;
-    --accent-text: #e3bd57;
-    --accent-indicator: #d6ab3c;
+    --background: #11151d;
+    --foreground: #f5f7fa;
+    --surface: #1a202b;
+    --secondary: #222b3a;
+    --border: rgb(245 247 250 / 0.17);
+    --muted: #b3bdcb;
+    --subtle: #9db3f0;
+    --ring: rgb(245 247 250 / 0.45);
+    --on-accent: #15191f;
+    --accent-text: #e6c471;
+    --accent-indicator: #d6ac43;
+    --marketing-groove: rgb(0 0 0 / 0.5);
   }
+}
+
+/* Fixed, hand-drawn repair lines. Each section's endpoint meets the next at 97%
+   width; the content stays above the artwork and has an opaque porcelain backing. */
+[data-marketing-home] {
+  position: relative;
+  padding-top: 1rem;
+}
+[data-marketing-site] .kintsugi-fracture {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+[data-marketing-home] .marketing-home-section {
+  position: relative;
+  isolation: isolate;
+  padding-block: 2.5rem;
+}
+[data-marketing-home] [data-section] {
+  position: relative;
+  z-index: 1;
+  margin-right: 4rem;
+}
+[data-marketing-home] [data-section] > section {
+  background-color: var(--background);
+}
+[data-marketing-home] [data-marketing-section=hero] {
+  min-height: 33rem;
+  display: flex;
+  align-items: center;
+  padding-block: 4.5rem;
+}
+[data-marketing-home] [data-marketing-section=hero] [data-section] {
+  width: 67%;
+  margin-right: 0;
+}
+[data-marketing-home] [data-marketing-section=hero] [data-section] > section {
+  background: var(--background);
+}
+[data-marketing-home] [data-section=hero] h1 {
+  font-size: clamp(2.5rem, 4.8vw, 3.75rem);
+  line-height: 1.06;
+  letter-spacing: -0.045em;
+}
+[data-marketing-home] [data-section=problem] > section {
+  background: var(--secondary);
+  border-radius: .75rem;
+}
+[data-marketing-home] [data-section=capabilities] > section {
+  padding-block: .5rem;
+}
+[data-marketing-home] [data-section=capabilities] ul {
+  background: var(--background);
+}
+[data-marketing-home] [data-section=cta] {
+  margin-right: 0;
+}
+[data-marketing-home] [data-section=cta] > section,
+[data-marketing-site] > footer {
+  background: var(--marketing-dark);
+  color: #f5f7fa;
+  --focus-color: #f5f7fa;
+}
+[data-marketing-home] [data-section=cta] > section {
+  background: linear-gradient(125deg, var(--marketing-dark) 50%, color-mix(in srgb, var(--marketing-dark), var(--subtle) 18%));
+}
+[data-marketing-site] header a[href="/demo"],
+[data-marketing-home] [data-section=hero] a[href="/demo"] {
+  background: linear-gradient(110deg, var(--marketing-gold-shadow) -45%, var(--marketing-gold) 30%, var(--marketing-gold-reflection) 180%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .45);
+}
+[data-marketing-home] [data-marketing-section=cta] > .kintsugi-fracture {
+  z-index: 2;
+}
+[data-marketing-home] [data-section=cta] > section > div {
+  position: relative;
+  z-index: 3;
+  margin-left: 0;
+  max-width: 72%;
+}
+[data-marketing-home] [data-section=cta] a {
+  --background: #f5f7fa;
+  --foreground: #15191f;
+}
+[data-marketing-site] .marketing-footer-inner {
+  position: relative;
+  isolation: isolate;
+}
+[data-marketing-site] .marketing-footer-inner > div {
+  position: relative;
+  z-index: 1;
+  margin-right: 4rem;
+  background: var(--marketing-dark);
+}
+[data-marketing-site] .marketing-footer-inner > .kintsugi-fracture {
+  width: calc(100% - 4rem);
+  left: 2rem;
+  opacity: .7;
+}
+[data-marketing-site]:has([data-marketing-home]) > main { padding-bottom: 0; }
+[data-marketing-site]:has([data-marketing-home]) > footer { margin-top: 0; }
+[data-marketing-site] .kintsugi-mobile { display: none; }
+.kintsugi-reflection {
+  opacity: 0;
+}
+@keyframes kintsugi-reflection {
+  0%, 65% { transform: translateX(0); opacity: 0; }
+  68% { opacity: .85; }
+  92% { transform: translateX(1280px); opacity: .85; }
+  95%, 100% { transform: translateX(1280px); opacity: 0; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  [data-marketing-site] .kintsugi-reflection {
+    animation: kintsugi-reflection 13s linear infinite;
+  }
+  [data-fracture=hero] .kintsugi-reflection { animation-delay: -9s; }
+  [data-fracture=automation] .kintsugi-reflection { animation-delay: -4s; }
+  [data-fracture=cta] .kintsugi-reflection { animation-delay: -7s; }
+}
+@media (max-width: 639px) {
+  [data-marketing-home] .marketing-home-section { padding-block: 1.75rem; }
+  [data-marketing-home] [data-section] { margin-right: 2.25rem; }
+  [data-marketing-home] [data-marketing-section=hero] {
+    min-height: 34rem;
+    padding-block: 6rem 2.5rem;
+  }
+  [data-marketing-home] [data-marketing-section=hero] [data-section] { width: calc(100% - 2.25rem); }
+  [data-marketing-site] .kintsugi-mobile { display: inline; }
+  [data-marketing-site] .kintsugi-crossing { display: none; }
+  [data-marketing-site] [data-fracture=hero] .kintsugi-desktop { display: none; }
+  [data-marketing-home] [data-section=hero] > section { background: var(--background); }
+  [data-marketing-home] [data-section=cta] > section > div { max-width: 100%; }
+  [data-marketing-home] [data-marketing-section=cta] > .kintsugi-fracture { z-index: 0; }
+  [data-marketing-site] .marketing-footer-inner > .kintsugi-fracture {
+    width: calc(100% - 3rem);
+    left: 1.5rem;
+  }
+  [data-marketing-site] .marketing-footer-inner > div { margin-right: 2.25rem; }
+}
+@media (max-width: 359px) {
+  [data-marketing-site] > header > div { column-gap: .5rem; padding-left: .75rem; }
+  [data-marketing-site] header a[href="/demo"] { padding-inline: .75rem; }
 }
 
 /* A branded subtree states its own lettering and re-resolves the aliases that read a brand role.
@@ -361,25 +511,6 @@ h1, h2, h3, h4 {
 @keyframes panel-glow {
   0%, 100% { opacity: 0.05; }
   50% { opacity: 0.09; }
-}
-
-/* GildOps' own homepage: each section after the hero rises into place as it scrolls into view.
-   Scoped to `data-marketing-home` (app/(marketing)/page.tsx), so a business's website, Studio's
-   canvas and previews never move. Scroll-linked rather than timed, so nothing waits on a timer;
-   a browser without view timelines, or a visitor who asked for reduced motion, sees the page
-   still. The hero never animates: it is the first thing read. */
-@keyframes marketing-rise {
-  from { opacity: 0.15; transform: translateY(1.5rem); }
-  to { opacity: 1; transform: none; }
-}
-@media (prefers-reduced-motion: no-preference) {
-  @supports (animation-timeline: view()) {
-    [data-marketing-home] [data-section]:not([data-section=hero]) {
-      animation: marketing-rise linear both;
-      animation-timeline: view();
-      animation-range: entry 5% entry 55%;
-    }
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

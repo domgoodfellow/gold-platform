@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Mail, Phone } from 'lucide-react';
 import { FOCUS_RING, cx } from '@/components/class-names';
 import { ACCOUNT_LINKS, COMPANY_LINKS, LEGAL_LINKS, PRODUCT_LINKS } from '@/lib/marketing/navigation';
+import { KintsugiFracture } from './kintsugi-fracture';
 
 const COLUMNS = [
   { heading: 'Products', links: PRODUCT_LINKS },
@@ -30,7 +31,8 @@ export function MarketingFooter({
 }) {
   return (
     <footer className="mt-16 bg-foreground text-background">
-      <div className="mx-auto w-full max-w-5xl px-6 py-12 sm:px-8 sm:py-14">
+      <div className="marketing-footer-inner mx-auto w-full max-w-5xl px-6 py-12 sm:px-8 sm:py-14">
+        <KintsugiFracture variant="footer" />
         <div className="grid gap-10 sm:grid-cols-2 md:grid-cols-[1.6fr_repeat(4,1fr)] md:gap-8">
           <div className="flex flex-col gap-4">
             <span className="text-2xl font-semibold tracking-tight">{name}</span>

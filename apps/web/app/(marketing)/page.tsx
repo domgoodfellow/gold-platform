@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { PageSections } from '@/features/public-site/section-renderers';
+import { MarketingHomepage } from '@/components/marketing/marketing-homepage';
 import { getPublishedGoldHomepage } from '@/lib/domain/public-site/cached';
 import { canonicalUrl } from '@/lib/seo/site';
 import { PLATFORM_NAME } from '@/lib/brand';
@@ -34,10 +34,7 @@ export default async function Home() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, '\\u003c') }} />
-      {/* `data-marketing-home` scopes the homepage's scroll entrance (globals.css) to this page. */}
-      <div data-marketing-home>
-        <PageSections sections={site.sections} context={{ mode: 'live', forms: site.forms }} />
-      </div>
+      <MarketingHomepage sections={site.sections} context={{ mode: 'live', forms: site.forms }} />
       <PublicSiteCommunication siteId={site.siteId} />
     </>
   );
