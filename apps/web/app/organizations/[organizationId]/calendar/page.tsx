@@ -1,16 +1,7 @@
-import { redirect } from 'next/navigation';
+import { SharedCalendarPage } from '@/features/calendar/workspace-calendar-page';
 import { requireOrganization } from '@/lib/route/organization';
-
-export default async function LegacyCalendarPage({ params, searchParams }: {
-  params: Promise<{ organizationId: string }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const { organizationId } = await params;
-  await requireOrganization(organizationId);
-  const query = new URLSearchParams();
-  for (const [key, value] of Object.entries(await searchParams)) {
-    for (const entry of Array.isArray(value) ? value : value === undefined ? [] : [value]) query.append(key, entry);
-  }
-  const suffix = query.toString();
-  redirect(`/organizations/${organizationId}/crm/calendar${suffix ? `?${suffix}` : ''}`);
+export const dynamic='force-dynamic';
+export default async function CalendarPage(props:{params:Promise<{organizationId:string}>;searchParams:Promise<Record<string,string|undefined>>}) {
+  await requireOrganization((await props.params).organizationId);
+  return <SharedCalendarPage {...props}/>;
 }

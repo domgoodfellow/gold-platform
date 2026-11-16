@@ -340,13 +340,13 @@ export type Area = {
 export const AREAS: readonly Area[] = [
   // Home leads because the operator should reach current work before configuration.
   { segment: 'home', label: 'Home', group: 'home' },
+  { segment: 'calendar', label: 'Calendar', group: 'home' },
 
   // Library: shared organization infrastructure, never a workspace. Kernel, like Home — every
   // business has it, so it names no module.
   // Its own internal destinations (Files, Media, Templates, Knowledge, Collections, Sources,
   // Trash) are reached from Library's own page, not a second permanent sidebar.
   { segment: 'library', label: 'Library', group: 'library' },
-  { segment: 'organization-calendar-legacy', label: 'Calendar (legacy organization link)', group: 'library', route: 'calendar', sidebar: false },
 
   // CRM retains its existing landing route. The shell offers Dashboard explicitly;
   // Contacts and opportunity Pipeline are principal destinations, relationship stages contextual.
@@ -359,7 +359,7 @@ export const AREAS: readonly Area[] = [
   { segment: 'pipeline', label: 'Relationship stages', group: 'workspaces', workspace: 'crm', route: 'crm/contacts/stages', sidebar: false, module: 'reception', relevantCapabilities: ['customer.read'], featureKeys: ['pipeline', 'configurable_stages', 'qualification_state'] },
   { segment: 'opportunities', route: 'crm/opportunities', label: 'Opportunities', group: 'workspaces', workspace: 'crm', sidebar: false },
   { segment: 'opportunity-pipeline', label: 'Pipeline', group: 'workspaces', workspace: 'crm', route: 'crm/pipeline' },
-  { segment: 'calendar', label: 'Calendar', group: 'workspaces', workspace: 'crm', route: 'crm/calendar' },
+  { segment: 'crm-calendar', label: 'CRM calendar (legacy link)', group: 'workspaces', workspace: 'crm', route: 'crm/calendar', sidebar: false },
   { segment: 'follow-ups', route: 'crm/tasks', label: 'Tasks', group: 'workspaces', workspace: 'crm', sidebar: false, featureKeys: ['follow_ups'] },
   { segment: 'crm-search', label: 'Search CRM', group: 'workspaces', workspace: 'crm', route: 'crm/search', sidebar: false },
   // Communications. Home is the workspace's own destination, so it is offered to anyone who can

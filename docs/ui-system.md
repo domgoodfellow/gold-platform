@@ -959,13 +959,13 @@ Home, Search and Library form one cluster at the top of the sidebar at every dep
 
 ## Workspace navigation
 
-Workspaces group operating destinations and configuration by canonical ownership. Each workspace Home remains an operational dashboard. Desktop, tablet and phone consume the same authorized hierarchy, and record/detail/calendar routes retain their workspace context.
+Workspaces group operating destinations and configuration by canonical ownership. Each workspace Home remains an operational dashboard. Desktop, tablet and phone consume the same authorized hierarchy, and record and detail routes retain their workspace context. Legacy workspace Calendar doors redirect into the shared Calendar with workspace filter context (ADR-052).
 
 ### Header composition
 
 The entered-workspace sidebar, with its phone sheet and page-location menu, is the one persistent workspace navigation (ADR-048). The page header owns page identity, the page's business actions, its page-support modes (Activity, Insights, Configure, always last) and page-local view controls; it never reproduces the workspace's destination list. `HeaderControls` is only the action row: actions stay right-aligned and wrap on a narrow canvas. Page-local view controls stay in the page: list or board, dispatch mode, attention categories, invoice filters, inbox queue filters, periods and record sub-views. They are not workspace navigation.
 
-The organization header carries no workspace Calendar shortcut (ADR-050). Calendars are the projection's registered destinations (`NavItem.calendar`), reached in context: CRM from its Dashboard (when tasks are available) and Tasks, Work from its Dashboard; no address is built by appending `/calendar`. No notification control is shown until an operator notification read model exists. Calendar pages themselves still check only organization membership (open question, Slice 2C).
+The organization header carries no Calendar shortcut (ADR-050). Calendar is a shared primary destination, with contextual workspace links and previews targeting its filtered canonical route (ADR-052). Native event creation explicitly chooses workspace provenance. No notification control is shown until an operator notification read model exists.
 
 Connect is an organization utility over canonical Connections, available in the shared header at desktop, tablet and phone widths when the member may manage connections. It uses a compact stack of actual account connector marks, a Connect label where space permits and an accessible name on every width. An empty account collection uses the generic connection glyph, without suggesting that an account exists. A warning dot accompanies a readable needs-attention or unavailable status; disconnected accounts remain distinct from broken accounts. The touch/keyboard popover groups relevant accounts before other organization accounts, supports Escape and focus return, and fits the viewport with internal scrolling. Its contents and management actions come from the Connections projection, not workspace navigation or platform-provider state. Other utilities and the phone Menu retain their existing owners and order.
 

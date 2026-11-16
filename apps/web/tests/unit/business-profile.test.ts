@@ -34,7 +34,7 @@ describe('business vocabulary and navigation',()=>{
     const input={organizationId:'org',enabledModules:new Set(['reception']),featureAvailability:new Set(AREAS.flatMap(area=>area.featureKeys??[])),capabilities:new Set(ALL_CAPABILITIES)};
     const sections=projectBusinessNavigation(input,{...profile,navigation:['opportunity-pipeline','customers'],labels:{'workspace-dashboard':'Old overview'}});
     const crm=sections.flatMap(section=>section.items).find(item=>item.key==='workspace-crm')!;
-    expect(crm.destinations?.map(item=>item.key)).toEqual(['workspace-dashboard','customers','opportunity-pipeline','calendar']);
+    expect(crm.destinations?.map(item=>item.key)).toEqual(['workspace-dashboard','customers','opportunity-pipeline']);
     expect(crm.destinations?.[0].label).toBe('Dashboard');
   });
 

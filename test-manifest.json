@@ -137,6 +137,8 @@
     ]
   },
   "files": {
+    "apps/web/e2e/shared-surfaces.spec.ts": {"category":"playwright-acceptance","concerns":["calendar","navigation","rbac","responsive","activity"]},
+    "apps/web/tests/unit/calendar-navigation.test.ts": {"category":"unit","concerns":["calendar","navigation"]},
     "apps/web/tests/component/configuration-continuity.test.tsx": {"category":"component","concerns":["setup","configuration","platform","security"]},
     "apps/web/e2e/ux-guided.spec.ts": {"category":"playwright-acceptance","concerns":["work","finance","crm","scheduling","setup","accessibility"]},
     "apps/web/tests/unit/pricing-planning.test.ts": {"category":"unit","concerns":["finance","pricing","money"]},

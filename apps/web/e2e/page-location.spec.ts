@@ -381,7 +381,7 @@ function crmRoutes() {
     'area:opportunities': { path: `${base}/crm/opportunities`, expected: { trail: [crm], current: 'Opportunities', heading: 'Opportunities' } },
     'record:opportunity': { path: `${base}/crm/opportunities/${fixture.opportunity}`, expected: { trail: [crm, { label: 'Opportunities', href: `${base}/crm/opportunities` }], current: 'Roof refit', heading: 'Roof refit' } },
     'area:follow-ups': { path: `${base}/crm/tasks`, expected: followUps },
-    'area:calendar': { path: `${base}/crm/calendar`, expected: { trail: [crm], current: 'Calendar', heading: 'Calendar' } },
+    'area:calendar': { path: `${base}/calendar`, expected: { trail: [], current: 'Calendar', heading: 'Calendar' } },
     'area:crm-search': { path: `${base}/crm/search`, expected: { trail: [crm], current: 'Search CRM', heading: 'Search CRM' } },
   } as Record<string, { path: string; expected: Parameters<typeof expectLocation>[2] }>;
 }

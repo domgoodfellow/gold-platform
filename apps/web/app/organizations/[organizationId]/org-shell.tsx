@@ -344,12 +344,13 @@ function NavGroupRow({ item, active, open, setOpen }: { item: NavItem; active: s
  * Home, Search and Library: the same three controls at every depth of the organization, drawn once
  * by this component for the business's own rows and for any workspace or Administration context.
  */
-function PrimaryNavigation({ organizationId, home, library, active }: { organizationId: string; home?: NavItem; library?: NavItem; active: string | null }) {
+function PrimaryNavigation({ organizationId, home, calendar, library, active }: { organizationId: string; home?: NavItem; calendar?: NavItem; library?: NavItem; active: string | null }) {
   return (
     <SidebarGroup>
       <SidebarMenu>
         {home ? <NavRow item={home} active={active} /> : null}
         <SidebarMenuItem><SearchEntry /></SidebarMenuItem>
+        {calendar ? <NavRow item={calendar} active={active} /> : null}
         {library ? <LibraryMenu organizationId={organizationId} label={library.label} /> : null}
       </SidebarMenu>
     </SidebarGroup>
@@ -383,9 +384,10 @@ export function OrgNav({ sections, organizationId }: { sections: ShellSection[];
   const context = workspaceNavigation(sections, pathname);
   const topLevel = topLevelSections(sections);
   const home = shellHomeItem(sections);
+  const calendar = topLevel.flatMap(section => section.items).find(item => item.key === 'calendar');
   const library = topLevel.flatMap((section) => section.items).find((item) => item.key === 'library');
   const navigation = context?.sections ?? topLevel
-    .map((section) => ({ ...section, label: section.key === 'home' ? 'Workspaces' : section.label, items: section.items.filter((item) => !['home', 'library'].includes(item.key)) }))
+    .map((section) => ({ ...section, label: section.key === 'home' ? 'Workspaces' : section.label, items: section.items.filter((item) => !['home', 'calendar', 'library'].includes(item.key)) }))
     .filter((section) => section.items.length);
   const active = activeItemKey([...sections.filter((section) => section.key === 'home'), ...navigation], pathname);
   const { setOpenMobile } = useSidebar();
@@ -410,7 +412,7 @@ export function OrgNav({ sections, organizationId }: { sections: ShellSection[];
     <nav aria-label="This business" className="flex flex-1 flex-col" onClick={(event) => {
       if ((event.target as Element).closest('a[href]')) setOpenMobile(false);
     }}>
-      <PrimaryNavigation organizationId={organizationId} home={home} library={library} active={active} />
+      <PrimaryNavigation organizationId={organizationId} home={home} calendar={calendar} library={library} active={active} />
       {navigation.map(group)}
     </nav>
   );

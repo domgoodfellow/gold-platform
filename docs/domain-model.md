@@ -844,7 +844,7 @@ Readings can inform maintenance/automation policy without turning the Asset into
 
 ### Calendar event
 
-A native Calendar Event is an Organization-owned appointment with workspace context, title, start/end instants, optional notes, creator and Scheduled/Cancelled status. It is independent of Customers, CRM tasks and Work. Calendar events can overlap and do not reserve Resources or imply scheduling feasibility. Each workspace reads its events by default; All workspaces broadens the view explicitly. CRM tasks and Work remain projections from their own canonical records, never copied into Calendar Events.
+A native Calendar Event is an Organization-owned appointment with workspace context, title, start/end instants, optional notes, creator and Scheduled/Cancelled status. It is independent of Customers, CRM tasks and Work. Calendar events can overlap and do not reserve Resources or imply scheduling feasibility. The shared organization Calendar reads authorized sources across the business by default; workspace and source filters narrow it explicitly. Workspace is required provenance, not a privacy boundary; unfiltered event creation requires an explicit workspace choice. CRM tasks and Work remain projections from their own canonical records, never copied into Calendar Events.
 
 
 ### Schedule

@@ -7,7 +7,8 @@ import { FormError, FormField } from '@/components/controls/form';
 import { PageDrawer, PageDrawerContent, PageDrawerHeader, PageDrawerTitle, PageDrawerTrigger } from '@/components/panels/page-drawer';
 import { saveEventAction } from '@/app/organizations/[organizationId]/calendar/actions';
 import type { CalendarEvent } from '@/lib/domain/calendar/events';
-import type { WorkspaceKey } from '@/lib/navigation';
+import { WORKSPACES, type WorkspaceKey } from '@/lib/navigation';
+import { SelectField } from '@/components/controls/select-field';
 
 function localInput(instant: string, timezone: string) {
   const parts = new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(instant));
@@ -15,7 +16,7 @@ function localInput(instant: string, timezone: string) {
   return `${part('year')}-${part('month')}-${part('day')}T${part('hour')}:${part('minute')}`;
 }
 export function EventSheet({ organizationId, workspace, timezone, event, startsAt, mayEdit = true, children, slot = false }: {
-  organizationId: string; workspace: WorkspaceKey; timezone: string; event?: CalendarEvent;
+  organizationId: string; workspace?: WorkspaceKey; timezone: string; event?: CalendarEvent;
   startsAt: string; mayEdit?: boolean; children?: ReactNode; slot?: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -27,15 +28,16 @@ export function EventSheet({ organizationId, workspace, timezone, event, startsA
   </PageDrawer>;
 }
 function EventForm({ organizationId, workspace, timezone, event, startsAt, mayEdit, close }: {
-  organizationId: string; workspace: WorkspaceKey; timezone: string; event?: CalendarEvent; startsAt: string; mayEdit: boolean; close: () => void;
+  organizationId: string; workspace?: WorkspaceKey; timezone: string; event?: CalendarEvent; startsAt: string; mayEdit: boolean; close: () => void;
 }) {
   const [state, action, pending] = useActionState(saveEventAction, { error: null, savedId: null });
   const router = useRouter();
   const prefix = useId();
   useEffect(() => { if (state.savedId) { close(); router.refresh(); } }, [state.savedId, close, router]);
   return <form action={action} className="space-y-4">
-    <input type="hidden" name="organizationId" value={organizationId}/><input type="hidden" name="workspace" value={event?.workspace ?? workspace}/><input type="hidden" name="id" value={event?.id ?? ''}/>
+    <input type="hidden" name="organizationId" value={organizationId}/>{event?<input type="hidden" name="workspace" value={event.workspace}/>:null}<input type="hidden" name="id" value={event?.id ?? ''}/>
     <fieldset disabled={!mayEdit} className="space-y-4">
+      {!event?<FormField id={`${prefix}-workspace`} label="Workspace">{props=><SelectField {...props} name="workspace" required defaultValue={workspace??''} options={[{value:'',label:'Choose workspace'},...WORKSPACES.map(item=>({value:item.key,label:item.label}))]}/>}</FormField>:null}
       <FormField id={`${prefix}-title`} label="Title">{props => <TextInput {...props} name="title" required maxLength={200} defaultValue={event?.title}/>}</FormField>
       <FormField id={`${prefix}-start`} label="Starts" hint={timezone}>{props => <TextInput {...props} name="startsAt" type="datetime-local" required defaultValue={localInput(event?.startsAt ?? startsAt, timezone)}/>}</FormField>
       <FormField id={`${prefix}-end`} label="Ends">{props => <TextInput {...props} name="endsAt" type="datetime-local" required defaultValue={localInput(event?.endsAt ?? new Date(Date.parse(startsAt) + 3600000).toISOString(), timezone)}/>}</FormField>

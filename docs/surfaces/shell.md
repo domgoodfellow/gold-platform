@@ -10,6 +10,10 @@ Workspace and feature surface specifications. System-wide rules, including **Cor
 - **Communications:** Numbers and Configuration stay under Configure.
 - **Work:** Dashboard, Work items, Schedule, Resources, Locations and Equipment & Assets as eligible. Work has no Configuration row: Work types & workflow open from Work items and Scheduling & hours from Schedule (each page's Configure control), and that page stays selected while its editor is open. `field/configuration` still redirects to the first editor the member may open.
 
+## Shared Calendar
+
+Primary navigation is Home, Search, Calendar and Library at every organization depth. Calendar opens the canonical `/calendar` route without entering a workspace, defaults to authorized organization data and owns its selected state and page location. Workspace Calendar URLs redirect with date/view/filter intent preserved. Day, Week, Month, event editing and cancellation reuse the existing renderer and commands. Creation requires a visible workspace choice when the entry context supplies none. Loading, empty and partial-source states remain explicit. Calendar is not an operator workspace; Work Schedule remains the resource scheduling surface (ADR-052).
+
 ## Library navigation
 
 Library is shared infrastructure, separate from the Workspace list.

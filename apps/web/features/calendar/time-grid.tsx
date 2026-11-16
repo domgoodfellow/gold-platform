@@ -7,7 +7,7 @@ import type { WorkspaceKey } from '@/lib/navigation';
 import { EventSheet } from './event-sheet';
 
 export function CalendarTimeGrid({ events, dates, timezone, organizationId, workspace, renderEvent, focusDate }: {
-  events: OrganizationCalendarEvent[]; dates: string[]; timezone: string; organizationId: string; workspace: WorkspaceKey; focusDate: string;
+  events: OrganizationCalendarEvent[]; dates: string[]; timezone: string; organizationId: string; workspace?: WorkspaceKey; focusDate: string;
   renderEvent: (event: OrganizationCalendarEvent) => ReactNode;
 }) {
   const hour = new Intl.DateTimeFormat('en-CA', { timeZone: timezone, hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });

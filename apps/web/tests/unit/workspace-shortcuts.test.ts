@@ -29,7 +29,7 @@ describe('Work Home shortcuts', () => {
       { key: 'resources', label: 'Resources', href: `${base}/resources` },
       { key: 'locations', label: 'Locations', href: `${base}/locations` },
       { key: 'assets', label: 'Equipment & Assets', href: `${base}/assets` },
-      { key: 'work-calendar', label: 'Work calendar', href: `${base}/field/calendar` },
+      { key: 'calendar', label: 'Calendar', href: `${base}/calendar?workspace=field` },
       { key: 'schedule-configuration', label: 'Scheduling & hours', href: `${base}/schedule/configuration` },
     ]);
   });
@@ -57,6 +57,6 @@ describe('Work Home shortcuts', () => {
     const items = shortcuts(projectShell(input(ALL_CAPABILITIES)));
     expect(items.map((item) => item.href)).not.toContain(`${base}/field`);
     const registered = new Set([...AREAS.map((area) => `${base}/${area.route ?? area.segment}`), ...CONFIG_TARGETS.map((target) => `${base}/${target.path}`)]);
-    expect(items.filter((item) => !registered.has(item.href))).toEqual([]);
+    expect(items.filter((item) => !registered.has(item.href.split('?')[0]))).toEqual([]);
   });
 });

@@ -174,8 +174,8 @@ describe('CRM Dashboard calendar agenda',()=>{
     expect(within(agenda).getAllByRole('listitem')).toHaveLength(5);
     expect(within(agenda).getByText('Showing the next 5. Open Calendar for more.')).toBeInTheDocument();
     expect(within(agenda).getAllByRole('link',{name:/Due Sun, Nov 1/})).toHaveLength(5);
-    expect(within(agenda).getAllByRole('link')[1]).toHaveAttribute('href','/organizations/org/crm/calendar?view=day&on=2026-11-01&scope=workspace');
-    expect(within(agenda).getByRole('link',{name:'Open Calendar'})).toHaveAttribute('href','/organizations/org/crm/calendar?view=day&on=2026-11-01&scope=workspace');
+    expect(within(agenda).getAllByRole('link')[1]).toHaveAttribute('href','/organizations/org/calendar?view=day&on=2026-11-01&workspace=crm');
+    expect(within(agenda).getByRole('link',{name:'Open Calendar'})).toHaveAttribute('href','/organizations/org/calendar?view=day&on=2026-11-01&workspace=crm');
   });
   it('distinguishes an empty agenda from source failure and keeps healthy events readable',()=>{
     const {rerender}=render(<CalendarAgenda {...props}/>);
@@ -190,7 +190,7 @@ describe('CRM Dashboard calendar agenda',()=>{
   it('shows cross-day native duration and opens an ongoing event on today',()=>{
     const native={...event(0),source:'calendar',startsAt:'2026-10-31T22:00:00Z',endsAt:'2026-11-02T02:00:00Z',event:{}} as OrganizationCalendarEvent;
     render(<CalendarAgenda {...props} events={[native]}/>);
-    expect(screen.getByRole('link',{name:/Agenda task 0/})).toHaveAttribute('href','/organizations/org/crm/calendar?view=day&on=2026-11-01&scope=workspace');
+    expect(screen.getByRole('link',{name:/Agenda task 0/})).toHaveAttribute('href','/organizations/org/calendar?view=day&on=2026-11-01&workspace=crm');
     expect(screen.getByText(/Sat, Oct 31/)).toBeInTheDocument();
     expect(screen.getByText(/Sun, Nov 1/)).toBeInTheDocument();
     expect(screen.queryByText(/Due /)).toBeNull();
@@ -198,9 +198,9 @@ describe('CRM Dashboard calendar agenda',()=>{
   it('uses the canonical CRM-only read with open tasks and seven local dates through DST',async()=>{
     vi.useFakeTimers(); vi.setSystemTime(new Date('2026-11-01T04:30:00Z'));
     try {
-      vi.mocked(loadOrganizationCalendar).mockResolvedValue({events:[],notices:[],members:[],followUpsEnabled:false});
+      vi.mocked(loadOrganizationCalendar).mockResolvedValue({events:[],notices:[],members:[],followUpsEnabled:false,tasksAvailable:false,mayManageTasks:false});
       render(await CrmCalendarAgenda({db:{} as Db,organizationId:'org',timezone:'America/Toronto'}));
-      expect(loadOrganizationCalendar).toHaveBeenCalledWith({}, {organizationId:'org',source:'follow-ups',workspace:'crm',taskStatus:'open',within:{startsAt:'2026-11-01T04:30:00.000Z',endsAt:'2026-11-08T05:00:00.000Z'}});
+      expect(loadOrganizationCalendar).toHaveBeenCalledWith({}, {organizationId:'org',source:'all',workspace:'crm',taskStatus:'open',within:{startsAt:'2026-11-01T04:30:00.000Z',endsAt:'2026-11-08T05:00:00.000Z'}});
     } finally {vi.useRealTimers();}
   });
   it('places the agenda after relationships and attention with no redundant header Calendar action',()=>{

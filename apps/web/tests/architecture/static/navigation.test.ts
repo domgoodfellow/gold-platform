@@ -371,9 +371,9 @@ describe('the operator shell navigation', () => {
   it('keeps only places somebody works in the sidebar, and configuration behind canonical owners', () => {
     const inSidebar = AREAS.filter((area) => area.sidebar !== false).map((area) => area.segment);
     expect(inSidebar).toEqual([
-      'home',
+      'home', 'calendar',
       'library',
-      'sales', 'customers', 'opportunity-pipeline', 'calendar',
+      'sales', 'customers', 'opportunity-pipeline',
       'comms', 'calls', 'comms-inbox',
       'marketing', 'marketing-campaigns', 'marketing-audiences', 'marketing-leads', 'marketing-performance', 'support', 'support-cases', 'support-queue-workbench', 'support-service-levels-view', 'support-reports', 'ai', 'ai-activity', 'ai-evaluations',
       'finance', 'finance-catalog', 'finance-quotes', 'finance-invoices', 'finance-payments', 'finance-reports',
@@ -1085,7 +1085,8 @@ describe('the Library area', () => {
   it('sits directly after Home and outside Workspaces, per AREA_GROUPS order', () => {
     expect(AREA_GROUPS.map((group) => group.key)).toEqual(['home', 'library', 'workspaces', 'settings']);
     expect(AREAS[0].segment).toBe('home');
-    expect(AREAS[1].segment).toBe('library');
+    expect(AREAS[1].segment).toBe('calendar');
+    expect(AREAS[2].segment).toBe('library');
   });
 
   it('resolves through the one href function', () => {
