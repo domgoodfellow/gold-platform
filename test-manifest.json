@@ -313,7 +313,7 @@
     "apps/web/tests/component/crm-record-editing.test.tsx": {"category": "component", "concerns": ["crm", "forms", "accessibility"], "note": "Edit contact dialog sections, classification, discard guard, kept stage; shared EntityRow, StatusSummary, CollectionToolbar, ConfigurationEditor and RecordSubnavigation."},
     "apps/web/tests/unit/contact-record-sections.test.ts": {"category": "unit", "concerns": ["crm", "navigation"], "note": "Every former contact tab maps to its new section; unavailable sections fall back predictably."},
     "apps/web/e2e/crm-intake.spec.ts": {"category": "playwright-acceptance", "concerns": ["crm", "imports", "forms", "rbac", "responsive", "accessibility"], "note": "Add contacts intake on the isolated harness: shared dialog, two-stage creation with inline company, discard guard, guided Library CSV import to results with matching and provenance, Appearance presets, reduced role."},
-    "apps/web/e2e/crm-dashboard.spec.ts": {"category": "playwright-acceptance", "concerns": ["crm", "responsive", "rbac", "navigation"], "note": "Relationship-first CRM Dashboard across new, relationship-only, people-and-companies, sales-heavy and limited-member states at phone, tablet and desktop widths."},
+    "apps/web/e2e/crm-dashboard.spec.ts": {"category": "playwright-acceptance", "concerns": ["crm", "responsive", "rbac", "navigation", "calendar"], "note": "Relationship-first CRM Dashboard across new, relationship-only, people-and-companies, sales-heavy and limited-member states at phone, tablet and desktop widths."},
     "apps/web/tests/unit/crm-follow-up-time.test.ts": {
       "category": "unit",
       "concerns": ["crm", "time"]
@@ -1455,7 +1455,7 @@
     "apps/web/tests/component/contact-intake.test.tsx": {"category": "component", "concerns": ["crm", "forms", "rbac", "accessibility"], "note": "Add contacts intake: one dialog from every entry point, per-path permissions, two-stage creation, inline company, unsaved-change guard, focus return."},
     "apps/web/tests/component/crm-home.test.tsx": {
       "category": "component",
-      "concerns": ["crm", "navigation", "rbac"]
+      "concerns": ["crm", "navigation", "rbac", "calendar"]
     },
     "apps/web/tests/component/context-identity.test.tsx": {
       "category": "component",

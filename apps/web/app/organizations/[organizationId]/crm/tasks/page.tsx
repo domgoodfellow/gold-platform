@@ -31,7 +31,7 @@ export default async function FollowUpsPage({params,searchParams}:{params:Promis
   const options={organizationId,timezone:organization.timezone,members,mayManage:organization.capabilities.includes('follow_up.manage'),mayRemoveFromCallList:organization.capabilities.includes('call_list.remove')};
   const href=`/organizations/${organizationId}/crm/tasks`;
   const pageHref=(p:number)=>{const state=new URLSearchParams();for(const [key,value] of Object.entries(q))if(value && key!=='page')state.set(key,value);state.set('page',String(p));return `${href}?${state}`;};
-  return <AppPage><CollectionHeader location={{}} actions={<><ButtonLink href={`${href}/calendar`}>Calendar</ButtonLink>{options.mayManage?<FollowUpSheet {...options}/>:null}</>}/>
+  return <AppPage><CollectionHeader location={{}} actions={options.mayManage?<FollowUpSheet {...options}/>:null}/>
     <form method="get" role="search" className="mb-5 grid grid-cols-2 items-end gap-3 sm:grid-cols-3 xl:grid-cols-6">
       <FormField id="follow-up-q" label="Search tasks" className="col-span-2 sm:col-span-1">{p=><TextInput {...p} name="q" type="search" defaultValue={q.q}/>}</FormField>
       <FormField id="follow-up-status" label="Status">{p=><SelectField {...p} name="status" defaultValue={q.status??'open'} options={[...['open','completed','cancelled','all'].map((v) => ({ value: v, label: v }))]} />}</FormField>

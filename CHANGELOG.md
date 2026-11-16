@@ -34,6 +34,8 @@ Entries describe the product or operational change, not every file touched.
 
 ## 2026-11-16
 
+- CRM now offers Calendar after Contacts and Pipeline in workspace navigation, replacing the redundant Dashboard and Tasks header actions. A compact Dashboard agenda previews the next five native CRM events and open tasks over seven local dates, with timezone-aware dates, loading, empty and source-failure states and links into the existing Calendar.
+
 - The Dialer's call list is searched, filtered, counted and paged by the server, so search reaches every call, not only the first 25. Views are All calls, My calls, Due now, Overdue (before today in the business's timezone), Upcoming and Callbacks, each with its count; rows show the business and title, reason, due time with Due now or Overdue, number and owner.
 - Each call list entry can be rescheduled or reassigned (the same task, never a copy), skipped for this calling session without changing the task, or opened as a contact or task, by members permitted to.
 - Calling modes: Preview, Auto-advance (once a call's outcome is resolved, the next eligible call in the current view is prepared, never dialed, and nothing advances during a call) and Manual. After a call, members who manage tasks can schedule a callback, which moves the contact's one open call task and marks it as a callback, or complete the call task; hanging up completes nothing.

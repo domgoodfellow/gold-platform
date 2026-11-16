@@ -114,6 +114,7 @@ import {
  * area without an icon fails at the gate rather than rendering blank in the rail.
  */
 export const AREA_ICONS: Record<string, LucideIcon> = {
+  calendar: CalendarDays,
   home: Home,
   library: Library,
   marketing: Megaphone,

@@ -501,6 +501,15 @@ describe('every workspace Configuration organizes its real pages', () => {
 });
 
 describe('workspace calendars', () => {
+  it('offers Calendar after CRM Contacts and Pipeline, active only on its canonical route, even without optional tasks', () => {
+    const sections = project([], { enabledModules: new Set(), featureAvailability: new Set() });
+    const context = workspaceNavigation(sections, `/organizations/${ORG}/crm/calendar`)!;
+    expect(context.sections[0].items.map(item => item.key)).toEqual(['workspace-dashboard', 'opportunity-pipeline', 'calendar']);
+    expect(activeItemKey(context.sections, `/organizations/${ORG}/crm/calendar`)).toBe('calendar');
+    expect(activeItemKey(context.sections, `/organizations/${ORG}/crm`)).toBe('workspace-dashboard');
+    const full = workspaceNavigation(project(), `/organizations/${ORG}/crm/calendar`)!;
+    expect(full.sections[0].items.slice(0, 4).map(item => item.key)).toEqual(['workspace-dashboard', 'customers', 'opportunity-pipeline', 'calendar']);
+  });
   it('retains each workspace context and introduces no standalone calendar sidebar item', () => {
     const sections = project();
     expect(projectedItems(sections).some(item => item.key.includes('calendar'))).toBe(false);

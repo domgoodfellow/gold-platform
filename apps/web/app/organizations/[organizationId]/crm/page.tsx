@@ -1,3 +1,6 @@
+import { Suspense } from 'react';
+import { CrmCalendarAgenda } from '@/features/crm/home/calendar-agenda';
+import { OperationalPanel } from '@/components/operational/primitives';
 import { ContactIntakeProvider } from '@/features/crm/intake/contact-intake';
 import { anyIntake,contactIntakeOptions } from '@/lib/application/crm/contact-intake';
 import { CrmHome } from '@/features/crm/home/crm-home';
@@ -39,7 +42,8 @@ export default async function CrmDashboardPage({params,searchParams}:{params:Pro
   const relationships=!overview||active.length||!overview.total?{rows:active,mode:'active' as const,grouped}:{rows:await listRecentlyAddedContacts(db,{organizationId}),mode:'added' as const,grouped};
   // One intake dialog offers create, import and synchronize, each by the capability its destination enforces.
   const intake=await contactIntakeOptions(db,{organizationId,capabilities:organization.capabilities,modules:activeModuleKeys(states)}); const mayAddContacts=anyIntake(intake);
-  const home=<><CrmHome organizationId={organizationId} timezone={organization.timezone} month={month} overview={overview} relationships={relationships}
+  const calendar=<Suspense fallback={<OperationalPanel title="Upcoming calendar" density="compact"><p role="status" className="text-sm text-muted">Loading calendar...</p></OperationalPanel>}><CrmCalendarAgenda db={db} organizationId={organizationId} timezone={organization.timezone}/></Suspense>;
+  const home=<><CrmHome calendar={calendar} organizationId={organizationId} timezone={organization.timezone} month={month} overview={overview} relationships={relationships}
     sales={summary?{summary,stages:opportunitySummary}:null} salesComposition={composition}
     attention={{overdue:overdue?.total??0,today:today?.total??0,noNext:summary?.noNext??0,unassigned:summary?.unassigned??0}} today={today??[]} overdue={overdue??[]} noNext={noNext} unassigned={unassigned}
     followUpsEnabled={followUpsEnabled} conversionEnabled={conversionEnabled}

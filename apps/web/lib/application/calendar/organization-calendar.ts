@@ -2,7 +2,7 @@ import { listCalendarEvents, type CalendarEvent } from '@/lib/domain/calendar/ev
 import type { WorkspaceKey } from '@/lib/navigation';
 import type { Db } from '@/lib/db/types';
 import { followUpsAvailable } from '@/lib/application/crm/follow-ups';
-import { listTasks, type CrmTask } from '@/lib/domain/tasks/tasks';
+import { listTasks, type CrmTask, type TaskStatus } from '@/lib/domain/tasks/tasks';
 import { listMembers, type Member } from '@/lib/domain/tenancy/members';
 import { listWorkItems, type WorkItem } from '@/lib/domain/work-items/work-items';
 import { zonedDayRange, type Window } from '@/lib/domain/scheduling/window';
@@ -43,7 +43,7 @@ export function eventsOnDate(events: OrganizationCalendarEvent[], date: string, 
 }
 
 export async function loadOrganizationCalendar(db: Db, input: {
-  organizationId: string; within: Window; source: CalendarSource; owner?: string; workspace?: WorkspaceKey;
+  organizationId: string; within: Window; source: CalendarSource; owner?: string; workspace?: WorkspaceKey; taskStatus?: TaskStatus;
 }) {
   const notices: string[] = [];
   let members: Member[] = [];
@@ -54,7 +54,7 @@ export async function loadOrganizationCalendar(db: Db, input: {
       followUpsEnabled = await followUpsAvailable(db, input.organizationId);
       if (!followUpsEnabled) return [];
       const [items, owners] = await Promise.all([
-        listTasks(db, { organizationId: input.organizationId, from: input.within.startsAt,
+        listTasks(db, { organizationId: input.organizationId, status: input.taskStatus, from: input.within.startsAt,
           before: input.within.endsAt, ownerMembershipId: input.owner === 'unassigned' ? null : input.owner || undefined, limit: 500 }),
         listMembers(db, { organizationId: input.organizationId }),
       ]);
