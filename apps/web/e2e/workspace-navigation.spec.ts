@@ -459,17 +459,18 @@ test('the header carries page identity and actions, never the workspace destinat
   }
   writeFileSync(path.join(OUT, 'header-acceptance.json'), JSON.stringify(results, null, 2));
 
-  // Every workspace destination is still reachable from the sidebar, and each registered Calendar still
-  // opens a resolved calendar (not only its loading state), now reached in context rather than from the header.
+  // Workspace destinations remain in the sidebar. Primary Calendar and legacy contextual doors
+  // resolve to the same shared screen (not only its loading state).
   await page.setViewportSize({ width: 1440, height: 900 });
   for (const [key, workspace] of Object.entries(WORKSPACES) as [keyof typeof WORKSPACES, (typeof WORKSPACES)[keyof typeof WORKSPACES]][]) {
     await page.goto(`${base}${workspace.home}`);
     for (const child of CHILDREN[key]) await expect(sidebar(page).getByRole('link', { name: child, exact: true })).toBeVisible();
     if (key === 'crm') await page.getByRole('link', { name: 'Calendar', exact: true }).click();
     else await page.goto(`${base}${registered[key === 'work' ? 'work' : key]}`);
-    await page.waitForURL(`**${base}${registered[key === 'work' ? 'work' : key]}`);
+    await page.waitForURL(url => url.pathname === `${base}/calendar`);
+    if (key !== 'crm') expect(new URL(page.url()).searchParams.get('workspace')).toBe(key === 'work' ? 'field' : key);
     await expect(page.locator('header.sticky').getByRole('navigation', { name: 'breadcrumb' })).toContainText('Calendar');
-    await expect(page.getByLabel(/^(day|week|month) calendar$/).first()).toBeVisible();
+    await expect(page.locator('[data-calendar-time-scroll]')).toBeVisible();
   }
 
   // A page-local view control still works: Work items' List / Board.
@@ -478,7 +479,7 @@ test('the header carries page identity and actions, never the workspace destinat
   await page.waitForURL((url) => url.searchParams.get('view') === 'board');
   await expect(page.getByRole('navigation', { name: 'Work view' }).getByRole('link', { name: 'Board', exact: true })).toHaveAttribute('aria-current', 'page');
 
-  // The contextual Calendar action is focusable and shows focus.
+  // The primary Calendar destination is focusable and shows focus.
   await page.goto(`${base}/crm`);
   const calendar = page.getByRole('link', { name: 'Calendar', exact: true });
   await calendar.focus();

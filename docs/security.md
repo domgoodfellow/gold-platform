@@ -4,6 +4,10 @@
 
 Native `calendar_events` are shared within their Organization. Membership permits reading and creating an attributed event. The creator or an actor with `organization.manage` may edit/cancel it. Column grants prevent changing Organization, creator, workspace and creation time; database constraints enforce a positive interval. RLS enforces the tenant boundary. These rights do not grant permission to edit projected CRM Follow-ups or scheduled Work, which retain their own authorization.
 
+### Organization Activity
+
+Organization Activity (ADR-053) uses the caller session, verifies organization membership, filters event families by actual source access and validates each referenced record under RLS before formatting payloads or returning destinations. Contact names require `customer.read`; task history follows feature availability; financial snapshots require Finance availability and `report.read`. Unsupported/private service, Agent and notification event families are withheld from the global utility. This grants no new database access or source permission. Existing native Calendar events remain organization-shared; there is no private native-event flag whose meaning could be bypassed by aggregation.
+
 ### Imported connector execution boundary
 
 Imported connector packages execute only whitelisted read/search operations. The Node worker accepts timestamped HMAC requests from the Python command layer; public callers cannot supply a usable credential or choose an arbitrary module. Normal requests reference an expiring single-use database job. Claiming rechecks connection state, tenant membership, permissions or assistant/automation grants before retrieving Vault credentials. Verification requests carry a candidate API key only after caller membership and `integration.manage` have been checked. Raw upstream diagnostics are not returned.

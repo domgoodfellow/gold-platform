@@ -3,9 +3,11 @@
 **Date:** 2026-10-24
 **Status:** Accepted (owner-approved GuildOps V1.4 work order, section 11)
 **Supersedes:** ADR-048, point 4 only
-**Superseded by:** None
+**Superseded by:** ADR-052, point 2 Calendar placement only. Points 1 and 3 remain active.
 
 **Amended:** 2026-11-16, owner-approved CRM Calendar Navigation & Dashboard Integration work order: CRM Calendar is a first-class workspace sidebar destination; its sidebar and Dashboard agenda links replace the redundant CRM page-header actions. The organization-header restriction remains.
+
+**Extended:** 2026-11-16 by ADR-053: organization Activity joins the header utilities as authorized history. The Calendar-shortcut and notification restrictions remain.
 
 ## Context
 

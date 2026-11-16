@@ -704,7 +704,7 @@ The shared page-identity components own this responsibility.
 
 ### Page location contract (ADR-047)
 
-**Status.** This is the approved target. Migration is per route (`RESOLVED_LOCATION_ROUTES` in `lib/route/page-location.ts`). Today the CRM operating pages take their location from the resolver: CRM Home, Customers and Customer detail, Relationship pipeline, Opportunities and Opportunity detail, Tasks, CRM Calendar and CRM Search. The Opportunity pipeline (open decision U-17), CRM configuration (Batch 3) and every other workspace still publish their own trail through `PageLocation`. A route uses exactly one of the two, never both. On a migrated route the shell resolves the location once, and the bar, the phone's Up control and the page's `h1` read that one answer; loading and refused states keep the known ancestors.
+**Status.** This is the approved target. Migration is per route (`RESOLVED_LOCATION_ROUTES` in `lib/route/page-location.ts`). Today the CRM operating pages take their location from the resolver: CRM Home, Customers and Customer detail, Relationship pipeline, Opportunities and Opportunity detail, Tasks, shared Calendar and CRM Search. The Opportunity pipeline (open decision U-17), CRM configuration (Batch 3) and every other workspace still publish their own trail through `PageLocation`. A route uses exactly one of the two, never both. On a migrated route the shell resolves the location once, and the bar, the phone's Up control and the page's `h1` read that one answer; loading and refused states keep the known ancestors.
 
 - **One location.** Every page inside the organization, Settings and Platform shells shows one location: its ancestors and the current page, resolved by `resolveLocation` (`lib/route/page-location.ts`) from the canonical registries. A page supplies only server-known record labels; it never writes its own ancestors.
 - **Loading and missing.** A loading page keeps its known ancestors and shows the record name only once it is known. A missing, deleted or unauthorized record shows not-found inside its nearest valid ancestors, without disclosing which it was. Record data is never invented.
@@ -959,13 +959,13 @@ Home, Search and Library form one cluster at the top of the sidebar at every dep
 
 ## Workspace navigation
 
-Workspaces group operating destinations and configuration by canonical ownership. Each workspace Home remains an operational dashboard. Desktop, tablet and phone consume the same authorized hierarchy, and record/detail/calendar routes retain their workspace context.
+Workspaces group operating destinations and configuration by canonical ownership. Each workspace Home remains an operational dashboard. Desktop, tablet and phone consume the same authorized hierarchy, and record and detail routes retain their workspace context. Legacy workspace Calendar doors redirect into the shared Calendar with workspace filter context (ADR-052).
 
 ### Header composition
 
 The entered-workspace sidebar, with its phone sheet and page-location menu, is the one persistent workspace navigation (ADR-048). The page header owns page identity, the page's business actions, its page-support modes (Activity, Insights, Configure, always last) and page-local view controls; it never reproduces the workspace's destination list. `HeaderControls` is only the action row: actions stay right-aligned and wrap on a narrow canvas. Page-local view controls stay in the page: list or board, dispatch mode, attention categories, invoice filters, inbox queue filters, periods and record sub-views. They are not workspace navigation.
 
-The organization header carries no workspace Calendar shortcut (ADR-050). Calendars are the projection's registered destinations (`NavItem.calendar`), reached in context: CRM from its Dashboard (when tasks are available) and Tasks, Work from its Dashboard; no address is built by appending `/calendar`. No notification control is shown until an operator notification read model exists. Calendar pages themselves still check only organization membership (open question, Slice 2C).
+The organization header carries no Calendar shortcut (ADR-050). Calendar is a shared primary destination, with contextual workspace links and previews targeting its filtered canonical route (ADR-052). Native event creation explicitly chooses workspace provenance. No notification control is shown until an operator notification read model exists.
 
 Connect is an organization utility over canonical Connections, available in the shared header at desktop, tablet and phone widths when the member may manage connections. It uses a compact stack of actual account connector marks, a Connect label where space permits and an accessible name on every width. An empty account collection uses the generic connection glyph, without suggesting that an account exists. A warning dot accompanies a readable needs-attention or unavailable status; disconnected accounts remain distinct from broken accounts. The touch/keyboard popover groups relevant accounts before other organization accounts, supports Escape and focus return, and fits the viewport with internal scrolling. Its contents and management actions come from the Connections projection, not workspace navigation or platform-provider state. Other utilities and the phone Menu retain their existing owners and order.
 
@@ -1177,6 +1177,8 @@ A page renders only modes for which it has a real source.
 ---
 
 ### Activity
+
+Global organization Activity is a header utility distinct from page-support Activity (ADR-053). It uses the existing nonmodal overlay and phone-sheet geometry, retains page drafts, uses the same rail owner for last-opened arbitration with Agent and returns focus to its trigger on closing. The icon control uses an accessible name, tooltip and expanded state. Its history contains authorized record links, times and actor names, with bounded loading and explicit empty/unavailable states; it has no unread badge.
 
 Activity shows relevant historical/current events for the page context.
 

@@ -4,6 +4,8 @@
 **Status:** Accepted
 **Origin:** Formalizes architecture already present before the documentation reset; exact implementation history remains in Git.
 
+**Extended:** ADR-052 adds Calendar as another shared organization surface, retaining all existing decisions here.
+
 ## Context
 
 Several important cross-cutting capabilities do not represent one ongoing operating domain.

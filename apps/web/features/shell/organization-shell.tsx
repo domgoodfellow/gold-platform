@@ -8,6 +8,7 @@ import { developmentSupabaseTarget, getDb } from '@/lib/db/server';
 import { signOut } from '@/lib/domain/identity/credentials';
 import { requireOrganizationForBillingRecovery } from '@/lib/route/organization';
 import { loadOrganizationShellModel } from '@/lib/application/shell/organization-shell';
+import { OrganizationActivity } from '@/features/timeline/organization-activity';
 import { TenantAgentRail } from '@/features/agent/tenant-agent-rail';
 import { offeredSections } from '@/features/settings/settings-map';
 import { projectSettingsNav, settingsSearchItems } from '@/lib/settings-nav';
@@ -105,7 +106,7 @@ export async function OrganizationShell({
     <AccountAppearance brand={brand}>
       <ShellLayoutProvider value={shellLayout}>
       <BusinessVocabulary profile={businessProfile}>
-      <OrganizationFrame
+      <OrganizationFrame organizationActivity={<OrganizationActivity organizationId={organizationId} timezone={organization.timezone}/>}
         organizationId={organizationId}
         displayName={displayName}
         setupPending={setupPending}

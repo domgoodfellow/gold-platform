@@ -199,10 +199,10 @@ test.describe.serial('Relationship-first CRM Dashboard', () => {
         await agenda.scrollIntoViewIfNeeded();
         await page.screenshot({path:test.info().outputPath(`crm-agenda-${viewport.name}.png`),fullPage:true});
         await agenda.getByRole('link',{name:new RegExp(nativeTitles[0])}).click();
-        await expect(page).toHaveURL(/\/crm\/calendar\?view=day&on=.*scope=workspace/);
+        await expect(page).toHaveURL(/\/calendar\?view=day&on=.*workspace=crm/);
         await page.goBack();
         await region(page,'Upcoming calendar').getByRole('link',{name:'Open Calendar'}).click();
-        await expect(page).toHaveURL(/\/crm\/calendar\?view=day&on=.*scope=workspace/);
+        await expect(page).toHaveURL(/\/calendar\?view=day&on=.*workspace=crm/);
         await expect(page.getByRole('heading',{level:1,name:'Calendar',exact:true})).toBeAttached();
         const location=page.locator('header').getByRole('navigation',{name:viewport.width<768?'Page location':'breadcrumb',exact:true});
         await expect(location).toContainText('Calendar');
@@ -211,11 +211,11 @@ test.describe.serial('Relationship-first CRM Dashboard', () => {
         const nav=page.getByRole('navigation',{name:'This business',exact:true}).filter({visible:true});
         const calendar=nav.getByRole('link',{name:'Calendar',exact:true});
         await expect(calendar).toHaveAttribute('aria-current','page');
-        await expect(nav.getByRole('link',{name:'Dashboard',exact:true})).not.toHaveAttribute('aria-current','page');
-        await nav.getByRole('link',{name:'Dashboard',exact:true}).click();
+        await expect(nav.getByRole('link',{name:'CRM',exact:true})).not.toHaveAttribute('aria-current','page');
+        await nav.getByRole('link',{name:'CRM',exact:true}).click();
         if(viewport.width<768) await page.locator('header').getByRole('button',{name:'Menu',exact:true}).click();
         await nav.getByRole('link',{name:'Calendar',exact:true}).click();
-        await expect(page).toHaveURL(`${base}/crm/calendar`);
+        await expect(page).toHaveURL(`${base}/calendar`);
         expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
         await page.screenshot({path:test.info().outputPath(`crm-calendar-navigation-${viewport.name}.png`),fullPage:true});
       }

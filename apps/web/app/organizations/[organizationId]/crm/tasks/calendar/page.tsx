@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { requireOrganization } from '@/lib/route/organization';
+import { legacyCalendarHref } from '@/lib/application/calendar/navigation';
 
 export default async function LegacyCalendarPage({ params, searchParams }: {
   params: Promise<{ organizationId: string }>;
@@ -7,10 +8,5 @@ export default async function LegacyCalendarPage({ params, searchParams }: {
 }) {
   const { organizationId } = await params;
   await requireOrganization(organizationId);
-  const query = new URLSearchParams();
-  for (const [key, value] of Object.entries(await searchParams)) {
-    for (const entry of Array.isArray(value) ? value : value === undefined ? [] : [value]) query.append(key, entry);
-  }
-  const suffix = query.toString();
-  redirect(`/organizations/${organizationId}/crm/calendar${suffix ? `?${suffix}` : ''}`);
+  return redirect(legacyCalendarHref(organizationId, 'crm', await searchParams));
 }

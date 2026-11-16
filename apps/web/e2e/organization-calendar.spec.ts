@@ -19,7 +19,7 @@ import { recordCommercialTerm } from '../lib/domain/commercial/terms';
 import { chooseOption } from './select-field';
 
 test.use({ storageState: { cookies: [], origins: [] }, hasTouch: true, trace: 'off' });
-test('calendar has time blocks, slot creation, event editing and workspace context without a standalone sidebar entry', async ({ page }, testInfo) => {
+test('shared Calendar has primary navigation, time blocks, attributed event editing and workspace filters', async ({ page }, testInfo) => {
   test.setTimeout(180_000);
   page.setDefaultTimeout(15000);
   config({ path: path.join(__dirname, '../../..', '.env.test'), quiet: true });
@@ -54,8 +54,8 @@ test('calendar has time blocks, slot creation, event editing and workspace conte
   await page.getByRole('button', { name: 'Log in', exact: true }).click();
   await page.waitForURL(location => location.pathname !== '/login');
   await page.goto(`${base}/crm`);
-  await page.getByRole('link', { name: 'View calendar', exact: true }).click();
-  await expect(page).toHaveURL(new RegExp(`${base}/crm/calendar$`));
+  await page.getByRole('link', { name: 'Calendar', exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`${base}/calendar$`));
   await expect(page.getByRole('heading', { name: 'Calendar', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'New task', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'New event', exact: true })).toBeVisible();
@@ -65,6 +65,8 @@ test('calendar has time blocks, slot creation, event editing and workspace conte
   await slot.click();
   let drawer = page.getByRole('dialog', { name: 'New event', exact: true });
   await expect(drawer.getByLabel('Starts', { exact: true })).toHaveValue(`${today}T09:00`);
+  await expect(drawer.getByRole('combobox', { name: 'Workspace', exact: true })).toBeVisible();
+  await chooseOption(drawer.getByRole('combobox', { name: 'Workspace', exact: true }), 'crm');
   await drawer.getByLabel('Title', { exact: true }).fill('Team planning');
   await drawer.getByLabel('Ends', { exact: true }).fill(`${today}T10:30`);
   await drawer.getByRole('button', { name: 'Save event', exact: true }).click();
@@ -92,10 +94,10 @@ test('calendar has time blocks, slot creation, event editing and workspace conte
   await scheduleWorkItem(owner, { workItemId: workId, startsAt: new Date(start).toISOString(), endsAt: new Date(start + 3600000).toISOString() });
   expect(await listWorkItems(owner, { organizationId: foreign })).toEqual([]);
   expect(await listFollowUps(owner, { organizationId: foreign })).toEqual([]);
-  await page.reload();
+  await page.goto(`${base}/calendar?workspace=crm`);
   await expect(page.getByRole('button', { name: 'Proposal meeting', exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Calendar installation', exact: true })).toHaveCount(0);
-  await chooseOption(page.getByRole('combobox', { name: 'Calendar scope', exact: true }), 'organization');
+  await chooseOption(page.getByRole('combobox', { name: 'Calendar workspace', exact: true }), '');
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
   await expect(page.getByRole('link', { name: 'Calendar installation', exact: true })).toBeVisible();
   await page.goto(`${base}/field/calendar`);
@@ -103,14 +105,15 @@ test('calendar has time blocks, slot creation, event editing and workspace conte
   await expect(page.getByRole('button', { name: 'Team planning', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Proposal meeting', exact: true })).toHaveCount(0);
   await page.goto(`${base}/crm/calendar?view=day&on=${today}`);
-  await expect(page).toHaveURL(new RegExp(`${base}/crm/calendar`));
-  await chooseOption(page.getByRole('combobox', { name: 'Calendar scope', exact: true }), 'organization');
+  await expect(page).toHaveURL(new RegExp(`${base}/calendar\\?`));
+  await chooseOption(page.getByRole('combobox', { name: 'Calendar workspace', exact: true }), '');
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
   for (const [width, height] of [[1600, 1000], [768, 1024], [390, 844]]) {
     await page.setViewportSize({ width, height });
     for (const view of ['Day', 'Week', 'Month']) {
       await page.getByRole('link', { name: view, exact: true }).click();
-      await expect(page.getByLabel(`${view.toLowerCase()} calendar`, { exact: true })).toBeVisible();
+      if (view === 'Month') await expect(page.getByLabel('month calendar', { exact: true })).toBeVisible();
+      else await expect(page.locator('[data-calendar-time-scroll]')).toBeVisible();
       if (view === 'Month' && width < 1000) {
         await expect(page.getByRole('link', { name: `View 3 items on ${today}`, exact: true })).toBeVisible();
       } else {
@@ -127,9 +130,8 @@ test('calendar has time blocks, slot creation, event editing and workspace conte
   await drawer.getByRole('button', { name: 'Cancel event', exact: true }).click();
   await expect(drawer).toBeHidden();
   await expect(page.getByRole('button', { name: 'Team planning', exact: true })).toHaveCount(0);
-  await page.goto(`${base}/support`);
-  await page.getByRole('link', { name: 'Support calendar', exact: true }).click();
-  await expect(page).toHaveURL(new RegExp(`${base}/support/calendar`));
+  await page.goto(`${base}/support/calendar`);
+  await expect(page).toHaveURL(new RegExp(`${base}/calendar\\?.*workspace=support`));
   await expect(page.getByRole('button', { name: 'Proposal meeting', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'New event', exact: true }).click();
   drawer = page.getByRole('dialog', { name: 'New event', exact: true });

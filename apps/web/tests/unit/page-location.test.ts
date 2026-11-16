@@ -373,7 +373,7 @@ describe('the migration boundary', () => {
     expect(adoptsResolvedLocation(`${ORG}/crm/contacts`)).toBe(true);
     expect(adoptsResolvedLocation(`${ORG}/crm/contacts/c1`)).toBe(true);
     // Slice 1C: CRM operating pages, but neither the Opportunity pipeline (U-17) nor CRM configuration (Batch 3).
-    for (const path of ['/crm', '/crm/pipeline', '/crm/contacts/stages', '/crm/opportunities', '/crm/opportunities/o1', '/crm/tasks', '/crm/calendar', '/crm/search']) {
+    for (const path of ['/crm', '/crm/pipeline', '/crm/contacts/stages', '/crm/opportunities', '/crm/opportunities/o1', '/crm/tasks', '/calendar', '/crm/search']) {
       expect(adoptsResolvedLocation(`${ORG}${path}`), path).toBe(true);
     }
     for (const path of ['/crm/configuration', '/crm/configuration/relationship-stages', '/crm/configuration/fields']) {

@@ -55,7 +55,7 @@ export type NavItem = {
    */
   configureDoors?: NavItem[];
   /**
-   * The workspace's registered Calendar destination (`AREAS`, `{home}/calendar`), offered as a shortcut
+   * The shared registered Calendar destination with this workspace's filter, offered as a shortcut
    * only while its Home is usable and the calendar area is available. Never built from a string.
    */
   calendar?: NavItem;
@@ -253,11 +253,10 @@ export function projectShell(input: ShellInput): ShellSection[] {
         section: 'workspaces',
         children: branch.map(concern => ({ ...concern, section: 'workspaces' as const })),
       } : undefined;
-    // The registered calendar beneath this workspace's Home, only while that Home is usable.
-    const calendarRoute = home ? `${home.route ?? home.segment}/calendar` : null;
-    const calendarArea = calendarRoute ? AREAS.find((area) => area.workspace === workspace.key && (area.route ?? area.segment) === calendarRoute) : undefined;
-    const calendar: NavItem | undefined = calendarArea && eligible(calendarArea)
-      ? { key: calendarArea.segment, label: calendarArea.label, href: areaHref(organizationId, calendarArea.segment), section: 'workspaces' }
+    // Contextual shortcuts target the shared destination, preserving workspace provenance.
+    const calendarArea = AREAS.find(area => area.segment === 'calendar');
+    const calendar: NavItem | undefined = home && calendarArea && eligible(calendarArea)
+      ? { key: calendarArea.segment, label: calendarArea.label, href: `${areaHref(organizationId, calendarArea.segment)}?workspace=${workspace.key}`, section: 'home' }
       : undefined;
     return [{
       key: `workspace-${workspace.key}`,

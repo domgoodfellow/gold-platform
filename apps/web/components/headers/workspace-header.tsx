@@ -20,6 +20,7 @@ export function WorkspaceHeader({
   utilityControls = {},
   agentTrigger = 'always',
   phoneAction,
+  activityControl,
 }: {
   navigationTrigger?: 'always' | 'md';
   context?: ReactNode;
@@ -33,6 +34,8 @@ export function WorkspaceHeader({
   /** Use 'md' when mobile navigation carries Agent. */
   agentTrigger?: 'always' | 'md' | 'none';
   phoneAction?: ReactNode;
+  /** Organization-only global history, supplied by the owning shell. */
+  activityControl?: ReactNode;
 }) {
   return (
     <header className="sticky top-0 z-20 flex h-(--header-height) shrink-0 items-center gap-3 border-b border-border bg-background px-4 sm:px-6">
@@ -72,6 +75,7 @@ export function WorkspaceHeader({
             );
           })}
         </div>
+        {activityControl}
         {phoneAction}
         {agentTrigger !== 'none' ? <div className={cx('items-center', agentTrigger === 'md' ? 'hidden md:flex' : 'flex')}><AgentTrigger /></div> : null}
       </div>

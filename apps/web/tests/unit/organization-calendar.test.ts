@@ -5,8 +5,9 @@ import type { CrmTask } from '@/lib/domain/tasks/tasks';
 import type { WorkItem } from '@/lib/domain/work-items/work-items';
 import { calendarEvents, eventsOnDate, loadOrganizationCalendar, parseCalendarSource } from '@/lib/application/calendar/organization-calendar';
 
-const reads = vi.hoisted(() => ({ available: vi.fn(), followUps: vi.fn(), work: vi.fn(), members: vi.fn(), events: vi.fn() }));
-vi.mock('@/lib/application/crm/follow-ups', () => ({ followUpsAvailable: reads.available }));
+const reads = vi.hoisted(() => ({ available: vi.fn(), followUps: vi.fn(), work: vi.fn(), members: vi.fn(), events: vi.fn(), organization: vi.fn(), features: vi.fn() }));
+vi.mock('@/lib/domain/tenancy/organizations',()=>({getOrganization:reads.organization}));
+vi.mock('@/lib/domain/catalogue/organization-plans',()=>({organizationResolvedFeatureStates:reads.features,availableFeatureKeys:(enabled:boolean)=>new Set(enabled?['follow_ups']:[])}));
 vi.mock('@/lib/domain/tasks/tasks', () => ({ listTasks: reads.followUps }));
 vi.mock('@/lib/domain/work-items/work-items', () => ({ listWorkItems: reads.work }));
 vi.mock('@/lib/domain/calendar/events', () => ({ listCalendarEvents: reads.events }));
@@ -21,6 +22,8 @@ const db = {} as Db;
 beforeEach(() => {
   vi.resetAllMocks();
   reads.available.mockResolvedValue(true);
+  reads.organization.mockResolvedValue({capabilities:['follow_up.manage']});
+  reads.features.mockImplementation(()=>reads.available());
   reads.followUps.mockResolvedValue(counted([followUp], 1));
   reads.work.mockResolvedValue(counted([work], 1));
   reads.members.mockResolvedValue([]);
@@ -64,7 +67,7 @@ describe('shared organization calendar', () => {
   it('honors source selection and discloses truncated or unknown totals', async () => {
     reads.work.mockResolvedValue(counted([work], 501));
     const result = await loadOrganizationCalendar(db, { ...input, source: 'work' });
-    expect(reads.available).not.toHaveBeenCalled();
+    expect(reads.followUps).not.toHaveBeenCalled();
     expect(result.notices).toHaveLength(1);
     expect(parseCalendarSource('unknown')).toBe('all');
     expect(parseCalendarSource('follow-ups')).toBe('follow-ups');
@@ -72,7 +75,7 @@ describe('shared organization calendar', () => {
 });
 
 it('scopes dashboard calendar reads to native CRM events and open tasks without reading scheduled Work', async () => {
-  await loadOrganizationCalendar(db, {...input,source:'follow-ups',workspace:'crm',taskStatus:'open'});
+  await loadOrganizationCalendar(db, {...input,source:'all',workspace:'crm',taskStatus:'open'});
   expect(reads.events).toHaveBeenCalledWith(db, {organizationId:'org',workspace:'crm',within:input.within});
   expect(reads.followUps).toHaveBeenCalledWith(db, expect.objectContaining({status:'open',from:input.within.startsAt,before:input.within.endsAt}));
   expect(reads.work).not.toHaveBeenCalled();
@@ -80,8 +83,19 @@ it('scopes dashboard calendar reads to native CRM events and open tasks without 
 it('keeps native CRM events readable without the optional Tasks feature', async () => {
   reads.available.mockResolvedValue(false);
   reads.events.mockResolvedValue(counted([{id:'native',title:'Planning',startsAt:input.within.startsAt,endsAt:input.within.endsAt,status:'scheduled'}],1));
-  const result=await loadOrganizationCalendar(db, {...input,source:'follow-ups',workspace:'crm',taskStatus:'open'});
+  const result=await loadOrganizationCalendar(db, {...input,source:'all',workspace:'crm',taskStatus:'open'});
   expect(result.events.map(e=>e.source)).toEqual(['calendar']);
   expect(reads.followUps).not.toHaveBeenCalled();
   expect(reads.work).not.toHaveBeenCalled();
+});
+
+it('refuses aggregation without actual organization membership before any source query',async()=>{
+  reads.organization.mockResolvedValue(null);
+  await expect(loadOrganizationCalendar(db,input)).rejects.toMatchObject({code:'calendar.forbidden'});
+  expect(reads.events).not.toHaveBeenCalled();expect(reads.followUps).not.toHaveBeenCalled();expect(reads.work).not.toHaveBeenCalled();
+});
+it('applies workspace and source filters independently without reading other sources',async()=>{
+  await loadOrganizationCalendar(db,{...input,workspace:'field',source:'events'});
+  expect(reads.followUps).not.toHaveBeenCalled();expect(reads.work).not.toHaveBeenCalled();
+  expect(reads.events).toHaveBeenCalledWith(db,expect.objectContaining({workspace:'field'}));
 });

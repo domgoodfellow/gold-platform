@@ -73,7 +73,7 @@ type LocationNode = {
  * Areas whose route exists only to redirect. Their address is never a link and never a current
  * page; `library` and `settings` are also the plain-text grouping levels of their sections.
  */
-const REDIRECT_AREAS = new Set(['library', 'organization-calendar-legacy', 'follow-up-calendar', 'insights', 'pricing', 'fields', 'roles', 'integrations', 'settings']);
+const REDIRECT_AREAS = new Set(['library', 'crm-calendar', 'work-calendar', 'follow-up-calendar', 'insights', 'pricing', 'fields', 'roles', 'integrations', 'settings']);
 
 /** Labels for Settings pages the Settings projection does not list. */
 const SETTINGS_LABELS: Readonly<Record<string, string>> = { 'custom-fields': 'Custom fields', 'public-profile': 'Public profile', secrets: 'Secrets & credentials', team: 'Access' };
@@ -213,7 +213,7 @@ function deriveNodes(): LocationNode[] {
     if (area.segment === 'home' || workspaceHomes.has(area.segment)) continue;
     // The configuration target at the same address owns it; its read-only use is an open decision (U-3).
     if (targetPaths.has(route)) continue;
-    if (REDIRECT_AREAS.has(area.segment)) {
+    if (REDIRECT_AREAS.has(area.segment) || (route.endsWith('/calendar') && area.segment !== 'calendar')) {
       if (area.segment !== 'library' && area.segment !== 'settings') nodes.push({ id: `area:${area.segment}`, scope: 'organization', kind: 'destination', pattern: route, area: area.segment, redirect: true });
       continue;
     }

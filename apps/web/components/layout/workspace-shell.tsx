@@ -17,6 +17,7 @@ export function WorkspaceShell({
   header,
   bottomBar,
   agent,
+  organizationActivity,
   children,
 }: {
   sidebar: ReactNode;
@@ -24,10 +25,11 @@ export function WorkspaceShell({
   header: ReactNode;
   bottomBar?: ReactNode;
   agent: ReactNode;
+  organizationActivity?: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <WorkspaceRailProvider>
+    <WorkspaceRailProvider organizationActivity={organizationActivity}>
       <WorkspaceCrumbsProvider navigation={locationNavigation}>
         <WorkspaceRightRail
           bottomInset={bottomBar != null}

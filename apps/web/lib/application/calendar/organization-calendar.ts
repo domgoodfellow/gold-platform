@@ -1,7 +1,9 @@
 import { listCalendarEvents, type CalendarEvent } from '@/lib/domain/calendar/events';
 import type { WorkspaceKey } from '@/lib/navigation';
 import type { Db } from '@/lib/db/types';
-import { followUpsAvailable } from '@/lib/application/crm/follow-ups';
+import { getOrganization } from '@/lib/domain/tenancy/organizations';
+import { organizationResolvedFeatureStates, availableFeatureKeys } from '@/lib/domain/catalogue/organization-plans';
+import { DomainError } from '@/lib/domain/errors';
 import { listTasks, type CrmTask, type TaskStatus } from '@/lib/domain/tasks/tasks';
 import { listMembers, type Member } from '@/lib/domain/tenancy/members';
 import { listWorkItems, type WorkItem } from '@/lib/domain/work-items/work-items';
@@ -9,7 +11,7 @@ import { zonedDayRange, type Window } from '@/lib/domain/scheduling/window';
 
 export type CalendarSource = 'all' | 'follow-ups' | 'work' | 'events';
 export function parseCalendarSource(value?: string): CalendarSource {
-  return value === 'follow-ups' || value === 'work' ? value : 'all';
+  return value === 'follow-ups' || value === 'work' || value === 'events' ? value : 'all';
 }
 export type OrganizationCalendarEvent = {
   key: string;
@@ -45,13 +47,16 @@ export function eventsOnDate(events: OrganizationCalendarEvent[], date: string, 
 export async function loadOrganizationCalendar(db: Db, input: {
   organizationId: string; within: Window; source: CalendarSource; owner?: string; workspace?: WorkspaceKey; taskStatus?: TaskStatus;
 }) {
+  const organization = await getOrganization(db, input.organizationId);
+  if (!organization) throw new DomainError('Organization membership required.', 'calendar.forbidden');
+  const features = availableFeatureKeys(await organizationResolvedFeatureStates(db, { organizationId: input.organizationId }));
   const notices: string[] = [];
   let members: Member[] = [];
   let followUpsEnabled = false;
   const [crm, work, native] = await Promise.allSettled([
     (async () => {
-      if (input.source !== 'all' && input.source !== 'follow-ups') return [];
-      followUpsEnabled = await followUpsAvailable(db, input.organizationId);
+      if ((input.source !== 'all' && input.source !== 'follow-ups') || (input.workspace && input.workspace !== 'crm')) return [];
+      followUpsEnabled = features.has('follow_ups');
       if (!followUpsEnabled) return [];
       const [items, owners] = await Promise.all([
         listTasks(db, { organizationId: input.organizationId, status: input.taskStatus, from: input.within.startsAt,
@@ -62,13 +67,13 @@ export async function loadOrganizationCalendar(db: Db, input: {
       if (items.exactCount === null || items.total > items.length) notices.push('Tasks preview may be incomplete. Choose a shorter period or open Tasks for all records.');
       return items;
     })(),
-    input.source !== 'all' && input.source !== 'work' ? Promise.resolve([]) : listWorkItems(db, {
+    ((input.source !== 'all' && input.source !== 'work') || (input.workspace && input.workspace !== 'field')) ? Promise.resolve([]) : listWorkItems(db, {
       organizationId: input.organizationId, within: input.within, scheduled: true, sort: 'schedule', limit: 500,
     }).then(items => {
       if (items.exactCount === null || items.total > items.length) notices.push('Scheduled work preview may be incomplete. Choose a shorter period or open Schedule for all records.');
       return items;
     }),
-    listCalendarEvents(db, { organizationId: input.organizationId, within: input.within, workspace: input.workspace }),
+    input.source === 'all' || input.source === 'events' ? listCalendarEvents(db, { organizationId: input.organizationId, within: input.within, workspace: input.workspace }) : Promise.resolve(Object.assign([], {exactCount: 0, total: 0})),
   ]);
   if (native.status === 'rejected') notices.push('Calendar events are unavailable.');
   else if (native.value.exactCount === null || native.value.total > native.value.length) notices.push('Event preview is limited. Choose a shorter period to see all events.');
@@ -78,5 +83,5 @@ export async function loadOrganizationCalendar(db: Db, input: {
   if (native.status === 'fulfilled') for (const event of native.value) events.push({ key: `event:${event.id}`, source: 'calendar', event, title: event.title, startsAt: event.startsAt, endsAt: event.endsAt, context: '', status: event.status });
   events.sort((a,b) => Date.parse(a.startsAt) - Date.parse(b.startsAt) || a.key.localeCompare(b.key));
   return { events,
-    notices, members, followUpsEnabled };
+    notices, members, followUpsEnabled, tasksAvailable: features.has('follow_ups'), mayManageTasks: features.has('follow_ups') && organization.capabilities.includes('follow_up.manage') };
 }

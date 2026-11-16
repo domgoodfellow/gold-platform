@@ -10,6 +10,10 @@ Workspace and feature surface specifications. System-wide rules, including **Cor
 - **Communications:** Numbers and Configuration stay under Configure.
 - **Work:** Dashboard, Work items, Schedule, Resources, Locations and Equipment & Assets as eligible. Work has no Configuration row: Work types & workflow open from Work items and Scheduling & hours from Schedule (each page's Configure control), and that page stays selected while its editor is open. `field/configuration` still redirects to the first editor the member may open.
 
+## Shared Calendar
+
+Primary navigation is Home, Search, Calendar and Library at every organization depth. Calendar opens the canonical `/calendar` route without entering a workspace, defaults to authorized organization data and owns its selected state and page location. Workspace Calendar URLs redirect with date/view/filter intent preserved. Day, Week, Month, event editing and cancellation reuse the existing renderer and commands. Creation requires a visible workspace choice when the entry context supplies none. Loading, empty and partial-source states remain explicit. Calendar is not an operator workspace; Work Schedule remains the resource scheduling surface (ADR-052).
+
 ## Library navigation
 
 Library is shared infrastructure, separate from the Workspace list.
@@ -71,6 +75,8 @@ Below 768 px, Agent is a fullscreen native modal dialog, with the shared header-
 One dialog element and conversation subtree remain in place across layout changes and stay mounted after first opening. Native modal activation changes browser presentation without reparenting React content; lazy organization-keyed bootstrap, drafts, uploads, selections and pending actions remain with the existing controller. Page-support panels retain their separate nonmodal geometry. The permanent operator identity/scope banner is omitted; recoverable errors remain. Context is the one composer popover: it lists what the Agent sees, holds the one per-conversation control (include the open record) and, for people who manage the business, links to Agent settings in the AI workspace. There is no separate Configure and no model choice: GildOps chooses the model. Answers render as formatted text with Copy and Ask again beneath them, and a question in flight waits in an Agent bubble.
 
 ## Persistent application controls
+
+The persistent organization header groups Team, Connections and Activity before Agent. Activity is an icon-only control named Organization activity with an Activity tooltip at every width. Its nonmodal responsive panel shows chronological recent history, actor and time, useful authorized record context, and canonical links, with loading, empty, error/retry and bounded Load more states. The shell supplies it independently of page Activity; both retain state, with the selected secondary panel visible. Global Activity overlays the page at tablet/desktop widths and uses the nonmodal phone sheet; Activity and Agent follow last-opened arbitration, while existing page panels retain wide coexistence with Agent. Escape and Close restore the global trigger. No unread indicator or notifications model is added; Platform receives no control (ADR-053).
 
 The sidebar footer holds the Account/session menu, which represents the signed-in person: Settings,
 Help & documentation, Contact GildOps Support, then Sign out. Help and Contact are organization-scoped

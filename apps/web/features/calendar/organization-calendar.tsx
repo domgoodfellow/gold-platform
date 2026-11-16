@@ -8,7 +8,7 @@ import { eventsOnDate, type OrganizationCalendarEvent } from '@/lib/application/
 import { FollowUpSheet, type FollowUpOptions } from '@/features/crm/follow-ups/follow-up-sheet';
 
 export function OrganizationCalendar({ events, dates, view, month, today, filters, basePath, workspace, actorId, mayManageCalendar, selectedDate, ...options }: FollowUpOptions & {
-  selectedDate: string; workspace: WorkspaceKey; actorId: string; mayManageCalendar: boolean; basePath: string; events: OrganizationCalendarEvent[]; dates: string[]; view: CalendarView; month: string; today: string; filters: CalendarFilters;
+  selectedDate: string; workspace?: WorkspaceKey; actorId: string; mayManageCalendar: boolean; basePath: string; events: OrganizationCalendarEvent[]; dates: string[]; view: CalendarView; month: string; today: string; filters: CalendarFilters;
 }) {
   const base = `/organizations/${options.organizationId}`;
   const title = (event: OrganizationCalendarEvent) => event.source === 'follow-ups'

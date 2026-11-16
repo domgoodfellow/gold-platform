@@ -24,7 +24,7 @@ describe('flat business navigation', () => {
   it('has Home, Library and Workspaces only, in canonical order', () => {
     expect(sections.map((section) => section.key)).toEqual(SHELL_SECTION_ORDER);
     expect(sections.map((section) => section.label)).toEqual([null, null, 'Workspaces']);
-    expect(keys(sections)).toEqual(['home', 'library', ...workspaceKeys]);
+    expect(keys(sections)).toEqual(['home', 'calendar', 'library', ...workspaceKeys]);
     for (const row of rows) {
       expect(row.children).toBeUndefined();
       expect(row.heading).toBeUndefined();
@@ -49,7 +49,7 @@ describe('flat business navigation', () => {
   });
   it('does not conjure module or feature gated destinations', () => {
     const none = project(ALL_CAPABILITIES, { enabledModules: new Set(), featureAvailability: new Set() });
-    expect(keys(none)).toEqual(['home', 'library', 'workspace-crm', 'workspace-communications', 'workspace-marketing', 'workspace-support', 'workspace-field', 'workspace-finance', 'workspace-ai', 'workspace-studio']);
+    expect(keys(none)).toEqual(['home', 'calendar', 'library', 'workspace-crm', 'workspace-communications', 'workspace-marketing', 'workspace-support', 'workspace-field', 'workspace-finance', 'workspace-ai', 'workspace-studio']);
     const aliases = projectedItems(none).flatMap((item) => item.activeHrefs ?? []);
     expect(aliases).not.toContain(`/organizations/${ORG}/assets`);
     expect(aliases).not.toContain(`/organizations/${ORG}/crm/contacts/stages`);
@@ -501,18 +501,17 @@ describe('every workspace Configuration organizes its real pages', () => {
 });
 
 describe('workspace calendars', () => {
-  it('offers Calendar after CRM Contacts and Pipeline, active only on its canonical route, even without optional tasks', () => {
-    const sections = project([], { enabledModules: new Set(), featureAvailability: new Set() });
-    const context = workspaceNavigation(sections, `/organizations/${ORG}/crm/calendar`)!;
-    expect(context.sections[0].items.map(item => item.key)).toEqual(['workspace-dashboard', 'opportunity-pipeline', 'calendar']);
-    expect(activeItemKey(context.sections, `/organizations/${ORG}/crm/calendar`)).toBe('calendar');
-    expect(activeItemKey(context.sections, `/organizations/${ORG}/crm`)).toBe('workspace-dashboard');
-    const full = workspaceNavigation(project(), `/organizations/${ORG}/crm/calendar`)!;
-    expect(full.sections[0].items.slice(0, 4).map(item => item.key)).toEqual(['workspace-dashboard', 'customers', 'opportunity-pipeline', 'calendar']);
+  it('offers Calendar beside Home without entering a workspace and selects it only once',()=>{
+    const sections=project([], {enabledModules:new Set(),featureAvailability:new Set()});
+    expect(sections[0].items.map(item=>item.key)).toEqual(['home','calendar']);
+    expect(workspaceNavigation(sections,`/organizations/${ORG}/calendar`)).toBeNull();
+    expect(activeItemKey(sections,`/organizations/${ORG}/calendar?workspace=crm`)).toBe('calendar');
+    const crm=workspaceNavigation(project(),`/organizations/${ORG}/crm`)!;
+    expect(crm.sections[0].items.some(item=>item.key==='calendar')).toBe(false);
   });
   it('retains each workspace context and introduces no standalone calendar sidebar item', () => {
     const sections = project();
-    expect(projectedItems(sections).some(item => item.key.includes('calendar'))).toBe(false);
+    expect(projectedItems(sections).filter(item => item.key==='calendar')).toHaveLength(1);
     for (const workspace of WORKSPACES) {
       const context = workspaceNavigation(sections, `${areaHref(ORG, workspace.home)}/calendar`);
       expect(context?.workspace.key).toBe(`workspace-${workspace.key}`);
@@ -613,9 +612,9 @@ describe('workspace Calendar shortcut', () => {
     const row = projectedItems(project()).find((item) => item.key === `workspace-${workspace.key}`);
     if (!row || row.configurationOnly) return;
     expect(row.calendar, workspace.key).toBeDefined();
-    expect(row.calendar!.href).toBe(`${row.href}/calendar`);
+    expect(row.calendar!.href).toBe(`${base}/calendar?workspace=${workspace.key}`);
     // Never built from a string: the address is a registered destination.
-    expect(registered.has(row.calendar!.href)).toBe(true);
+    expect(registered.has(row.calendar!.href.split('?')[0])).toBe(true);
   });
   it('offers no calendar to a workspace whose Home this person cannot use', () => {
     const row = projectedItems(project(['field.manage'])).find((item) => item.key === 'workspace-communications')!;
@@ -629,7 +628,7 @@ describe('workspace Calendar shortcut', () => {
   it('reaches the calendar from inside the workspace and keeps the workspace context there', () => {
     const context = workspaceNavigation(project(), `${base}/crm/calendar`)!;
     expect(context.workspace.key).toBe('workspace-crm');
-    expect(context.workspace.calendar?.href).toBe(`${base}/crm/calendar`);
+    expect(context.workspace.calendar?.href).toBe(`${base}/calendar?workspace=crm`);
   });
 });
 

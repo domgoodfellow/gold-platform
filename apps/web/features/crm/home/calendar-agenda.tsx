@@ -10,7 +10,7 @@ import { areaHref } from '@/lib/navigation';
 export async function CrmCalendarAgenda({ db, organizationId, timezone }: { db: Db; organizationId: string; timezone: string }) {
   const now = new Date();
   const today = todayInZone(timezone, now);
-  const data = await loadOrganizationCalendar(db, { organizationId, source: 'follow-ups', workspace: 'crm', taskStatus: 'open', within: {
+  const data = await loadOrganizationCalendar(db, { organizationId, source: 'all', workspace: 'crm', taskStatus: 'open', within: {
     startsAt: now.toISOString(), endsAt: zonedDayRange(shiftDate(today, 7), timezone).startsAt,
   } });
   return <CalendarAgenda organizationId={organizationId} timezone={timezone} today={today} events={data.events} notices={data.notices}/>;
@@ -20,7 +20,7 @@ export function CalendarAgenda({ organizationId, timezone, today, events, notice
   organizationId: string; timezone: string; today: string; events: OrganizationCalendarEvent[]; notices: string[];
 }) {
   const path = areaHref(organizationId, 'calendar');
-  const dayHref = (date: string) => `${path}?view=day&on=${date}&scope=workspace`;
+  const dayHref = (date: string) => `${path}?view=day&on=${date}&workspace=crm`;
   const dateTime = new Intl.DateTimeFormat('en', { timeZone: timezone, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   const time = new Intl.DateTimeFormat('en', { timeZone: timezone, hour: 'numeric', minute: '2-digit' });
   return <OperationalPanel title="Upcoming calendar" density="compact" href={dayHref(today)} hrefLabel="Open Calendar" meta={<span className="text-xs text-muted">Next 7 days ({timezone})</span>}>
