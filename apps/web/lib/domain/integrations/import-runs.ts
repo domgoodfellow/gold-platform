@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
-import { importValue, normalizeImportRow, translationPlanOf, type MappingField } from '@/lib/domain/integrations/mappings';
+import { importValue, normalizeImportRow, translationPlanOf, type MappingField, type NormalizedCustomerRow } from '@/lib/domain/integrations/mappings';
 import { prepareTranslatedImport, type RowTranslation } from '@/lib/domain/integrations/translation/adapter';
 import { expandRows } from '@/lib/domain/integrations/translation/inspect';
 
@@ -270,7 +270,7 @@ export async function stagePreparedRows(
   input: {
     organizationId: string;
     runId: string;
-    rows: { key: string; raw: Record<string, string>; normalized: Record<string, unknown>; validation_errors: string[]; hold: boolean }[];
+    rows: { key: string; raw: Record<string, string>; normalized: NormalizedCustomerRow; validation_errors: string[]; hold: boolean }[];
   },
 ): Promise<number> {
   await requireActor(db);

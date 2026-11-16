@@ -34,6 +34,8 @@ Entries describe the product or operational change, not every file touched.
 
 ## 2026-11-16
 
+- Fixed TypeScript errors blocking deployment builds of translated contact imports. Staging uses the normalized row contract, and whole-source translation plans stay separate from custom-field normalization.
+
 - The Kintsugi treatment now carries through every public marketing page, including product details, pricing, integrations, inquiry forms and legal pages. Shared section artwork keeps the gold repairs aligned, with quieter decoration around forms and legal copy; existing content and actions are preserved.
 
 - GildOps' public marketing site now uses cool porcelain, charcoal and metallic gold. Fixed Kintsugi seams connect the homepage sections, with a gentle reflection and static reduced-motion treatment; published copy, product availability and consultation paths are preserved.

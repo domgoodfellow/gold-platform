@@ -328,7 +328,7 @@ export function normalizeImportRow(
   const location: NormalizedCustomerRow['location'] = { address: null, city: null, province: null };
 
   for (const field of fields) {
-    if (field.target.kind === 'ignore') continue;
+    if (field.target.kind === 'ignore' || field.target.kind === 'translation') continue;
 
     const { value, warning } = applyTransform(field.transform, field.fixedValue ?? raw[field.sourceColumn] ?? '', field.sourceColumn);
     if (warning) errors.push(warning);

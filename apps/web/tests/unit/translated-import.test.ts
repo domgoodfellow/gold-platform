@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import type { Json } from '@/lib/db/database.types';
 import { parseCsv } from '@/lib/domain/files/parsers/csv';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
-import { createMapping, translationMappingFields, translationPlanOf } from '@/lib/domain/integrations/mappings';
+import { createMapping, normalizeImportRow, translationMappingFields, translationPlanOf } from '@/lib/domain/integrations/mappings';
 import {
   BUSINESS_FIELDS, defaultPlan, describeQuality, discoverSource, expandRecord, expandRows, inspectRows, interpretationConflicts,
   isWorkbenchFlatPackage, looksLikeLocation, looksLikePersonalName, normalizePhone, normalizeWebsite, phoneDisplay, prepareTranslatedImport,
@@ -14,7 +15,7 @@ import {
  * is proven in `tests/integration/database/translated-import.test.ts`.
  */
 
-const META = (fields: Record<string, string>) => `[NF_LEAD_META]${JSON.stringify(fields)}[/NF_LEAD_META]`;
+const META = (fields: Record<string, Json>) => `[NF_LEAD_META]${JSON.stringify(fields)}[/NF_LEAD_META]`;
 const HEADERS = 'id,business_name,full_name,owner_name,phone_e164,contact_email,website,industry,lead_status,do_not_call,notes,colour';
 const line = (fields: Record<string, string>) => {
   const values = HEADERS.split(',').map((header) => fields[header] ?? '');
@@ -98,6 +99,10 @@ describe('discovery and interpretations', () => {
     const columns = discovery.columns.map((column) => column.name);
     const plan = defaultPlan(discovery, proposals);
     expect(validatePlan(plan, columns)).toEqual(plan);
+    // A source-wide plan is not a custom column in the ordinary row normalizer.
+    const columnRow = normalizeImportRow([...translationMappingFields(plan), { sourceColumn: 'business_name', target: { kind: 'core', field: 'name' }, transform: 'none' }], [], { business_name: 'Acme', '*': 'whole-source plan' });
+    expect(columnRow.normalized).toMatchObject({ name: 'Acme', custom: {} });
+    expect(columnRow.validationErrors).toEqual([]);
     expect(interpretationConflicts({ ...plan.decisions, extract_nested: 'rejected' }, plan.mapping)).toMatch(/embedded/);
     expect(() => validatePlan({ ...plan, mapping: { ...plan.mapping, email: 'password' } }, [...columns, 'password'])).toThrow(/credential/);
     expect(() => validatePlan({ ...plan, mapping: { business_name: 'missing' } }, columns)).toThrow(/no column/);
