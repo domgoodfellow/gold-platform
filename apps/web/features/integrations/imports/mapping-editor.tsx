@@ -32,6 +32,7 @@ export function MappingEditor({
   definitions,
   error,
   maySynchronize = false,
+  translateHref,
 }: {
   organizationId: string;
   resourceId: string;
@@ -42,6 +43,8 @@ export function MappingEditor({
   definitions: FieldDefinition[];
   error?: string;
   maySynchronize?: boolean;
+  /** The same source read as businesses and people instead (`InterpretationEditor`). */
+  translateHref?: string;
 }) {
   const samples = (header: string) => [...new Set(sample.map(row => row[header]?.trim()).filter(Boolean))].slice(0, 2);
   return (
@@ -98,7 +101,10 @@ export function MappingEditor({
       </Card>
 
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <ButtonLink tone="secondary" href={libraryNewImportHref(organizationId)}>Choose a different source</ButtonLink>
+        <div className="flex flex-wrap gap-2">
+          <ButtonLink tone="secondary" href={libraryNewImportHref(organizationId)}>Choose a different source</ButtonLink>
+          {translateHref ? <ButtonLink tone="text" href={translateHref}>Read as businesses and people instead</ButtonLink> : null}
+        </div>
         <Button type="submit" tone="primary">Review changes</Button>
       </div>
     </form>

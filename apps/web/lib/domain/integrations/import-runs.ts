@@ -3,15 +3,20 @@ import { createHash } from 'node:crypto';
 import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
-import { importValue, normalizeImportRow, type MappingField } from '@/lib/domain/integrations/mappings';
+import { importValue, normalizeImportRow, translationPlanOf, type MappingField } from '@/lib/domain/integrations/mappings';
+import { prepareTranslatedImport, type RowTranslation } from '@/lib/domain/integrations/translation/adapter';
+import { expandRows } from '@/lib/domain/integrations/translation/inspect';
 
 import { IMPORT_BATCH_SIZE } from './import-policy';
 import { downloadImportFile } from './resources';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 
+/** The database contract this code was written against; `import_pipeline_version` says which one is applied. */
+export const IMPORT_PIPELINE_VERSION = 3;
+
 export async function requireImportPipeline(db: Db): Promise<void> {
   const result = await db.rpc('import_pipeline_version');
-  if (result.error || result.data !== 2) {
+  if (result.error || result.data !== IMPORT_PIPELINE_VERSION) {
     throw new DomainError('Prospect import needs its database update before it can run. Ask the operator to apply the approved import migration.', 'integrations.pipeline_unavailable');
   }
 }
@@ -38,10 +43,19 @@ export async function resumeImportStaging(db: Db, input: { organizationId: strin
   if (resource.error) throw new DomainError('The import source could not be read.', 'integrations.resource_get_failed');
   const snapshot = run.mapping_snapshot as { mapping?: MappingField[] };
   if (!Array.isArray(snapshot.mapping)) throw new DomainError('The saved mapping is unavailable.', 'integrations.mapping_missing');
+  const sourceName = resource.data.resource_type === 'file_upload' ? resource.data.display_name : run.resource_id;
+  const fieldDefinitions = await listFieldDefinitions(db, { organizationId: input.organizationId, entityType: 'customer' });
+  const plan = translationPlanOf(snapshot.mapping);
+  if (plan) {
+    // A translated import stages every business before any person, in separate batches, so that
+    // applying (which runs in staging order) reaches a business before the person who names it.
+    const { staging } = prepareTranslatedImport(expandRows(parsed.rows), { sourceName, plan, definitions: fieldDefinitions });
+    await stagePreparedRows(db, { ...input, rows: staging.businesses });
+    return stagePreparedRows(db, { ...input, rows: staging.people });
+  }
   return stageRows(db, {
-    ...input, mapping: snapshot.mapping,
-    fieldDefinitions: await listFieldDefinitions(db, { organizationId: input.organizationId, entityType: 'customer' }),
-    sourceRows: sourceRowsForImport(parsed.rows, resource.data.resource_type === 'file_upload' ? resource.data.display_name : run.resource_id),
+    ...input, mapping: snapshot.mapping, fieldDefinitions,
+    sourceRows: sourceRowsForImport(parsed.rows, sourceName),
   });
 }
 
@@ -71,8 +85,14 @@ export type StagingRowStatus = 'ready' | 'review' | 'duplicate' | 'invalid' | 'i
  * `phone`: contacts with this phone number and no email to tell them apart. `phone_in_file`,
  * `email_in_file`, `contact_in_file`: an earlier row of the same file.
  */
-export type ImportMatchReason = 'source' | 'source_other_file' | 'source_deleted' | 'email' | 'email_shared' | 'email_unconfirmed' | 'phone' | 'phone_in_file' | 'email_in_file' | 'contact_in_file';
+export type ImportMatchReason = 'source' | 'source_other_file' | 'source_deleted' | 'email' | 'email_shared' | 'email_unconfirmed' | 'phone' | 'phone_in_file' | 'email_in_file' | 'contact_in_file' | 'quality';
 export type ImportRowDecision = 'create' | 'update' | 'skip';
+
+/** What a translated import remembers about a staged row; null for a row staged by a column mapping. */
+export function rowTranslation(row: Pick<StagingRow, 'normalized'>): RowTranslation | null {
+  const translation = (row.normalized as { translation?: RowTranslation }).translation;
+  return translation && typeof translation === 'object' && 'entity' in translation ? translation : null;
+}
 
 export type StagingRow = {
   id: string;
@@ -233,19 +253,46 @@ export async function stageRows(
   await requireActor(db);
   await requireImportPipeline(db);
 
-  const rows = input.sourceRows.map(({ key, raw }, index) => {
+  const rows = input.sourceRows.map(({ key, raw }) => {
     const { normalized, validationErrors } = normalizeImportRow(input.mapping, input.fieldDefinitions, raw);
-    return {
-      // The row's own position in this upload — `stage_import_rows` ranks in-batch duplicates
-      // by this, since Postgres cannot derive an ordinal from a jsonb array alongside an
-      // explicit column definition list (`WITH ORDINALITY` refuses the combination).
-      seq: index,
-      source_record_key: key,
-      raw,
-      normalized,
-      validation_errors: validationErrors,
-    };
+    return { key, raw, normalized, validation_errors: validationErrors, hold: false };
   });
+  return stagePreparedRows(db, { organizationId: input.organizationId, runId: input.runId, rows });
+}
+
+/**
+ * Stages rows already normalized — by a column mapping above, or by a translation plan — in
+ * bounded batches. A `hold` row is one the translation could read but a person must confirm; the
+ * database keeps it as Needs review until they decide.
+ */
+export async function stagePreparedRows(
+  db: Db,
+  input: {
+    organizationId: string;
+    runId: string;
+    rows: { key: string; raw: Record<string, string>; normalized: Record<string, unknown>; validation_errors: string[]; hold: boolean }[];
+  },
+): Promise<number> {
+  await requireActor(db);
+  await requireImportPipeline(db);
+  const rows = input.rows.map((row, index) => ({
+    // The row's own position in this upload — `stage_import_rows` ranks in-batch duplicates
+    // by this, since Postgres cannot derive an ordinal from a jsonb array alongside an
+    // explicit column definition list (`WITH ORDINALITY` refuses the combination).
+    seq: index,
+    source_record_key: row.key,
+    raw: row.raw,
+    normalized: row.normalized,
+    validation_errors: row.validation_errors,
+    hold: row.hold,
+  }));
+
+  if (rows.length === 0) {
+    const { count, error } = await db.from('import_staging_rows').select('id', { count: 'exact', head: true })
+      .eq('organization_id', input.organizationId).eq('run_id', input.runId);
+    if (error) throw fromDatabaseError(error, 'integrations.staging_list_failed');
+    return count ?? 0;
+  }
 
   let count = 0;
   for (let offset = 0; offset < rows.length; offset += IMPORT_BATCH_SIZE) {

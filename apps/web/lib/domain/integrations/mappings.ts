@@ -10,9 +10,14 @@ import {
   type CustomValues,
   type FieldDefinition,
 } from '@/lib/domain/fields/field-definitions';
+import type { TranslationPlan } from '@/lib/domain/integrations/translation/plan';
 
-/** Optional company facts use the existing tenant field registry, not new Customer columns. */
-export async function prepareImportFields(db: Db, organizationId: string, headers: string[]): Promise<void> {
+/**
+ * Optional company facts use the existing tenant field registry, not new Customer columns. A
+ * column mapping creates the fields its headers name; a translated import names the fields its
+ * businesses will carry (`BUSINESS_FIELDS`) through `keys`.
+ */
+export async function prepareImportFields(db: Db, organizationId: string, headers: string[], keys: readonly string[] = []): Promise<void> {
   const definitions = await listFieldDefinitions(db, { organizationId, entityType: 'customer' });
   const fields = [
     ['owner_name', 'Contact name', 'text'], ['website', 'Website', 'text'],
@@ -20,9 +25,11 @@ export async function prepareImportFields(db: Db, organizationId: string, header
     ['estimated_revenue_band', 'Estimated revenue band', 'text'],
     ['team_size_band', 'Team size band', 'text'], ['do_not_call', 'Do not call', 'boolean'],
     ['lead_status', 'Source lead status', 'text'],
+    ['estimated_revenue', 'Estimated revenue', 'number'], ['estimated_employees', 'Estimated employees', 'number'],
+    ['postal_code', 'Postal code', 'text'],
   ] as const;
   for (const [key, label, kind] of fields) {
-    if (!headers.includes(key) || definitions.some((definition) => definition.key === key)) continue;
+    if (!(headers.includes(key) || keys.includes(key)) || definitions.some((definition) => definition.key === key)) continue;
     await createFieldDefinition(db, { organizationId, entityType: 'customer', key, label, kind, required: false });
   }
 }
@@ -30,6 +37,8 @@ export async function prepareImportFields(db: Db, organizationId: string, header
 /**
  * What a source column becomes. `ignore` and `custom` cover an open-ended source; `core` is the
  * closed set of columns `customers` itself has (the custom-field registry rule — nothing else is a real column to target).
+ * `translation` is the one field of a translated import: the whole source read as businesses,
+ * people, links, addresses and telephones under a saved plan (`translation/plan.ts`).
  */
 export type MappingTarget =
   | { kind: 'ignore' }
@@ -37,7 +46,19 @@ export type MappingTarget =
   /** A source-wide lifecycle for rows this import creates; never applied to an existing contact (V1.4). Only ever a fixed value, never suggested. */
   | { kind: 'core'; field: 'default_lifecycle' }
   | { kind: 'location'; field: 'address' | 'city' | 'province' }
-  | { kind: 'custom'; key: string };
+  | { kind: 'custom'; key: string }
+  | { kind: 'translation'; plan: TranslationPlan };
+
+/** The whole-source field of a translated import, when a mapping is one. */
+export function translationPlanOf(fields: readonly MappingField[]): TranslationPlan | null {
+  const field = fields.find((candidate) => candidate.target.kind === 'translation');
+  return field && field.target.kind === 'translation' ? field.target.plan : null;
+}
+
+/** The one mapping field a translated import saves. */
+export function translationMappingFields(plan: TranslationPlan): MappingField[] {
+  return [{ sourceColumn: '*', target: { kind: 'translation', plan }, transform: 'none' }];
+}
 
 /**
  * A normalization step applied before validation, not a field kind of its own (the custom-field registry rule names the six
@@ -132,7 +153,11 @@ export async function createMapping(
   if (input.fields.length === 0) {
     throw new DomainError('Map at least one column before continuing.', 'integrations.mapping_empty');
   }
-  if (!input.fields.some((field) => field.target.kind === 'core' && field.target.field === 'name')) {
+  const translated = translationPlanOf(input.fields) !== null;
+  if (translated && input.fields.length !== 1) {
+    throw new DomainError('A translated import reads the whole source under its plan and maps no separate columns.', 'integrations.mapping_invalid');
+  }
+  if (!translated && !input.fields.some((field) => field.target.kind === 'core' && field.target.field === 'name')) {
     throw new DomainError('Something has to map to Name.', 'integrations.mapping_needs_name');
   }
 

@@ -11,11 +11,17 @@ import { uploadImportFile, attachLibraryFileForImport, getResourceSync } from '@
 import {
   createMapping,
   prepareImportFields,
+  translationMappingFields,
   type MappingField,
   type MappingFieldTransform,
   type MappingTarget,
 } from '@/lib/domain/integrations/mappings';
 import { beginImportRun, requireImportPipeline, resumeImportStaging } from '@/lib/domain/integrations/import-runs';
+import { BUSINESS_FIELDS } from '@/lib/domain/integrations/translation/adapter';
+import { INTERPRETATION_IDS, type InterpretationDecision, type InterpretationId } from '@/lib/domain/integrations/translation/interpretations';
+import { CONCEPTS, type Concept, type ConceptMapping } from '@/lib/domain/integrations/translation/discovery';
+import { inspectImportSource } from '@/lib/domain/integrations/translation/inspect';
+import { validatePlan, type TranslationPlan } from '@/lib/domain/integrations/translation/plan';
 import { requireOrganization } from '@/lib/route/organization';
 import { libraryImportHref, libraryNewImportHref } from '@/lib/route/library';
 import { loadConfigurationContext } from '@/lib/route/workspace-configuration';
@@ -152,6 +158,58 @@ export async function createMappingAndStageAction(formData: FormData): Promise<v
     throw error;
   }
 
+  redirect(libraryImportHref(organizationId, runId));
+}
+
+/**
+ * Saves a translation plan as the import's mapping and stages the source under it: every
+ * business, then every person. The plan is read back from the interpretation form and validated
+ * against the source's own columns, so a stale or hand-made form cannot name a column that is
+ * not there. Nothing is written to Contacts; the next step reviews what staging decided.
+ */
+export async function createTranslationAndStageAction(formData: FormData): Promise<void> {
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const resourceId = String(formData.get('resourceId') ?? '');
+  const { db, organization } = await requireOrganization(organizationId);
+  const backTo = `${libraryNewImportHref(organizationId, resourceId)}&mode=translate`;
+  if (!organization.capabilities.includes('integration.manage')) redirect(`${backTo}&error=${encodeURIComponent('Your role cannot import contacts.')}`);
+
+  const mapping: ConceptMapping = {};
+  for (const concept of CONCEPTS) {
+    const column = String(formData.get(`concept_${concept}`) ?? '');
+    if (column) mapping[concept as Concept] = column;
+  }
+  const decisions = Object.fromEntries(INTERPRETATION_IDS.map((id) => [id, formData.get(`interpretation_${id}`) === 'approved' ? 'approved' : 'rejected'])) as Record<InterpretationId, InterpretationDecision>;
+  const extraFields: Record<string, string> = {};
+  for (const column of formData.getAll('extra_column').map(String)) {
+    const key = String(formData.get(`extra_${column}`) ?? '');
+    if (key) extraFields[column] = key;
+  }
+  const defaultLifecycle = String(formData.get('defaultLifecycle') ?? '');
+  const draft: TranslationPlan = {
+    version: 1, mapping, decisions, extraFields,
+    defaultLifecycle: CONTACT_LIFECYCLES.includes(defaultLifecycle as ContactLifecycle) ? defaultLifecycle : null,
+    suppression: formData.get('suppression') === 'omit' ? 'omit' : 'reference',
+  };
+
+  let runId: string | undefined;
+  try {
+    await requireImportPipeline(db);
+    const inspection = await inspectImportSource(db, { organizationId, resourceId });
+    const plan = validatePlan(draft, inspection.discovery.columns.map((column) => column.name));
+    // The business's own fields need `field.manage`; without it the values stay with the source row and review says so.
+    try { await prepareImportFields(db, organizationId, [], BUSINESS_FIELDS.map(([key]) => key)); }
+    catch (error) { if (!(error instanceof DomainError)) throw error; }
+    const mappingId = await createMapping(db, { organizationId, resourceId, fields: translationMappingFields(plan), dedupeKey: 'email' });
+    runId = await beginImportRun(db, { organizationId, mappingId });
+    await resumeImportStaging(db, { organizationId, runId });
+  } catch (error) {
+    if (error instanceof DomainError) {
+      if (runId) redirect(libraryImportHref(organizationId, runId, `?stageError=${encodeURIComponent(error.message)}`));
+      redirect(`${backTo}&error=${encodeURIComponent(error.message)}`);
+    }
+    throw error;
+  }
   redirect(libraryImportHref(organizationId, runId));
 }
 

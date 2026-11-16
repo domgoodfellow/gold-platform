@@ -16,6 +16,9 @@ import { ImportSteps } from '@/features/integrations/imports/import-steps';
 import { listConnections } from '@/lib/domain/integrations/connections';
 import { listLibraryFiles } from '@/lib/domain/documents/library-files';
 import { MappingEditor } from '@/features/integrations/imports/mapping-editor';
+import { InterpretationEditor } from '@/features/integrations/imports/interpretation-editor';
+import { inspectRows } from '@/lib/domain/integrations/translation/inspect';
+import { libraryNewImportHref } from '@/lib/route/library';
 import {DomainError} from '@/lib/domain/errors';
 
 export const dynamic = 'force-dynamic';
@@ -25,7 +28,7 @@ export default async function NewImportPage({
   searchParams,
 }: PageProps<'/organizations/[organizationId]/library/imports/new'>) {
   const { organizationId } = await params;
-  const { resourceId, error } = await searchParams;
+  const { resourceId, error, mode } = await searchParams;
   const { db, organization } = await requireOrganization(organizationId);
 
   // Importing is the organization's own capability. The database refuses every step without it
@@ -70,6 +73,20 @@ export default async function NewImportPage({
   }
 
   const definitions = await listFieldDefinitions(db, { organizationId, entityType: 'customer' });
+  // A source with a business column (or a Workbench export) is read as businesses and people
+  // unless the person asks for column-by-column mapping; anything else maps columns as before.
+  const inspection = inspectRows(source);
+  const translate = mode === 'translate' || (mode !== 'columns' && (inspection.discovery.workbenchPackage || Boolean(inspection.discovery.mapping.business_name)));
+  if (translate) {
+    return (
+      <>
+        <PageHeader title="Interpret your source" crumbs={[{ label: 'Imports', href: libraryHref(organizationId, 'sources') }]} />
+        <LibraryNav organizationId={organizationId} active="sources" />
+        <ImportSteps organizationId={organizationId} current={1} resourceId={resourceId} />
+        <InterpretationEditor organizationId={organizationId} resourceId={resourceId} inspection={inspection} definitions={definitions} error={typeof error === 'string' ? error : undefined} />
+      </>
+    );
+  }
   const suggested = suggestMapping(source.headers, definitions);
 
   return (
@@ -78,6 +95,7 @@ export default async function NewImportPage({
       <LibraryNav organizationId={organizationId} active="sources" />
       <ImportSteps organizationId={organizationId} current={1} resourceId={resourceId} />
       <MappingEditor
+        translateHref={`${libraryNewImportHref(organizationId, resourceId)}&mode=translate`}
         organizationId={organizationId}
         maySynchronize={['google_sheet','microsoft_workbook'].includes(resources.find(resource => resource.id === resourceId)?.resourceType ?? '')}
         resourceId={resourceId}

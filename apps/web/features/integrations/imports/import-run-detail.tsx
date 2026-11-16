@@ -1,11 +1,12 @@
 import { Button, ButtonLink } from '@/components/controls/button';
 import { resumeImportStagingAction } from '@/app/organizations/[organizationId]/library/imports/[runId]/actions';
 import { Hint } from '@/components/controls/inputs';
-import { Card } from '@/components/surfaces/card';
+import { Card, Disclosure } from '@/components/surfaces/card';
 import { DataTable } from '@/components/display/table';
 import { Badge } from '@/components/display/data';
 import { WidgetGrid, Widget } from '@/components/display/widget';
-import type { ImportRun, StagingRow, StagingRowStatus } from '@/lib/domain/integrations/import-runs';
+import { rowTranslation, type ImportRun, type StagingRow, type StagingRowStatus } from '@/lib/domain/integrations/import-runs';
+import { ISSUES, issueLabel } from '@/lib/domain/integrations/translation/translate';
 import type { ContactCurrentValues, ContactSummary } from '@/lib/domain/contacts/contacts';
 import { classificationLabel } from '@/lib/domain/customers/classification';
 import { ApplyImportForm } from './apply-import-form';
@@ -60,8 +61,25 @@ export function matchDescription(row: StagingRow, contacts: ReadonlyMap<string, 
     case 'phone_in_file': return 'Same phone number as an earlier row';
     case 'email_in_file': return 'Same email as an earlier row';
     case 'contact_in_file': return 'Another row updates the same contact';
+    case 'quality': {
+      const first = rowTranslation(row)?.issues.find(issue => ['holds', 'blocks'].includes(ISSUE_EFFECT(issue.code)));
+      const linked = row.candidateIds.length ? `; linked to ${names(row.candidateIds)} by source ID` : '';
+      return `Needs confirming: ${first ? issueLabel(first) : 'see what needs attention'}${linked}`;
+    }
     default: return '—';
   }
+}
+
+const ISSUE_EFFECT = (code: string) => (ISSUES as Record<string, { effect: string }>)[code]?.effect ?? 'notes';
+
+/** What a translated row is and belongs to, in words; empty for a column-mapped row. */
+export function translationDescription(row: StagingRow): { kind: string; belongsTo: string; attention: string[]; sourceRefs: string } | null {
+  const translation = rowTranslation(row);
+  if (!translation) return null;
+  const kind = translation.entity === 'business' ? 'Business' : translation.entity === 'person' ? 'Person' : 'Row';
+  const role = translation.affiliation?.role;
+  const belongsTo = translation.business ? `${role ? `${role} at ` : ''}${translation.business.name}` : '';
+  return { kind, belongsTo, attention: translation.issues.map(issueLabel), sourceRefs: translation.sourceRefs.join(', ') };
 }
 
 export type ImportChange = { field: string; label: string; current: string; incoming: string };
@@ -105,7 +123,8 @@ export function decisionChoices(row: StagingRow, contacts: ReadonlyMap<string, C
   const targets = [...new Set([...row.candidateIds, ...(row.matchedCustomerId ? [row.matchedCustomerId] : [])])];
   return [
     // A row linked by its source ID is that contact, and one email is one contact: neither becomes a second one.
-    ...(row.matchReason && ['source', 'email', 'email_shared', 'email_unconfirmed'].includes(row.matchReason) ? [] : [{ value: 'create', label: 'Create new contact' }]),
+    // A held translated row that is linked by its source ID keeps that link too.
+    ...(row.matchReason && (['source', 'email', 'email_shared', 'email_unconfirmed'].includes(row.matchReason) || (row.matchReason === 'quality' && row.candidateIds.length > 0)) ? [] : [{ value: 'create', label: 'Create new contact' }]),
     ...targets.map(id => ({ value: `update:${id}`, label: `Update ${contacts.get(id)?.name ?? 'contact'}` })),
     { value: 'skip', label: 'Skip' },
   ];
@@ -150,6 +169,7 @@ export function ImportRunDetail({
   mayReview?: boolean;
 }) {
   const finished = run.status === 'completed' || run.status === 'completed_with_errors';
+  const translated = rows.some(row => rowTranslation(row) !== null);
   return (
     <>
       {finished ? (
@@ -225,6 +245,33 @@ export function ImportRunDetail({
             empty="No rows match this filter."
             columns={[
               { key: 'name', header: 'Name', emphasis: 'primary', cell: (row) => (row.normalized as { name?: string }).name ?? '—' },
+              // A translated import stages businesses and people as their own rows: say which each is,
+              // whom a person belongs to, what needs attention in words, and where every value came from.
+              ...(translated ? [
+                { key: 'kind', header: 'Kind', cell: (row: StagingRow) => translationDescription(row)?.kind ?? '—' },
+                { key: 'belongs', header: 'Belongs to', cell: (row: StagingRow) => translationDescription(row)?.belongsTo || '—' },
+                {
+                  key: 'attention', header: 'Needs attention',
+                  cell: (row: StagingRow) => {
+                    const attention = translationDescription(row)?.attention ?? [];
+                    return attention.length ? <ul className="text-xs">{attention.map(line => <li key={line}>{line}</li>)}</ul> : '—';
+                  },
+                },
+                {
+                  key: 'evidence', header: 'Source evidence',
+                  cell: (row: StagingRow) => {
+                    const translation = rowTranslation(row);
+                    if (!translation) return '—';
+                    return <Disclosure className="min-w-48" summary={<span className="text-xs">{translation.evidence.length} value{translation.evidence.length === 1 ? '' : 's'} from {translation.sourceRefs.length === 1 ? translation.sourceRefs[0] : `${translation.sourceRefs.length} rows`}</span>}>
+                      <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-0.5 text-xs">{translation.evidence.map((item, index) => <div key={`${item.sourceColumn}-${index}`} className="contents">
+                        <dt className="text-muted">{item.concept} <span className="font-mono">{item.sourceColumn}</span></dt>
+                        <dd className="min-w-0 break-words">{item.originalValue}{item.translatedValue !== item.originalValue ? <> <span aria-hidden>→</span><span className="sr-only"> read as</span> <span className="font-medium">{item.translatedValue || 'left out'}</span></> : null}</dd>
+                      </div>)}</dl>
+                      {translation.phone ? <p className="mt-2 text-xs text-muted">Telephone {translation.phone.display} is on the {translation.phone.owner}; whose desk it reaches is not verified.</p> : null}
+                    </Disclosure>;
+                  },
+                },
+              ] : []),
               {
                 key: 'status',
                 header: 'Status',
