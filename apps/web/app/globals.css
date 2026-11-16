@@ -181,8 +181,8 @@
 /* GildOps' own marketing frame (`MarketingShell`, `data-marketing-site`): charcoal on cool
    porcelain, metallic gold for actions and seams, and cobalt for the technical details that
    `--subtle` carries (step numbers, eyebrows, times). Scoped to that frame, so a business's
-   published website, Studio's canvas and every operator surface keep the neutral roles above. An
-   accent GildOps saves in Studio still wins: `BrandStyle` writes `--accent` after this sheet. The
+   published website, Studio's canvas and every operator surface keep the neutral roles above.
+   The marketing palette is code-owned; the published brand still supplies logo and lettering. The
    neutral roles are literal here and every alias is declared again, because an alias resolves
    where it is written, not where it is read. */
 [data-marketing-site] {
@@ -203,6 +203,7 @@
   --marketing-gold-shadow: #87601d;
   --marketing-groove: rgb(67 48 17 / 0.22);
   --marketing-dark: #11151d;
+  --success: #065f46;
   --accent-foreground: var(--on-accent);
   --card: var(--surface);
   --card-foreground: var(--foreground);
@@ -233,12 +234,13 @@
     --accent-text: #e6c471;
     --accent-indicator: #d6ac43;
     --marketing-groove: rgb(0 0 0 / 0.5);
+    --success: #6ee7b7;
   }
 }
 
 /* Fixed, hand-drawn repair lines. Each section's endpoint meets the next at 97%
    width; the content stays above the artwork and has an opaque porcelain backing. */
-[data-marketing-home] {
+[data-marketing-page] {
   position: relative;
   padding-top: 1rem;
 }
@@ -250,74 +252,72 @@
   overflow: visible;
   pointer-events: none;
 }
-[data-marketing-home] .marketing-home-section {
+[data-marketing-page] .marketing-section {
   position: relative;
   isolation: isolate;
   padding-block: 2.5rem;
 }
-[data-marketing-home] [data-section] {
+[data-marketing-page] .marketing-section-content {
   position: relative;
   z-index: 1;
   margin-right: 4rem;
-}
-[data-marketing-home] [data-section] > section {
   background-color: var(--background);
 }
-[data-marketing-home] [data-marketing-section=hero] {
+[data-marketing-page] [data-marketing-section=hero] {
   min-height: 33rem;
   display: flex;
   align-items: center;
   padding-block: 4.5rem;
 }
-[data-marketing-home] [data-marketing-section=hero] [data-section] {
+[data-marketing-page] [data-marketing-section=hero] .marketing-section-content {
   width: 67%;
   margin-right: 0;
 }
-[data-marketing-home] [data-marketing-section=hero] [data-section] > section {
-  background: var(--background);
-}
-[data-marketing-home] [data-section=hero] h1 {
+[data-marketing-page] [data-marketing-section=hero] .marketing-section-content h1 {
   font-size: clamp(2.5rem, 4.8vw, 3.75rem);
   line-height: 1.06;
   letter-spacing: -0.045em;
 }
-[data-marketing-home] [data-section=problem] > section {
+[data-marketing-page] [data-section=problem] > section {
   background: var(--secondary);
   border-radius: .75rem;
 }
-[data-marketing-home] [data-section=capabilities] > section {
+[data-marketing-page] [data-section=capabilities] > section {
   padding-block: .5rem;
 }
-[data-marketing-home] [data-section=capabilities] ul {
+[data-marketing-page] [data-marketing-section=capabilities] .marketing-section-content ul {
   background: var(--background);
 }
-[data-marketing-home] [data-section=cta] {
+[data-marketing-page] [data-marketing-section=cta] .marketing-section-content {
   margin-right: 0;
 }
-[data-marketing-home] [data-section=cta] > section,
+[data-marketing-page] [data-marketing-section=cta] .marketing-section-content > section,
+[data-marketing-page] [data-marketing-section=cta] .marketing-section-content > [data-section] > section,
 [data-marketing-site] > footer {
   background: var(--marketing-dark);
   color: #f5f7fa;
   --focus-color: #f5f7fa;
 }
-[data-marketing-home] [data-section=cta] > section {
+[data-marketing-page] [data-marketing-section=cta] .marketing-section-content > section,
+[data-marketing-page] [data-marketing-section=cta] .marketing-section-content > [data-section] > section {
   background: linear-gradient(125deg, var(--marketing-dark) 50%, color-mix(in srgb, var(--marketing-dark), var(--subtle) 18%));
 }
 [data-marketing-site] header a[href="/demo"],
-[data-marketing-home] [data-section=hero] a[href="/demo"] {
+[data-marketing-page] [data-marketing-section=hero] .marketing-section-content a[href="/demo"] {
   background: linear-gradient(110deg, var(--marketing-gold-shadow) -45%, var(--marketing-gold) 30%, var(--marketing-gold-reflection) 180%);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .45);
 }
-[data-marketing-home] [data-marketing-section=cta] > .kintsugi-fracture {
+[data-marketing-page] [data-marketing-section=cta] > .kintsugi-fracture {
   z-index: 2;
 }
-[data-marketing-home] [data-section=cta] > section > div {
+[data-marketing-page] [data-marketing-section=cta] .marketing-section-content > section > div,
+[data-marketing-page] [data-marketing-section=cta] .marketing-section-content > [data-section] > section > div {
   position: relative;
   z-index: 3;
   margin-left: 0;
   max-width: 72%;
 }
-[data-marketing-home] [data-section=cta] a {
+[data-marketing-page] [data-marketing-section=cta] .marketing-section-content a {
   --background: #f5f7fa;
   --foreground: #15191f;
 }
@@ -336,8 +336,8 @@
   left: 2rem;
   opacity: .7;
 }
-[data-marketing-site]:has([data-marketing-home]) > main { padding-bottom: 0; }
-[data-marketing-site]:has([data-marketing-home]) > footer { margin-top: 0; }
+[data-marketing-site]:has([data-marketing-page]) > main { padding-bottom: 0; }
+[data-marketing-site]:has([data-marketing-page]) > footer { margin-top: 0; }
 [data-marketing-site] .kintsugi-mobile { display: none; }
 .kintsugi-reflection {
   opacity: 0;
@@ -357,19 +357,20 @@
   [data-fracture=cta] .kintsugi-reflection { animation-delay: -7s; }
 }
 @media (max-width: 639px) {
-  [data-marketing-home] .marketing-home-section { padding-block: 1.75rem; }
-  [data-marketing-home] [data-section] { margin-right: 2.25rem; }
-  [data-marketing-home] [data-marketing-section=hero] {
+  [data-marketing-page] .marketing-section { padding-block: 1.75rem; }
+  [data-marketing-page] .marketing-section-content { margin-right: 2.25rem; }
+  [data-marketing-page] [data-marketing-section=hero] {
     min-height: 34rem;
     padding-block: 6rem 2.5rem;
   }
-  [data-marketing-home] [data-marketing-section=hero] [data-section] { width: calc(100% - 2.25rem); }
+  [data-marketing-page] [data-marketing-section=hero] .marketing-section-content { width: calc(100% - 2.25rem); }
   [data-marketing-site] .kintsugi-mobile { display: inline; }
   [data-marketing-site] .kintsugi-crossing { display: none; }
   [data-marketing-site] [data-fracture=hero] .kintsugi-desktop { display: none; }
-  [data-marketing-home] [data-section=hero] > section { background: var(--background); }
-  [data-marketing-home] [data-section=cta] > section > div { max-width: 100%; }
-  [data-marketing-home] [data-marketing-section=cta] > .kintsugi-fracture { z-index: 0; }
+  [data-marketing-page] [data-marketing-section=hero] .marketing-section-content { background: var(--background); }
+  [data-marketing-page] [data-marketing-section=cta] .marketing-section-content > section > div,
+  [data-marketing-page] [data-marketing-section=cta] .marketing-section-content > [data-section] > section > div { max-width: 100%; }
+  [data-marketing-page] [data-marketing-section=cta] > .kintsugi-fracture { z-index: 0; }
   [data-marketing-site] .marketing-footer-inner > .kintsugi-fracture {
     width: calc(100% - 3rem);
     left: 1.5rem;

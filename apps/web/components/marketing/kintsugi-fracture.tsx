@@ -1,6 +1,6 @@
 import { useId } from 'react';
 
-type FractureVariant = 'hero' | 'bridge' | 'products' | 'automation' | 'connected' | 'process' | 'trust' | 'cta' | 'footer';
+export type FractureVariant = 'hero' | 'bridge' | 'products' | 'automation' | 'connected' | 'process' | 'trust' | 'cta' | 'footer';
 
 // Every composition meets at (970, 0/600). Section height may change with authored
 // content; non-scaling strokes keep the metal fine while the junctions stay joined.
