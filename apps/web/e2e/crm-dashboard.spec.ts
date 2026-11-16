@@ -8,6 +8,7 @@ import { loadDemoContext, OWNER_STORAGE_STATE, COLLEAGUE_STORAGE_STATE } from '.
 import { DEMO_PASSWORD } from '../scripts/demo/businesses';
 import { provisionOrganization } from '../lib/domain/platform/provision';
 import { createContact } from '../lib/domain/contacts/contacts';
+import { saveCalendarEvent } from '../lib/domain/calendar/events';
 import { createTask, changeTaskStatus } from '../lib/domain/tasks/tasks';
 import { createOpportunity, createOpportunityStage } from '../lib/domain/opportunities/opportunities';
 import { selectFieldValue } from './select-field';
@@ -61,6 +62,7 @@ test.describe.serial('Relationship-first CRM Dashboard', () => {
       await fitsEveryWidth(page, `/organizations/${emptyOrganizationId}/crm`, 'crm-dashboard-new', async () => {
         await expect(region(page, 'Relationship overview')).toBeVisible();
         await expect(page.getByText('Get started with CRM')).toHaveCount(0);
+        await expect(region(page, 'Upcoming calendar').getByText('No upcoming CRM events or tasks in the next 7 days.')).toBeVisible();
         const recent = region(page, 'Recently active relationships');
         await expect(recent.getByText(/No contacts yet/)).toBeVisible();
         await expect(recent.getByRole('button', { name: 'Add contacts', exact: true })).toBeVisible();
@@ -155,12 +157,80 @@ test.describe.serial('Relationship-first CRM Dashboard', () => {
       await expect(region(page, 'Opportunities & Pipeline').getByText('No opportunities closed in the selected month')).toBeVisible();
       expect(await page.getByRole('link', { name: /New contacts/ }).textContent()).toBe(newContacts);
 
-      // Canonical navigation is unchanged: Dashboard → Contacts → Pipeline.
+      // Canonical CRM navigation: Dashboard → Contacts → Pipeline.
       await page.goto(`/organizations/${organizationId}/crm`);
       await page.getByRole('link', { name: 'Pipeline', exact: true }).first().click();
       await expect(page).toHaveURL(/\/crm\/pipeline/);
       await page.getByRole('link', { name: 'Contacts', exact: true }).first().click();
       await expect(page).toHaveURL(/\/crm\/contacts/);
+    });
+  });
+
+  test.describe('calendar agenda', () => {
+    test.use({ storageState: OWNER_STORAGE_STATE });
+    test('opens the canonical Calendar from workspace navigation and the bounded Dashboard agenda', async ({ page }) => {
+      test.setTimeout(180_000);
+      const base=`/organizations/${organizationId}`;
+      const errors:string[]=[]; page.on('pageerror',error=>errors.push(error.message));
+      const start=Date.now()+60*60*1000;
+      const customerId=await createContact(owner,{organizationId,name:`Calendar contact ${run}`,contactType:'person'});
+      const taskTitle=`Agenda call ${run}`;
+      await createTask(owner,{organizationId,customerId,kind:'call',title:taskTitle,dueAt:new Date(start+15*60*1000).toISOString()});
+      const nativeTitles=Array.from({length:6},(_,i)=>`CRM event ${i} ${run}`);
+      for(const [i,title] of nativeTitles.entries()) await saveCalendarEvent(owner,{organizationId,workspace:'crm',title,startsAt:new Date(start+i*30*60*1000).toISOString(),endsAt:new Date(start+(i*30+20)*60*1000).toISOString()});
+      const otherTitle=`Work-only event ${run}`;
+      await saveCalendarEvent(owner,{organizationId,workspace:'field',title:otherTitle,startsAt:new Date(start).toISOString(),endsAt:new Date(start+20*60*1000).toISOString()});
+      const doneTitle=`Completed calendar task ${run}`;
+      const done=await createTask(owner,{organizationId,customerId,kind:'meeting',title:doneTitle,dueAt:new Date(start).toISOString()});
+      await changeTaskStatus(owner,{organizationId,id:done,status:'completed'});
+      for(const viewport of VIEWPORTS){
+        await page.setViewportSize(viewport);
+        await page.goto(`${base}/crm`);
+        const agenda=region(page,'Upcoming calendar');
+        await expect(agenda.getByText(taskTitle,{exact:true})).toBeVisible();
+        await expect(agenda.getByText(nativeTitles[0],{exact:true})).toBeVisible();
+        await expect(agenda.getByRole('listitem')).toHaveCount(5);
+        await expect(agenda.getByText(nativeTitles[5],{exact:true})).toHaveCount(0);
+        await expect(agenda.getByText(otherTitle,{exact:true})).toHaveCount(0);
+        await expect(agenda.getByText(doneTitle,{exact:true})).toHaveCount(0);
+        await expect(agenda.getByText('Showing the next 5. Open Calendar for more.')).toBeVisible();
+        await expect(page.locator('header').getByRole('link',{name:'Calendar',exact:true})).toHaveCount(0);
+        expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+        await agenda.scrollIntoViewIfNeeded();
+        await page.screenshot({path:test.info().outputPath(`crm-agenda-${viewport.name}.png`),fullPage:true});
+        await agenda.getByRole('link',{name:new RegExp(nativeTitles[0])}).click();
+        await expect(page).toHaveURL(/\/crm\/calendar\?view=day&on=.*scope=workspace/);
+        await page.goBack();
+        await region(page,'Upcoming calendar').getByRole('link',{name:'Open Calendar'}).click();
+        await expect(page).toHaveURL(/\/crm\/calendar\?view=day&on=.*scope=workspace/);
+        await expect(page.getByRole('heading',{level:1,name:'Calendar',exact:true})).toBeAttached();
+        const location=page.locator('header').getByRole('navigation',{name:viewport.width<768?'Page location':'breadcrumb',exact:true});
+        await expect(location).toContainText('Calendar');
+        await expect(page.getByRole('button',{name:nativeTitles[5],exact:true})).toBeAttached();
+        if(viewport.width<768) await page.locator('header').getByRole('button',{name:'Menu',exact:true}).click();
+        const nav=page.getByRole('navigation',{name:'This business',exact:true}).filter({visible:true});
+        const calendar=nav.getByRole('link',{name:'Calendar',exact:true});
+        await expect(calendar).toHaveAttribute('aria-current','page');
+        await expect(nav.getByRole('link',{name:'Dashboard',exact:true})).not.toHaveAttribute('aria-current','page');
+        await nav.getByRole('link',{name:'Dashboard',exact:true}).click();
+        if(viewport.width<768) await page.locator('header').getByRole('button',{name:'Menu',exact:true}).click();
+        await nav.getByRole('link',{name:'Calendar',exact:true}).click();
+        await expect(page).toHaveURL(`${base}/crm/calendar`);
+        expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+        await page.screenshot({path:test.info().outputPath(`crm-calendar-navigation-${viewport.name}.png`),fullPage:true});
+      }
+      await page.goto(`${base}/crm/tasks`);
+      const intro=page.locator('main header');
+      await expect(intro.getByRole('button',{name:'New task',exact:true})).toBeVisible();
+      await expect(intro.getByRole('link',{name:'Calendar',exact:true})).toHaveCount(0);
+      await expect(page.getByRole('navigation',{name:'This business',exact:true}).filter({visible:true}).getByRole('link',{name:'Calendar',exact:true})).toBeVisible();
+      // Membership-owned native events work even when the optional Tasks feature is absent.
+      const emptyTitle=`Native event without Tasks ${run}`;
+      await saveCalendarEvent(owner,{organizationId:emptyOrganizationId,workspace:'crm',title:emptyTitle,startsAt:new Date(start).toISOString(),endsAt:new Date(start+20*60*1000).toISOString()});
+      await page.goto(`/organizations/${emptyOrganizationId}/crm`);
+      await expect(region(page,'Upcoming calendar').getByText(emptyTitle,{exact:true})).toBeVisible();
+      await expect(region(page,'Upcoming calendar').getByText(taskTitle,{exact:true})).toHaveCount(0);
+      expect(errors).toEqual([]);
     });
   });
 

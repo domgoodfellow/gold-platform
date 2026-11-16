@@ -1,7 +1,8 @@
 import { ConfigureMenu } from '@/components/controls/configure-menu';
 import type { ConfigureItem } from '@/lib/navigation';
 import Link from 'next/link';
-import { CalendarDays, CircleCheck } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { CircleCheck } from 'lucide-react';
 import { Button,ButtonLink } from '@/components/controls/button';
 import { TextInput } from '@/components/controls/inputs';
 import { WorkspaceHome } from '@/components/patterns/workspace-home';
@@ -29,6 +30,7 @@ export type CrmHomeProps = {
   mayAddContacts:boolean;mayCreateOpportunity:boolean;mayConfigure:boolean;
   /** CRM's configuration doors this member may open (`workspaceConfigureItems`): none, one link, or a menu. */
   configureItems?:ConfigureItem[];
+  calendar?:ReactNode;
 };
 export function CurrencyValues({values}:{values:CurrencyTotal[]}) {
   return values.length?<>{values.map(v=><span className="block tabular-nums" key={v.currency}>{formatOpportunityValue(v.amount_minor,v.currency)}</span>)}</>:<span className="text-sm font-normal leading-5 text-muted">No valued opportunities</span>;
@@ -42,15 +44,14 @@ function dashboardHref(base:string,params:{month?:string;group?:boolean}) {
 /**
  * CRM Dashboard, relationship first: who the business knows (overview), who it has been dealing with
  * (Recently active relationships, the primary panel), what needs doing (Needs attention, beside it on
- * wide screens and after it in reading order), then Opportunities & Pipeline when sales applies.
+ * wide screens and after it in reading order), the compact Calendar agenda, then Opportunities & Pipeline when sales applies.
  * A new business keeps this structure with real zeros and the Add contacts entry point; there is no
  * separate getting-started page. Document order is reading order at every width.
  */
-export function CrmHome({organizationId,timezone,month,overview,relationships,sales,salesComposition,attention,today,overdue,noNext,unassigned,followUpOptions,opportunityOptions,followUpsEnabled,conversionEnabled,mayAddContacts,mayCreateOpportunity,mayConfigure,configureItems=[]}:CrmHomeProps) {
+export function CrmHome({organizationId,timezone,month,overview,relationships,sales,salesComposition,attention,today,overdue,noNext,unassigned,followUpOptions,opportunityOptions,followUpsEnabled,conversionEnabled,mayAddContacts,mayCreateOpportunity,mayConfigure,configureItems=[],calendar}:CrmHomeProps) {
   const base=`/organizations/${organizationId}`; const contacts=`${base}/crm/contacts`;
   const monthParam=month.slice(0,7); const salesEnabled=salesComposition==='full';
-  // ADR-050: Calendar is reached in context, from the workspace that owns it, not from global chrome.
-  const actions=<><ConfigureMenu items={configureItems} />{followUpsEnabled?<ButtonLink tone="secondary" href={`${base}/crm/calendar`}><CalendarDays aria-hidden/> Calendar</ButtonLink>:null}{mayAddContacts?<AddContactsTrigger/>:null}{mayCreateOpportunity&&salesEnabled?<OpportunitySheet {...opportunityOptions} triggerTone="secondary"/>:null}</>;
+  const actions=<><ConfigureMenu items={configureItems} />{mayAddContacts?<AddContactsTrigger/>:null}{mayCreateOpportunity&&salesEnabled?<OpportunitySheet {...opportunityOptions} triggerTone="secondary"/>:null}</>;
   const attentionSources=followUpsEnabled||salesEnabled; const attentionTotal=attention.overdue+attention.today+(salesEnabled?attention.unassigned+(followUpsEnabled?attention.noNext:0):0);
   const allClear=attentionSources&&!attentionTotal;
   const lifecycleTotal=overview?LIFECYCLES.reduce((sum,[key])=>sum+overview.lifecycles[key],0):0;
@@ -72,6 +73,7 @@ export function CrmHome({organizationId,timezone,month,overview,relationships,sa
       {attentionSources&&!allClear?<OperationalPanel className="min-w-0" title="Needs attention" action={followUpsEnabled&&followUpOptions.mayManage?<FollowUpSheet {...followUpOptions}/>:null}><NeedsAttention counts={attention} overdue={overdue} today={today} noNext={noNext} unassigned={unassigned} options={followUpOptions} followUpsEnabled={followUpsEnabled} salesEnabled={salesEnabled}/></OperationalPanel>:null}
       {allClear?<p role="status" className="flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm"><CircleCheck aria-hidden className="size-4 text-muted"/><span><span className="font-medium">Needs attention:</span> nothing overdue{followUpsEnabled?' or due today':''}{salesEnabled?', and every open opportunity has an owner':''}.</span></p>:null}
     </div>
+    {calendar?<div className="mb-6 min-w-0">{calendar}</div>:null}
     {salesComposition==='setup'?<OperationalPanel title="Opportunities & Pipeline" density="compact"><PanelState kind="not-configured" action={<ButtonLink tone="secondary" href={`${base}/crm/configuration/opportunity-stages`}>Set up opportunity stages</ButtonLink>}>Track specific sales pursuits by naming opportunity stages. CRM works without them.</PanelState></OperationalPanel>:null}
     {sales&&salesEnabled?<SalesSection base={base} month={month} sales={sales} conversionEnabled={conversionEnabled} mayConfigure={mayConfigure} group={relationships.grouped}/>:null}
   </WorkspaceHome>;

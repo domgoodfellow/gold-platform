@@ -373,7 +373,7 @@ describe('the operator shell navigation', () => {
     expect(inSidebar).toEqual([
       'home',
       'library',
-      'sales', 'customers', 'opportunity-pipeline',
+      'sales', 'customers', 'opportunity-pipeline', 'calendar',
       'comms', 'calls', 'comms-inbox',
       'marketing', 'marketing-campaigns', 'marketing-audiences', 'marketing-leads', 'marketing-performance', 'support', 'support-cases', 'support-queue-workbench', 'support-service-levels-view', 'support-reports', 'ai', 'ai-activity', 'ai-evaluations',
       'finance', 'finance-catalog', 'finance-quotes', 'finance-invoices', 'finance-payments', 'finance-reports',

@@ -2,6 +2,9 @@
 import { cleanup,render,screen,within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach,beforeEach,describe,expect,it,vi } from 'vitest';
+import { CalendarAgenda, CrmCalendarAgenda } from '@/features/crm/home/calendar-agenda';
+import { loadOrganizationCalendar, type OrganizationCalendarEvent } from '@/lib/application/calendar/organization-calendar';
+import type { Db } from '@/lib/db/types';
 import { CrmHome,type CrmHomeProps } from '@/features/crm/home/crm-home';
 import type { RelationshipRow } from '@/lib/domain/contacts/relationship-activity';
 vi.mock('@/features/crm/intake/contact-intake',()=>({AddContactsTrigger:()=> <button>Add contacts</button>}));
@@ -9,6 +12,7 @@ vi.mock('@/features/crm/opportunities/opportunity-sheet',()=>({OpportunitySheet:
 vi.mock('@/features/crm/follow-ups/follow-up-sheet',()=>({FollowUpSheet:({children,item}:{children?:string;item?:unknown})=><button>{children??(item?'Edit task':'New task')}</button>}));
 vi.mock('@/features/crm/follow-ups/follow-up-list',()=>({FollowUpList:({items}:{items:{title:string}[]})=><ul>{items.map(item=><li key={item.title}>{item.title}</li>)}</ul>}));
 vi.mock('@/components/panels/workspace-right-rail',()=>({SupportTrigger:({mode}:{mode:string})=> <button>{mode==='activity'?'Activity':mode==='insights'?'Insights':'Settings'}</button>}));
+vi.mock('@/lib/application/calendar/organization-calendar',()=>({loadOrganizationCalendar:vi.fn()}));
 const row=(id:string,name:string,contactType:RelationshipRow['contactType'],extra:Partial<RelationshipRow>={}):RelationshipRow=>({id,name,contactType,lifecycle:null,companyId:null,companyName:null,activity:{action:'follow_up.completed',detail:{kind:'call',title:`Call ${name}`},occurredAt:'2026-10-20T15:00:00Z'},nextTask:null,...extra});
 const rows=[row('p1','Ada Person','person',{companyId:'c1',companyName:'Acme Ltd',lifecycle:'prospect',nextTask:{id:'t1',title:'Send proposal',dueAt:'2026-10-25T15:00:00Z'}}),row('c1','Acme Ltd','company',{lifecycle:'customer'}),row('p2','Ben Person','person',{companyId:'c1',companyName:'Acme Ltd'}),row('p3','Cy Solo','person')];
 const stage={stageId:'s1',name:'Discovery',kind:'open',position:0,count:4,values:[]};
@@ -157,5 +161,51 @@ describe('relationship-first CRM dashboard',()=>{
     expect(screen.queryByRole('region',{name:'Relationship overview'})).toBeNull();
     expect(screen.queryByText('Ada Person')).toBeNull();
     expect(screen.getByRole('link',{name:'View pipeline'})).toBeInTheDocument();
+  });
+});
+
+
+describe('CRM Dashboard calendar agenda',()=>{
+  const event=(index:number):OrganizationCalendarEvent=>({key:`task:${index}`,source:'follow-ups',title:`Agenda task ${index}`,startsAt:`2026-11-01T${String(index+5).padStart(2,'0')}:30:00Z`,context:'Ada Person',status:'open',followUp:{} as never});
+  const props={organizationId:'org',timezone:'America/Toronto',today:'2026-11-01',events:[] as OrganizationCalendarEvent[],notices:[] as string[]};
+  it('renders bounded due times in business timezone without inventing duration or an exact total',()=>{
+    render(<CalendarAgenda {...props} events={Array.from({length:7},(_,i)=>event(i))}/>);
+    const agenda=panel('Upcoming calendar');
+    expect(within(agenda).getAllByRole('listitem')).toHaveLength(5);
+    expect(within(agenda).getByText('Showing the next 5. Open Calendar for more.')).toBeInTheDocument();
+    expect(within(agenda).getAllByRole('link',{name:/Due Sun, Nov 1/})).toHaveLength(5);
+    expect(within(agenda).getAllByRole('link')[1]).toHaveAttribute('href','/organizations/org/crm/calendar?view=day&on=2026-11-01&scope=workspace');
+    expect(within(agenda).getByRole('link',{name:'Open Calendar'})).toHaveAttribute('href','/organizations/org/crm/calendar?view=day&on=2026-11-01&scope=workspace');
+  });
+  it('distinguishes an empty agenda from source failure and keeps healthy events readable',()=>{
+    const {rerender}=render(<CalendarAgenda {...props}/>);
+    expect(screen.getByText('No upcoming CRM events or tasks in the next 7 days.')).toBeInTheDocument();
+    rerender(<CalendarAgenda {...props} notices={['Calendar events are unavailable.']}/>);
+    expect(screen.queryByText('No upcoming CRM events or tasks in the next 7 days.')).toBeNull();
+    expect(screen.getByText('Calendar preview unavailable. Open Calendar to retry.')).toBeInTheDocument();
+    rerender(<CalendarAgenda {...props} notices={['Calendar events are unavailable.']} events={[event(0)]}/>);
+    expect(screen.getByText('Agenda task 0')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Calendar events are unavailable.');
+  });
+  it('shows cross-day native duration and opens an ongoing event on today',()=>{
+    const native={...event(0),source:'calendar',startsAt:'2026-10-31T22:00:00Z',endsAt:'2026-11-02T02:00:00Z',event:{}} as OrganizationCalendarEvent;
+    render(<CalendarAgenda {...props} events={[native]}/>);
+    expect(screen.getByRole('link',{name:/Agenda task 0/})).toHaveAttribute('href','/organizations/org/crm/calendar?view=day&on=2026-11-01&scope=workspace');
+    expect(screen.getByText(/Sat, Oct 31/)).toBeInTheDocument();
+    expect(screen.getByText(/Sun, Nov 1/)).toBeInTheDocument();
+    expect(screen.queryByText(/Due /)).toBeNull();
+  });
+  it('uses the canonical CRM-only read with open tasks and seven local dates through DST',async()=>{
+    vi.useFakeTimers(); vi.setSystemTime(new Date('2026-11-01T04:30:00Z'));
+    try {
+      vi.mocked(loadOrganizationCalendar).mockResolvedValue({events:[],notices:[],members:[],followUpsEnabled:false});
+      render(await CrmCalendarAgenda({db:{} as Db,organizationId:'org',timezone:'America/Toronto'}));
+      expect(loadOrganizationCalendar).toHaveBeenCalledWith({}, {organizationId:'org',source:'follow-ups',workspace:'crm',taskStatus:'open',within:{startsAt:'2026-11-01T04:30:00.000Z',endsAt:'2026-11-08T05:00:00.000Z'}});
+    } finally {vi.useRealTimers();}
+  });
+  it('places the agenda after relationships and attention with no redundant header Calendar action',()=>{
+    render(<CrmHome {...defaults} calendar={<CalendarAgenda {...props}/>}/>);
+    expect(screen.getAllByRole('region').map(r=>r.getAttribute('aria-label')).slice(0,5)).toEqual(['Relationship overview','Recently active relationships','Needs attention','Upcoming calendar','Opportunities & Pipeline']);
+    expect(screen.queryByRole('link',{name:'Calendar'})).toBeNull();
   });
 });

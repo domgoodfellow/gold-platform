@@ -70,3 +70,18 @@ describe('shared organization calendar', () => {
     expect(parseCalendarSource('follow-ups')).toBe('follow-ups');
   });
 });
+
+it('scopes dashboard calendar reads to native CRM events and open tasks without reading scheduled Work', async () => {
+  await loadOrganizationCalendar(db, {...input,source:'follow-ups',workspace:'crm',taskStatus:'open'});
+  expect(reads.events).toHaveBeenCalledWith(db, {organizationId:'org',workspace:'crm',within:input.within});
+  expect(reads.followUps).toHaveBeenCalledWith(db, expect.objectContaining({status:'open',from:input.within.startsAt,before:input.within.endsAt}));
+  expect(reads.work).not.toHaveBeenCalled();
+});
+it('keeps native CRM events readable without the optional Tasks feature', async () => {
+  reads.available.mockResolvedValue(false);
+  reads.events.mockResolvedValue(counted([{id:'native',title:'Planning',startsAt:input.within.startsAt,endsAt:input.within.endsAt,status:'scheduled'}],1));
+  const result=await loadOrganizationCalendar(db, {...input,source:'follow-ups',workspace:'crm',taskStatus:'open'});
+  expect(result.events.map(e=>e.source)).toEqual(['calendar']);
+  expect(reads.followUps).not.toHaveBeenCalled();
+  expect(reads.work).not.toHaveBeenCalled();
+});

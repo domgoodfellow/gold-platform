@@ -24,6 +24,7 @@ describe('business vocabulary and navigation',()=>{
     expect(workspaceNavigation(sections, '/organizations/11111111-1111-4111-8111-111111111111/calls')!.sections[0].items.find(item => item.key === 'calls')!.label).toBe('Phone desk');
     expect(workspaceNavigation(sections, '/organizations/11111111-1111-4111-8111-111111111111/finance/invoices')!.workspace.label).toBe('Finance');
     const destinations = businessDestinations(input);
+    expect(destinations.filter(item => item.key === 'calendar')).toHaveLength(1);
     expect(destinations.find(item => item.key === 'customers')!.workspace).toBe('CRM');
     expect(destinations.find(item => item.key === 'calls')!.workspace).toBe('Communications');
     const restricted = projectBusinessNavigation({ ...input, capabilities: new Set() }, profile);
@@ -33,7 +34,7 @@ describe('business vocabulary and navigation',()=>{
     const input={organizationId:'org',enabledModules:new Set(['reception']),featureAvailability:new Set(AREAS.flatMap(area=>area.featureKeys??[])),capabilities:new Set(ALL_CAPABILITIES)};
     const sections=projectBusinessNavigation(input,{...profile,navigation:['opportunity-pipeline','customers'],labels:{'workspace-dashboard':'Old overview'}});
     const crm=sections.flatMap(section=>section.items).find(item=>item.key==='workspace-crm')!;
-    expect(crm.destinations?.map(item=>item.key)).toEqual(['workspace-dashboard','customers','opportunity-pipeline']);
+    expect(crm.destinations?.map(item=>item.key)).toEqual(['workspace-dashboard','customers','opportunity-pipeline','calendar']);
     expect(crm.destinations?.[0].label).toBe('Dashboard');
   });
 

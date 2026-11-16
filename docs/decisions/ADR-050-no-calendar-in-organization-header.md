@@ -5,6 +5,8 @@
 **Supersedes:** ADR-048, point 4 only
 **Superseded by:** None
 
+**Amended:** 2026-11-16, owner-approved CRM Calendar Navigation & Dashboard Integration work order: CRM Calendar is a first-class workspace sidebar destination; its sidebar and Dashboard agenda links replace the redundant CRM page-header actions. The organization-header restriction remains.
+
 ## Context
 
 ADR-048 point 4 kept a Calendar shortcut in the persistent organization header, offered for the entered workspace while its Home was usable. The header is organization chrome: it appeared and disappeared as a person moved between workspaces, and it treated one workspace's calendar as an organization utility. Only CRM and Work register calendars, and both are already reached from their own pages.
@@ -14,7 +16,7 @@ The V1.4 work order asked whether a canonical organization notification read mod
 ## Decision
 
 1. The persistent organization header shows location, organization utilities (Team and Connections where permitted), the command palette and Agent access. It carries no workspace Calendar shortcut.
-2. Calendars remain registered workspace destinations (`AREAS`, `NavItem.calendar`) and are reached in context: CRM from its Dashboard (when tasks are available) and Tasks pages, Work from its Dashboard. No address is built by appending `/calendar`.
+2. Calendars remain registered workspace destinations (`AREAS`, `NavItem.calendar`) and are reached in context: CRM from its sidebar and Dashboard agenda, Work from its Dashboard. CRM native events remain available without the optional Tasks feature. No address is built by appending `/calendar`.
 3. No notification control is added until an operator notification read model and destination exist. That is a separate feature dependency, not a placeholder.
 
 ## Consequences
