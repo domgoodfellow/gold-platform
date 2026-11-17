@@ -38,6 +38,8 @@ describe('translated contact import under real PostgreSQL', () => {
   let organizationId: string, otherOrg: string;
   const tag = randomUUID().slice(0, 6);
   const phone = (last: number) => `+1647555${String(2000 + last).padStart(4, '0')}`;
+  // A personal-looking name has no digits, so this business's surname is the tag spelled in letters.
+  const surname = `Cam${tag.replace(/[0-9]/g, (digit) => 'abcdefghij'[Number(digit)])}`;
 
   beforeAll(async () => {
     [owner, viewer, outsider] = await Promise.all([account(), account(), account()]);
@@ -104,12 +106,12 @@ describe('translated contact import under real PostgreSQL', () => {
 
   it('holds what must be confirmed until a person decides, and a skipped business links nobody', async () => {
     const csv = [HEADERS,
-      `k1,Kristy Cameron ${tag},,${phone(3)},,,General Contractors,NEW,${META({ cityOrLocation: 'Courtenay, BC V9N3S1' })}`,
+      `k1,Kristy ${surname},,${phone(3)},,,General Contractors,NEW,${META({ cityOrLocation: 'Courtenay, BC V9N3S1' })}`,
       `w1,Willow Services ${tag},Taylor Example ${tag},${phone(4)},,,Services,BAD_DATA,${META({ streetAddress: 'PO Box 10', cityOrLocation: 'Ottawa, ON K1A 0A1' })}`,
       `d1,Dispatch Coffee ${tag},267 Rue Saint-Zotique O,${phone(5)},,,,NEW,${META({ contactTitle: 'Montreal, QC H2V1A4' })}`,
     ].join('\n');
     const run = await stage(csv);
-    const kristy = run.row(`Kristy Cameron ${tag}`);
+    const kristy = run.row(`Kristy ${surname}`);
     expect(kristy).toMatchObject({ status: 'review', proposedAction: 'review', matchReason: 'quality', candidateIds: [] });
     expect(rowTranslation(kristy)?.issues.map(issue => issue.code)).toEqual(['business_name_looks_personal']);
     const willow = run.row(`Willow Services ${tag}`);
@@ -131,7 +133,7 @@ describe('translated contact import under real PostgreSQL', () => {
     expect(await affiliationsOf(taylor.id)).toEqual([]);
     const skipped = await owner.db.from('events').select('payload').eq('organization_id', organizationId).eq('entity_id', taylor.id).eq('action', 'contact.import_affiliation_skipped');
     expect(skipped.data).toHaveLength(1);
-    expect(await contactsNamed(`Kristy Cameron ${tag}`)).toHaveLength(1);
+    expect(await contactsNamed(`Kristy ${surname}`)).toHaveLength(1);
   });
 
   it('keeps a historical do-not-call value as a restriction on the business, never as consent, and links a person to a business matched by phone', async () => {

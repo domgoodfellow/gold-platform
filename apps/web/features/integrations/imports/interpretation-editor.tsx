@@ -51,7 +51,6 @@ export function InterpretationEditor({ organizationId, resourceId, inspection, d
 
       <Card as="section" aria-labelledby="interpretation-rules">
         <h2 id="interpretation-rules" className="text-sm font-semibold">Interpretations</h2>
-        {interpretations.length === 0 ? <p className="mt-3 text-sm text-muted">Every column is read as it is; nothing in this source needs interpreting.</p> : null}
         <ul className="mt-3 divide-y divide-border">
           {interpretations.map((interpretation) => (
             <li key={interpretation.id} className="py-3">
@@ -105,6 +104,7 @@ export function InterpretationEditor({ organizationId, resourceId, inspection, d
         </div>
         {unrecognized.length ? <>
           <h3 className="mt-4 text-sm font-medium">Other columns</h3>
+          {/* ui-copy-allow: states the consequence of keeping a column, which the choice depends on */}
           <Hint className="mt-1 block">A column kept becomes that field on each business. Columns not kept stay with the import&apos;s source data.</Hint>
           <div className="mt-2 overflow-x-auto">
             <table className="w-full min-w-[32rem] text-sm">

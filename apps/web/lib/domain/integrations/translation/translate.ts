@@ -5,7 +5,7 @@ import {
   normalizePhone, normalizePostalCode, normalizeWebsite, normalizeWholeNumber, phoneDisplay, plain, postalConflictsWithProvince,
   splitLocation, PROVINCES, type AddressKind,
 } from './normalize';
-import { readsNested, type TranslationPlan } from './plan';
+import type { TranslationPlan } from './plan';
 
 /**
  * Translation: one source row becomes candidate entities — a Business, a Person, the link between

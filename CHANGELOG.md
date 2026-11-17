@@ -34,6 +34,8 @@ Entries describe the product or operational change, not every file touched.
 
 ## 2026-11-16
 
+- Library imports can read a source as businesses and people. A row naming a company and a contact becomes a Company, a Person and the link between them with the role; rows that describe the same business become one Company. Addresses in name columns, locations in title columns, personal-looking business names, disagreeing details and source bad-data flags are held for a decision instead of being imported as they are. A historical do-not-call value is kept on the business as a restriction, never as permission to call. Each staged row shows what it is, whom it belongs to, what needs attention and the source values it came from. GuildOps Import Workbench `contacts_flat.csv` exports are recognized directly. Column-by-column mapping remains available.
+
 - Replaced GildOps' continuous page crack and zigzag section dividers with bounded, textured material panels, bevelled edges and raised gold joins. A restrained shimmer follows selected gold seams and stops under reduced motion; the treatment stays within the marketing site.
 
 - Fixed TypeScript errors blocking deployment builds of translated contact imports. Staging uses the normalized row contract, and whole-source translation plans stay separate from custom-field normalization.

@@ -76,6 +76,49 @@ until that check confirms the repaired database contract. Hosted application
 requires explicit migration approval; importing data
 through a local web server connected to hosted Supabase still writes hosted data.
 
+### Translated imports
+
+A source with a business column, or a GuildOps Import Workbench `contacts_flat.csv`, opens on
+Interpret your source instead of column mapping (ADR-054); `&mode=columns` keeps column mapping.
+The engine in `lib/domain/integrations/translation/` is deterministic TypeScript: no model is
+called and nothing leaves the process.
+
+- **Discovery** lifts JSON nested in a text column (tagged `[TAG]{…}[/TAG]` or a whole JSON cell)
+  into `prefix.key` columns, profiles every column and suggests a source column per concept.
+  Credential-like columns are never read or shown.
+- **Interpretations** (read embedded details, merge repeated name columns, split a combined
+  location, read the title as a role, link person to business, group rows of one business, keep
+  telephones in one form) are proposed only with evidence and each is approved or rejected.
+- **Translation** judges each entity on its own. An address in a name column makes no Person, a
+  location in a title column makes no role, and the Business stays importable. Telephones on a
+  business row belong to the Business, never to its people. Links are always `proposed`.
+- **Holds**: a business name that reads as a person's name with nothing on the row to settle it,
+  a name equal to the person's, rows with the same name but different website, telephone or city,
+  disagreeing province or postal code, a source `BAD_DATA` status and Workbench review flags are
+  staged as Needs review with reason `quality`; nothing held is applied until a person decides.
+  A historical do-not-call value is written to the business's Do not call field (or omitted by
+  choice) and always holds nothing open: it is never consent.
+- **Staging** saves the plan as the mapping's one `translation` field, so runs snapshot it and
+  resume from it. Each Business group and each Person is one staging row with a stable key
+  (`<file namespace>:id:business:<hash>` / `:id:person:<source id>`), businesses staged before
+  people. Matching, review, decisions and apply are the existing pipeline (pipeline version 3).
+  Applying a person resolves `company_source_key` to the business row applied in the same run and
+  calls `save_contact_affiliation`; a skipped business links nobody and records
+  `contact.import_affiliation_skipped`.
+- **Fields**: business facts use the tenant field registry (industry, SIC code, website, estimated
+  revenue and employees, postal code, Do not call, source lead status), created when the member
+  has `field.manage`. Unrecognized columns are kept only into a field the person chooses.
+- **Evidence**: every staged row keeps the source column, original and translated value of each
+  value it carries, shown in review under Source evidence.
+- **Inspection contract** (`inspect.ts`): `inspectImportSource` and `inspectRows` return
+  discovery, interpretations, the default plan, a quality summary and a preview, reading under
+  the caller's own session and writing nothing. An agent may use them to propose; applying stays
+  with the run commands under `integration.manage`, and nothing auto-approves a run.
+
+Not supported yet: XLSX, JSON files and database dumps as sources (CSV and connected worksheets
+only); the relational `semantic_*.csv` package (its `contacts_flat.csv` carries the same
+entities); matching a business by name alone; an agent tool registered in the AI catalogue.
+
 ### Imported application library
 
 GildOps imports pinned Activepieces community npm packages without an Activepieces account or hosted integration service (ADR-041). The installed catalogue currently contains 36 products and 64 reviewed read/search actions. Google and Microsoft products share their respective canonical connections. Metadata comes from the installed packages, including names, icons, schemas and authentication declarations; the web uses a generated projection and the API exposes authenticated, filtered, paginated discovery at `/integrations/library`.
