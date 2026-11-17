@@ -13,6 +13,9 @@ const FALLBACK_TAGLINE = 'AI, automation and business software, set up around ho
  * and gold for the primary action, scoped to this frame so a business's published website and
  * every operator surface keep the neutral roles. The header already carries the one primary
  * action on every width; there is no second, fixed copy of it along the bottom of a phone.
+ *
+ * The main column is the frame's measure (`--marketing-measure`, globals.css), shared with the
+ * header and footer so compositions, navigation and footer align.
  */
 export function MarketingShell({
   name,
@@ -32,7 +35,7 @@ export function MarketingShell({
   return (
     <div data-marketing-site className="flex min-h-dvh w-full flex-col overflow-x-clip bg-background text-foreground">
       <MarketingHeader name={name} logoUrl={logoUrl} />
-      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col p-6 sm:p-8">{children}</main>
+      <main className="marketing-measure mx-auto flex w-full flex-1 flex-col p-6 sm:p-8">{children}</main>
       <MarketingFooter
         name={name}
         tagline={tagline ?? FALLBACK_TAGLINE}

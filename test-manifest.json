@@ -137,8 +137,8 @@
     ]
   },
   "files": {
-    "apps/web/tests/unit/translated-import.test.ts": {"category":"unit","concerns":["crm","imports","data integrity"]},
-    "apps/web/tests/integration/database/translated-import.test.ts": {"category":"database-integration","concerns":["crm","imports","tenant-isolation"]},
+    "apps/web/tests/unit/translated-import.test.ts": {"category": "unit", "concerns": ["crm", "imports", "data integrity"], "note": "Translated imports: telephone, website, postal and nested-JSON reading; discovery and evidence-backed interpretations; one business with one or several people; same-name businesses with different details kept apart and held; business without a person and person without a business; addresses never become people and locations never become roles; personal-looking business names held; shared telephones stay on businesses; bad data held and do-not-call kept as a restriction; unknown columns kept only into defined fields; stable keys across reorders; Workbench contacts_flat.csv recognized."},
+    "apps/web/tests/integration/database/translated-import.test.ts": {"category": "database-integration", "concerns": ["crm", "imports", "data integrity", "permissions", "tenant-isolation"], "note": "Translated import under real PostgreSQL: businesses and people staged as separate rows and linked on apply with role, address and business fields; a repeat of the same file creates nobody twice; rows to confirm held until decided; a skipped business links nobody; do-not-call kept as a restriction; a person linked to a business matched by phone; refused without integration.manage and across businesses."},
     "apps/web/tests/integration/database/shared-surfaces-access.test.ts": {"category":"database-integration","concerns":["calendar","activity","rbac","tenant-isolation"]},
     "apps/web/tests/component/organization-activity.test.tsx": {"category":"component","concerns":["activity","accessibility","panels"]},
     "apps/web/e2e/shared-surfaces.spec.ts": {"category":"playwright-acceptance","concerns":["calendar","navigation","rbac","responsive","activity"]},
@@ -223,8 +223,6 @@
     "apps/api/tests/component/test_customer_notifications.py": {"category": "python-component", "concerns": ["communications", "providers", "security"]},
 
     "apps/web/tests/unit/prospect-import.test.ts": { "category": "unit", "concerns": ["crm", "imports", "data integrity"] },
-    "apps/web/tests/unit/translated-import.test.ts": {"category": "unit", "concerns": ["crm", "imports", "data integrity"], "note": "Translated imports: telephone, website, postal and nested-JSON reading; discovery and evidence-backed interpretations; one business with one or several people; same-name businesses with different details kept apart and held; business without a person and person without a business; addresses never become people and locations never become roles; personal-looking business names held; shared telephones stay on businesses; bad data held and do-not-call kept as a restriction; unknown columns kept only into defined fields; stable keys across reorders; Workbench contacts_flat.csv recognized."},
-    "apps/web/tests/integration/database/translated-import.test.ts": {"category": "database-integration", "concerns": ["crm", "imports", "data integrity", "permissions", "tenant-isolation"], "note": "Translated import under real PostgreSQL: businesses and people staged as separate rows and linked on apply with role, address and business fields; a repeat of the same file creates nobody twice; rows to confirm held until decided; a skipped business links nobody; do-not-call kept as a restriction; a person linked to a business matched by phone; refused without integration.manage and across businesses."},
     "apps/web/e2e/workspace-configuration.spec.ts": { "category": "playwright-acceptance", "concerns": ["configuration", "navigation", "responsive", "permissions"] },
     "apps/web/tests/unit/channel-diagnostics.test.ts": { "category": "unit", "concerns": ["communications", "readiness", "permissions"] },
     "apps/web/tests/unit/configuration-redirect.test.ts": { "category": "unit", "concerns": ["navigation", "configuration", "compatibility"] },
@@ -1194,6 +1192,9 @@
         "seo"
       ]
     },
+    "apps/web/tests/architecture/static/marketing-composition.test.ts": {"category": "architecture-static", "concerns": ["marketing", "public-site", "availability", "accessibility"], "note": "The seeded GildOps homepage drawn through its compositions: every published heading, product, step and statement as HTML in published order; availability matched by destination; one h1, an ordered process, hero links to groups on the page; decoration hidden from assistive technology; unfit content kept on the shared renderer; tenant renderer, tenant site and Studio canvas untouched."},
+    "apps/web/tests/unit/fragment-geometry.test.ts": {"category": "unit", "concerns": ["marketing", "public-site"], "note": "Every marketing composition at every width tiles its grid exactly; seams run only where two fragments meet and every shared edge has one; joints stay near their grid lines; geometry is deterministic; broken layouts are refused."},
+    "apps/web/tests/component/lighting-controller.test.tsx": {"category": "component", "concerns": ["marketing", "accessibility"], "note": "One page light: full light at the focal line and none far away, the crossing point reported; shimmer only after scrolling settles and stopped when it resumes; static under reduced motion; everything removed on unmount."},
     "apps/web/tests/architecture/static/marketing-shell.test.ts": {
       "category": "architecture-static",
       "concerns": [

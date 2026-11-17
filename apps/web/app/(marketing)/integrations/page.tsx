@@ -1,6 +1,6 @@
 import { MarketingPage, MarketingSection } from '@/components/marketing/marketing-page';
 import type { Metadata } from 'next';
-import { CtaBand } from '@/components/marketing/cta-band';
+import { CtaBand } from '@/features/marketing-site/closing';
 import { groupByCategory } from '@/lib/domain/integrations/published';
 import { getPublishedConnectors } from '@/lib/domain/integrations/published-cache';
 
@@ -25,7 +25,7 @@ export default async function IntegrationsPage() {
 
   return (
     <MarketingPage>
-      <MarketingSection kind="hero" variant="hero">
+      <MarketingSection kind="hero">
         <div className="flex flex-col gap-4">
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-subtle">Integrations</p>
           <h1 className="max-w-2xl text-4xl font-semibold leading-[1.04] tracking-tight sm:text-5xl">
@@ -37,7 +37,7 @@ export default async function IntegrationsPage() {
         </div>
       </MarketingSection>
 
-      <MarketingSection kind="content" variant="products">
+      <MarketingSection kind="content">
         <div className="grid gap-10 sm:grid-cols-2">
           {groups.map((group) => (
             <div key={group.category}>

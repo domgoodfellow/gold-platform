@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { ButtonLink } from '@/components/controls/button';
 import { AvailabilityLabel } from '@/components/marketing/availability-label';
-import { CtaBand } from '@/components/marketing/cta-band';
+import { CtaBand } from '@/features/marketing-site/closing';
 import { FaqSection, faqStructuredData } from '@/components/marketing/faq-section';
 import { FOCUS_RING, cx } from '@/components/class-names';
 import { AVAILABILITY, DIALER, OFFERINGS, consultationHref, offeringById, offeringHref } from '@/lib/marketing/content';
@@ -45,7 +45,7 @@ export default function DialerPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, '\\u003c') }}
       />
 
-      <MarketingSection kind="hero" variant="hero">
+      <MarketingSection kind="hero">
         <section className="flex max-w-3xl flex-col items-start gap-6">
           <p className="flex flex-wrap items-center gap-3 text-sm font-medium text-muted">
             Dialer
@@ -65,7 +65,7 @@ export default function DialerPage() {
         </section>
       </MarketingSection>
 
-      <MarketingSection kind="content" variant="products">
+      <MarketingSection kind="content">
         <section aria-labelledby="dialer-what">
           <h2 id="dialer-what" className="text-2xl font-semibold tracking-tight sm:text-3xl">What it does, call by call</h2>
           <ol className="mt-10 grid gap-x-10 gap-y-12 md:grid-cols-3">
@@ -90,7 +90,7 @@ export default function DialerPage() {
         </section>
       </MarketingSection>
 
-      <MarketingSection kind="content" variant="process">
+      <MarketingSection kind="content">
         <section aria-labelledby="dialer-start" className="-mx-2 rounded-2xl bg-secondary px-6 py-12 sm:px-12 sm:py-16">
           <h2 id="dialer-start" className="max-w-xl text-balance text-2xl font-semibold tracking-tight sm:text-3xl">Who it is for, and what it takes to start</h2>
           <dl className="mt-10 grid gap-x-12 gap-y-8 sm:grid-cols-2">
@@ -104,7 +104,7 @@ export default function DialerPage() {
         </section>
       </MarketingSection>
 
-      <MarketingSection kind="content" variant="trust">
+      <MarketingSection kind="content">
         <section id="compare" aria-labelledby="dialer-compare" className="scroll-mt-24">
           <h2 id="dialer-compare" className="max-w-2xl text-balance text-2xl font-semibold tracking-tight sm:text-3xl">{DIALER.comparison.heading}</h2>
           <div className="mt-10 grid gap-x-12 gap-y-8 md:grid-cols-2">
@@ -121,7 +121,7 @@ export default function DialerPage() {
         </section>
       </MarketingSection>
 
-      <MarketingSection kind="content" variant="bridge">
+      <MarketingSection kind="content">
         <section aria-labelledby="dialer-with" className="grid gap-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-16">
           <div className="flex max-w-md flex-col gap-3">
             <h2 id="dialer-with" className="text-balance text-2xl font-semibold tracking-tight sm:text-3xl">On its own, or with the rest</h2>
@@ -150,7 +150,7 @@ export default function DialerPage() {
         </section>
       </MarketingSection>
 
-      <MarketingSection kind="content" variant="products">
+      <MarketingSection kind="content">
         <FaqSection items={DIALER.faq} />
       </MarketingSection>
 

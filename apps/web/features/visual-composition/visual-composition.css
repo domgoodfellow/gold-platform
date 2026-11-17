@@ -1,0 +1,155 @@
+/* Visual composition: the mechanism behind `FragmentGroup`, independent of any one look.
+   Every colour is a token the page's material set supplies:
+     per material (`[data-material=name]`): --surface-top, --surface-bottom, --surface-sheen,
+       --surface-reflectivity (0-1), --surface-ink, --surface-muted, --surface-focus;
+     per page: --seam-shadow, --seam-metal, --seam-reflection, --seam-groove, --seam-glint,
+       --composition-edge, and optionally --seam-width.
+   Geometry arrives as custom properties from the component; nothing here knows a shape.
+   Breakpoints match `BREAKPOINT_MIN_REM` in composition.ts. */
+
+/* The light a composition is under. `LightingController` writes both as the page scrolls;
+   without it (no script, reduced motion) these static values give a fixed, even hierarchy. */
+@property --light { syntax: '<number>'; inherits: true; initial-value: 0.5; }
+@property --light-y { syntax: '<number>'; inherits: true; initial-value: 0.35; }
+
+.fg {
+  position: relative;
+  isolation: isolate;
+  container: fragment-group / inline-size;
+  transition: --light 0.5s ease-out, --light-y 0.6s ease-out;
+}
+
+.fg-cells {
+  display: grid;
+  /* Equal tracks: every row is as tall as the tallest share any cell needs, so a grid unit is an
+     exact fraction of the group's box and the outlines meet the cells where they should. */
+  grid-template-columns: repeat(var(--columns-compact), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--rows-compact), minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.fg-cell { display: flex; min-width: 0; grid-area: var(--area-compact); }
+.fg-cell[data-material]:not([data-material='ground']) {
+  --foreground: var(--surface-ink);
+  --muted: var(--surface-muted);
+  --border: color-mix(in srgb, var(--surface-ink) 26%, transparent);
+  --focus-color: var(--surface-focus, var(--surface-ink));
+  color: var(--surface-ink);
+}
+
+/* A surface is positioned against the whole group, not its cell, so its outline is in the same
+   coordinates as every other fragment and the seams. */
+.fg-surface {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  clip-path: var(--clip-compact);
+  background: linear-gradient(var(--facet, 150deg), var(--surface-top), var(--surface-bottom));
+}
+.fg-surface[data-material='ground'] { display: none; }
+/* Section light: one broad reflection across the whole group, clipped by each fragment, so the
+   pieces read as one object under one light. It follows the reader's focal line down the group
+   and drifts across it, and each material reflects it to its own degree. */
+.fg-surface::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 60% 85% at calc(18% + var(--light-y) * 34%) calc(var(--light-y) * 100%),
+    var(--surface-sheen),
+    transparent 72%
+  );
+  opacity: calc(var(--light) * var(--surface-reflectivity, 0.6) + var(--hover-light, 0));
+  transition: opacity 0.3s ease-out;
+}
+.fg-cell:hover > .fg-surface,
+.fg-cell:focus-within > .fg-surface { --hover-light: 0.2; }
+
+.fg-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding-block: var(--cell-pad-block, 2.25rem);
+  padding-inline: calc(var(--cell-pad-inline, 1.75rem) + var(--seam-reach-compact));
+  color: inherit;
+  text-decoration: none;
+}
+a.fg-content { cursor: pointer; }
+a.fg-content:focus-visible { outline: 2px solid var(--focus-color); outline-offset: -0.875rem; border-radius: 2px; }
+
+.fg-art { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+
+.fg-seams { position: absolute; inset: 0; display: none; width: 100%; height: 100%; overflow: visible; }
+.fg-seams[data-breakpoint='compact'] { display: block; }
+.fg-seams path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.fg-edge { stroke: var(--composition-edge); stroke-width: 1px; }
+.fg-seam-groove { stroke: var(--seam-groove); stroke-width: calc(var(--seam-width, 3px) + 3px); }
+.fg-seam-metal { stroke-width: var(--seam-width, 3px); }
+.fg-metal-shadow { stop-color: var(--seam-shadow); }
+.fg-metal-body { stop-color: var(--seam-metal); }
+.fg-metal-reflection { stop-color: var(--seam-reflection); }
+/* Seams catch more of the light than surfaces do. */
+.fg-seam-light { stroke: var(--seam-reflection); stroke-width: 1px; opacity: calc(0.15 + var(--light) * 0.85); }
+
+/* Specular shimmer: a short, bright reflection that runs along the selected seams, only while
+   the composition holds the reader's settled focus, then rests. The selected seams are drawn
+   fully bright and seen only through a narrow diagonal window that sweeps across the group, so
+   where the window crosses a seam a short glint travels along it, whatever the seam's direction. */
+.fg-seam-glint { stroke: var(--seam-glint); stroke-width: calc(var(--seam-width, 3px) + 1px); }
+.fg-glints {
+  visibility: hidden;
+  -webkit-mask-image: linear-gradient(118deg, transparent 46%, rgb(0 0 0 / 0.55) 49.2%, #000 50%, rgb(0 0 0 / 0.55) 50.8%, transparent 54%);
+  mask-image: linear-gradient(118deg, transparent 46%, rgb(0 0 0 / 0.55) 49.2%, #000 50%, rgb(0 0 0 / 0.55) 50.8%, transparent 54%);
+  -webkit-mask-size: 400% 100%;
+  mask-size: 400% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: 100% 0;
+  mask-position: 100% 0;
+}
+@keyframes fg-glint {
+  0% { -webkit-mask-position: 100% 0; mask-position: 100% 0; }
+  55%, 100% { -webkit-mask-position: 0% 0; mask-position: 0% 0; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .fg[data-shimmer] .fg-glints { visibility: visible; animation: fg-glint 9s cubic-bezier(0.4, 0, 0.3, 1) infinite; }
+}
+
+@container fragment-group (min-width: 40rem) {
+  .fg-cells {
+    grid-template-columns: repeat(var(--columns-medium), minmax(0, 1fr));
+    grid-template-rows: repeat(var(--rows-medium), minmax(0, 1fr));
+  }
+  .fg-cell { grid-area: var(--area-medium); }
+  .fg-surface { clip-path: var(--clip-medium); }
+  .fg-content { padding-inline: calc(var(--cell-pad-inline, 1.75rem) + var(--seam-reach-medium)); }
+  .fg-seams[data-breakpoint='compact'] { display: none; }
+  .fg-seams[data-breakpoint='medium'] { display: block; }
+}
+@container fragment-group (min-width: 64rem) {
+  .fg-cells {
+    grid-template-columns: repeat(var(--columns-wide), minmax(0, 1fr));
+    grid-template-rows: repeat(var(--rows-wide), minmax(0, 1fr));
+  }
+  .fg-cell { grid-area: var(--area-wide); }
+  .fg-surface { clip-path: var(--clip-wide); }
+  .fg-content { padding-inline: calc(var(--cell-pad-inline, 1.75rem) + var(--seam-reach-wide)); }
+  .fg-seams[data-breakpoint='medium'] { display: none; }
+  .fg-seams[data-breakpoint='wide'] { display: block; }
+}
+
+@media (forced-colors: active) {
+  .fg-surface, .fg-seam-glint { display: none; }
+  .fg-seams path { stroke: CanvasText; }
+}

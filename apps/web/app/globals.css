@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "../features/visual-composition/visual-composition.css";
+@import "../features/marketing-site/marketing-site.css";
 /* Scoped dark mode also covers explicit preferences opposite to the operating system. */
 @custom-variant dark {
   @container style(--appearance-scheme: dark) { @slot; }
@@ -238,132 +240,30 @@
   }
 }
 
-/* Marketing material is bounded artwork. Shared panel edges own the gold;
-   neither section heights nor reading-column margins determine fracture geometry. */
+/* The marketing frame's measure: header, main column and footer share it, so compositions,
+   navigation and footer align. Pages built on `MarketingPage` get the wider measure their
+   compositions need. Materials and section compositions live in marketing-site.css. */
+[data-marketing-site] { --marketing-measure: 64rem; }
+@media (min-width: 1024px) {
+  [data-marketing-site]:has([data-marketing-page]) { --marketing-measure: 75rem; }
+}
+[data-marketing-site] .marketing-measure { max-width: var(--marketing-measure); }
 [data-marketing-page] { position: relative; padding-top: 1rem; }
-[data-marketing-page] .marketing-section {
-  position: relative;
-  isolation: isolate;
-  padding-block: 2.75rem;
-}
-[data-marketing-page] .marketing-section-content { position: relative; z-index: 1; }
-[data-marketing-site] .kintsugi-fracture {
-  position: absolute;
-  pointer-events: none;
-  user-select: none;
-  overflow: visible;
-}
-[data-marketing-site] .kintsugi-material { filter: var(--material-filter, none); }
-@media (prefers-color-scheme: dark) {
-  [data-marketing-site] { --material-filter: grayscale(1) brightness(.34) sepia(.8) hue-rotate(170deg) saturate(1.3); }
-}
-[data-marketing-page] [data-marketing-section=hero] {
-  min-height: 38rem;
-  display: flex;
-  align-items: center;
-  padding-block: 4rem;
-}
-[data-marketing-page] [data-marketing-section=hero] > .kintsugi-fracture {
-  width: 72%;
-  height: auto;
-  right: -20%;
-  top: 50%;
-  transform: translateY(-50%);
-}
-[data-marketing-page] [data-marketing-section=hero] .marketing-section-content { width: 51%; }
-[data-marketing-page] [data-marketing-section=hero] h1 {
-  font-size: clamp(2.5rem, 4.1vw, 3.5rem);
-  line-height: 1.06;
-  letter-spacing: -.045em;
-}
+[data-marketing-page] .marketing-section { position: relative; padding-block: 2.5rem; }
+[data-marketing-page] [data-marketing-section=hero] { padding-block: 2rem 2.5rem; }
+[data-marketing-page] [data-marketing-section=hero] h1 { font-size: clamp(2.5rem, 4.1vw, 3.5rem); line-height: 1.06; letter-spacing: -.045em; }
 [data-marketing-page] [data-marketing-section=hero] p { font-size: 1.0625rem; }
 [data-marketing-page] [data-section=problem] > section { background: var(--secondary); border-radius: .75rem; }
 [data-marketing-page] [data-section=capabilities] > section { padding-block: .5rem; }
-[data-marketing-page] [data-marketing-section=cta] {
-  margin-block: 1.5rem 3rem;
-  padding: 0;
-  overflow: hidden;
-  border-radius: 1rem;
-  background: var(--marketing-dark);
-  color: #f5f7fa;
-  --focus-color: #f5f7fa;
-}
-[data-marketing-page] [data-marketing-section=cta] .marketing-section-content > section,
-[data-marketing-page] [data-marketing-section=cta] .marketing-section-content > [data-section] > section {
-  margin: 0;
-  background: transparent;
-  color: #f5f7fa;
-  border-radius: 0;
-}
-[data-marketing-page] [data-marketing-section=cta] > .kintsugi-fracture {
-  width: 28rem;
-  height: auto;
-  right: -8rem;
-  top: -5rem;
-  z-index: 0;
-  transform: rotate(-16deg);
-  --material-filter: grayscale(1) brightness(.34) sepia(.8) hue-rotate(170deg) saturate(1.3);
-}
-[data-marketing-page] [data-marketing-section=cta] .marketing-section-content > section > div,
-[data-marketing-page] [data-marketing-section=cta] .marketing-section-content > [data-section] > section > div {
-  position: relative;
-  margin-left: 0;
-  max-width: 78%;
-}
-[data-marketing-page] [data-marketing-section=cta] .marketing-section-content a {
-  --background: #f5f7fa;
-  --foreground: #15191f;
-}
 [data-marketing-site] header a[href="/demo"],
-[data-marketing-page] [data-marketing-section=hero] a[href="/demo"] {
-  background: linear-gradient(110deg, var(--marketing-gold-shadow) -45%, var(--marketing-gold) 30%, var(--marketing-gold-reflection) 180%);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / .55), 0 1px 2px rgb(67 48 17 / .12);
-}
+[data-marketing-page] [data-marketing-section=hero] a[href="/demo"] { background: linear-gradient(110deg, var(--marketing-gold-shadow) -45%, var(--marketing-gold) 30%, var(--marketing-gold-reflection) 180%); box-shadow: inset 0 1px 0 rgb(255 255 255 / .55), 0 1px 2px rgb(67 48 17 / .12); }
 [data-marketing-site] > footer { background: var(--marketing-dark); color: #f5f7fa; --focus-color: #f5f7fa; }
-[data-marketing-site] .marketing-footer-inner { position: relative; isolation: isolate; overflow: hidden; }
-[data-marketing-site] .marketing-footer-inner > div { position: relative; z-index: 1; }
-[data-marketing-site] .marketing-footer-inner > .kintsugi-fracture {
-  width: 9rem;
-  height: auto;
-  right: -5rem;
-  bottom: -2rem;
-  --material-filter: grayscale(1) brightness(.34) sepia(.8) hue-rotate(170deg) saturate(1.3);
-}
 [data-marketing-site]:has([data-marketing-page]) > main { padding-bottom: 0; }
 [data-marketing-site]:has([data-marketing-page]) > footer { margin-top: 0; }
-[data-marketing-site] .kintsugi-reflection { opacity: 0; }
-@keyframes kintsugi-reflection {
-  0% { transform: translateX(0); opacity: 0; }
-  5% { opacity: .95; }
-  35% { transform: translateX(990px); opacity: .95; }
-  39%, 100% { transform: translateX(990px); opacity: 0; }
-}
-@media (prefers-reduced-motion: no-preference) {
-  [data-marketing-site] .kintsugi-reflection { animation: kintsugi-reflection 9s linear infinite; }
-  [data-fracture=hero] .kintsugi-reflection { animation-delay: -1.2s; }
-  [data-fracture=cta] .kintsugi-reflection { animation-delay: -2s; }
-  [data-fracture=footer] .kintsugi-reflection { animation: none; }
-}
-@media (min-width: 1024px) {
-  [data-marketing-site]:has([data-marketing-page]) > main,
-  [data-marketing-site]:has([data-marketing-page]) > header > div,
-  [data-marketing-site]:has([data-marketing-page]) .marketing-footer-inner { max-width: 75rem; }
-}
-@media (max-width: 899px) {
-  [data-marketing-page] [data-marketing-section=hero] { min-height: 32rem; }
-  [data-marketing-page] [data-marketing-section=hero] .marketing-section-content { width: 60%; }
-  [data-marketing-page] [data-marketing-section=hero] > .kintsugi-fracture { width: 48%; right: -6%; }
-}
 @media (max-width: 639px) {
   [data-marketing-page] .marketing-section { padding-block: 1.75rem; }
-  [data-marketing-page] [data-marketing-section=hero] { display: flex; flex-direction: column; min-height: 0; padding-block: 1.5rem 1rem; }
-  [data-marketing-page] [data-marketing-section=hero] .marketing-section-content { width: 100%; }
-  [data-marketing-page] [data-marketing-section=hero] > .kintsugi-fracture { position: relative; order: 2; width: 85%; height: auto; right: auto; top: auto; transform: none; margin: 1rem -1rem -.5rem auto; }
+  [data-marketing-page] [data-marketing-section=hero] { padding-block: 1.5rem 1rem; }
   [data-marketing-page] [data-marketing-section=hero] h1 { font-size: clamp(2.25rem, 9.6vw, 3rem); }
-  [data-marketing-page] [data-marketing-section=cta] { padding-bottom: 6rem; margin-block: 1rem 2rem; }
-  [data-marketing-page] [data-marketing-section=cta] .marketing-section-content > section > div,
-  [data-marketing-page] [data-marketing-section=cta] .marketing-section-content > [data-section] > section > div { max-width: 100%; }
-  [data-marketing-page] [data-marketing-section=cta] > .kintsugi-fracture { width: 18rem; right: -6rem; top: auto; bottom: -8.5rem; }
 }
 @media (max-width: 359px) {
   [data-marketing-site] > header > div { column-gap: .5rem; padding-left: .75rem; }

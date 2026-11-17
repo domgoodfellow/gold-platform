@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { MarketingHomepage } from '@/components/marketing/marketing-homepage';
+import { MarketingHomepage } from '@/features/marketing-site/homepage';
 import { getPublishedGoldHomepage } from '@/lib/domain/public-site/cached';
 import { canonicalUrl } from '@/lib/seo/site';
 import { PLATFORM_NAME } from '@/lib/brand';

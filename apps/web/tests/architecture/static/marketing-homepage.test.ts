@@ -66,7 +66,7 @@ describe('the homepage presents products the way a visitor can buy them', () => 
     expect(sections.length).toBe(seededSections.length);
   });
 
-  it('shows tools on their own, AI and automation, and connected applications, as linked lists', () => {
+  it('authors the three product groups using the shared linked-list section vocabulary', () => {
     expect(groups).toHaveLength(3);
     for (const group of groups) {
       expect(group.variant).toBe('list');

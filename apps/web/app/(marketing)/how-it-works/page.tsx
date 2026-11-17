@@ -1,6 +1,6 @@
 import { MarketingPage, MarketingSection } from '@/components/marketing/marketing-page';
 import type { Metadata } from 'next';
-import { CtaBand } from '@/components/marketing/cta-band';
+import { CtaBand } from '@/features/marketing-site/closing';
 import { HOW_IT_WORKS_STEPS } from '@/lib/marketing/content';
 
 export const metadata: Metadata = {
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export default function HowItWorksPage() {
   return (
     <MarketingPage>
-      <MarketingSection kind="hero" variant="hero">
+      <MarketingSection kind="hero">
         <div className="flex flex-col gap-4">
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-subtle">How it works</p>
           <h1 className="max-w-2xl text-4xl font-semibold leading-[1.04] tracking-tight sm:text-5xl">
@@ -29,7 +29,7 @@ export default function HowItWorksPage() {
         </div>
       </MarketingSection>
 
-      <MarketingSection kind="content" variant="products">
+      <MarketingSection kind="content">
         <ol className="divide-y divide-border border-y border-border">
           {HOW_IT_WORKS_STEPS.map((step, index) => (
             <li key={step.title} className="grid gap-2 py-6 sm:grid-cols-[3rem_16rem_1fr] sm:gap-6">

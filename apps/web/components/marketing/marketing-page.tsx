@@ -1,25 +1,18 @@
 import type { ReactNode } from 'react';
-import { KintsugiFracture, type FractureVariant } from './kintsugi-fracture';
 
-/** GildOps' code-authored pages and published homepage share one visual composition. */
+/** GildOps' code-authored pages and published homepage share one page rhythm. */
 export function MarketingPage({ children, as: Element = 'div' }: { children: ReactNode; as?: 'div' | 'article' }) {
   return <Element data-marketing-page>{children}</Element>;
 }
 
-export function productFracture(index: number): FractureVariant {
-  return (['products', 'automation', 'connected'] as const)[index % 3]!;
-}
-
-/** Bounded material accents; content, forms and semantics stay with their owner. */
-export function MarketingSection({ children, kind = 'content', variant = 'bridge' }: {
-  children: ReactNode;
-  kind?: string;
-  variant?: FractureVariant;
-}) {
+/**
+ * One section of a marketing page: spacing and a hook for its kind. It draws no artwork; a section
+ * that wants geometry and light composes a `FragmentGroup` around its real content.
+ */
+export function MarketingSection({ children, kind = 'content' }: { children: ReactNode; kind?: string }) {
   return (
     <div className="marketing-section" data-marketing-section={kind}>
-      <KintsugiFracture variant={variant} />
-      <div className="marketing-section-content">{children}</div>
+      {children}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { ProductLanding } from '@/components/marketing/product-landing';
+import { ProductLanding } from '@/features/marketing-site/product-landing';
 import { productBySlug } from '@/lib/marketing/content';
 
 const product = productBySlug('sales')!;

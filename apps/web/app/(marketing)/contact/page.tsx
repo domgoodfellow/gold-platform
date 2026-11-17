@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { formatPhoneForDisplay } from '@/lib/display/phone';
 import type { Metadata } from 'next';
 import { Mail, Phone } from 'lucide-react';
-import { CtaBand } from '@/components/marketing/cta-band';
+import { CtaBand } from '@/features/marketing-site/closing';
 import { getPublishedGoldHomepage } from '@/lib/domain/public-site/cached';
 import { sendContactAction } from './actions';
 import { ContactForm } from './contact-form';
@@ -28,7 +28,7 @@ export default async function ContactPage() {
 
   return (
     <MarketingPage>
-      <MarketingSection kind="content" variant="bridge">
+      <MarketingSection kind="content">
         <section className="-mx-2 rounded-2xl bg-secondary px-6 py-12 sm:px-12 sm:py-16">
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-subtle">Contact</p>
           <h1 className="mt-3 max-w-2xl text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl">
@@ -43,7 +43,7 @@ export default async function ContactPage() {
         </section>
       </MarketingSection>
 
-      <MarketingSection kind="content" variant="products">
+      <MarketingSection kind="content">
         <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
           {methods.length > 0 ? (
             <section aria-labelledby="reach-us" className="flex flex-col gap-4">

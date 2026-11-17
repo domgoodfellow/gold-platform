@@ -75,10 +75,15 @@ test('public marketing menu groups authentication and demo in its footer', async
   const context = await browser.newContext();
   const page = await context.newPage();
   try {
-    for (const width of [320, 375, 390, 768, 1024, 1440]) {
+    for (const width of [320, 375, 390, 768, 900, 1023, 1024, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto('/pricing');
-      if (width < 640) {
+      // One header row at every width: Log in beside the primary action from 640px, the full
+      // navigation from 1024px, the drawer below that.
+      if (width >= 640) await expect(page.locator('header').getByRole('link', { name: 'Log in' })).toBeVisible();
+      expect(await page.locator('header > div').evaluate((bar) => bar.getBoundingClientRect().height)).toBeLessThan(64);
+      if (width < 1024) {
+        await expect(page.getByRole('navigation', { name: 'Primary' })).toBeHidden();
         await page.getByRole('button', { name: 'Open menu' }).click();
         const sheet = page.getByRole('dialog');
         const footer = sheet.locator('[data-slot="sheet-footer"]');
@@ -88,7 +93,6 @@ test('public marketing menu groups authentication and demo in its footer', async
         await page.screenshot({ path: testInfo.outputPath(`marketing-menu-${width}.png`) });
         await page.keyboard.press('Escape');
       } else {
-        await expect(page.locator('header').getByRole('link', { name: 'Log in' })).toBeVisible();
         await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible();
         await page.screenshot({ path: testInfo.outputPath(`marketing-${width}.png`) });
       }

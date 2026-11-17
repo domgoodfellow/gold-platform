@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
-import { MarketingPage, MarketingSection, productFracture } from '@/components/marketing/marketing-page';
+import { MarketingPage, MarketingSection } from '@/components/marketing/marketing-page';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { AvailabilityLabel } from '@/components/marketing/availability-label';
-import { CtaBand } from '@/components/marketing/cta-band';
+import { CtaBand } from '@/features/marketing-site/closing';
 import { FOCUS_RING, cx } from '@/components/class-names';
 import { AVAILABILITY, OFFERING_GROUPS, consultationHref, offeringsIn } from '@/lib/marketing/content';
 
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 export default function ProductsPage() {
   return (
     <MarketingPage>
-      <MarketingSection kind="hero" variant="hero">
+      <MarketingSection kind="hero">
         <header className="flex max-w-3xl flex-col gap-6">
           <h1 className="text-balance text-4xl font-semibold leading-[1.04] tracking-tight sm:text-5xl">
             Use one tool, or several together.
@@ -51,8 +51,8 @@ export default function ProductsPage() {
         </header>
       </MarketingSection>
 
-      {OFFERING_GROUPS.map((group, index) => (
-        <MarketingSection key={group.key} kind="capabilities" variant={productFracture(index)}>
+      {OFFERING_GROUPS.map((group) => (
+        <MarketingSection key={group.key} kind="capabilities">
           <section key={group.key} id={group.key} aria-labelledby={`${group.key}-heading`} className="scroll-mt-24">
             <div className="flex max-w-2xl flex-col gap-3">
               <h2 id={`${group.key}-heading`} className="text-balance text-2xl font-semibold tracking-tight sm:text-3xl">{group.name}</h2>

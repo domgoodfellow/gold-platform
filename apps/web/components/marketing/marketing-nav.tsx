@@ -89,7 +89,7 @@ export function MarketingNav() {
   );
 }
 
-/** Log in, the primary CTA, and — beneath `sm` — the drawer that carries the whole nav with them. */
+/** Log in from `sm`, the primary CTA, and — beneath `lg` — the drawer that carries the whole nav. */
 export function MarketingActions() {
   return (
     <div className="flex shrink-0 items-center gap-2 sm:gap-3">
@@ -105,7 +105,7 @@ export function MarketingActions() {
 
       <Sheet>
         <SheetTrigger asChild>
-          <Button type="button" tone="secondary" size="small" className="rounded-full px-2 sm:hidden" aria-label="Open menu">
+          <Button type="button" tone="secondary" size="small" className="rounded-full px-2 lg:hidden" aria-label="Open menu">
             <Menu aria-hidden size={16} />
           </Button>
         </SheetTrigger>

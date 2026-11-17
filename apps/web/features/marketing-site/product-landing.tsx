@@ -1,5 +1,5 @@
 import { MarketingPage, MarketingSection } from '@/components/marketing/marketing-page';
-import { CtaBand } from '@/components/marketing/cta-band';
+import { CtaBand } from './closing';
 import { FaqSection, faqStructuredData } from '@/components/marketing/faq-section';
 import { ButtonLink } from '@/components/controls/button';
 import { AvailabilityLabel } from '@/components/marketing/availability-label';
@@ -29,7 +29,7 @@ export function ProductLanding({ product }: { product: Product }) {
         />
       ) : null}
 
-      <MarketingSection kind="hero" variant="hero">
+      <MarketingSection kind="hero">
         <section className="max-w-3xl">
           <div className="flex flex-col items-start gap-6">
             <p className="flex flex-wrap items-center gap-3 text-sm font-medium text-muted">
@@ -48,7 +48,7 @@ export function ProductLanding({ product }: { product: Product }) {
         </section>
       </MarketingSection>
 
-      <MarketingSection kind="content" variant="products">
+      <MarketingSection kind="content">
         <section>
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Key workflows</h2>
           <div className="mt-10 grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
@@ -62,7 +62,7 @@ export function ProductLanding({ product }: { product: Product }) {
         </section>
       </MarketingSection>
 
-      <MarketingSection kind="content" variant="process">
+      <MarketingSection kind="content">
         <section className="grid gap-10 lg:grid-cols-2 lg:gap-16">
           {product.featureGroups.map((group) => (
             <div key={group.title}>
@@ -80,7 +80,7 @@ export function ProductLanding({ product }: { product: Product }) {
         </section>
       </MarketingSection>
 
-      <MarketingSection kind="content" variant="trust">
+      <MarketingSection kind="content">
         <section className="grid gap-8 border-t border-border pt-8 lg:grid-cols-3 lg:gap-16">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">How {product.name} works with other GildOps products</h2>
@@ -91,7 +91,7 @@ export function ProductLanding({ product }: { product: Product }) {
         </section>
       </MarketingSection>
 
-      <MarketingSection kind="content" variant="bridge">
+      <MarketingSection kind="content">
         <section>
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Relevant integrations</h2>
           <p className="mt-3 max-w-xl text-muted">
@@ -101,7 +101,7 @@ export function ProductLanding({ product }: { product: Product }) {
         </section>
       </MarketingSection>
 
-      {product.faq.length ? <MarketingSection kind="content" variant="products">
+      {product.faq.length ? <MarketingSection kind="content">
         <FaqSection items={product.faq} />
       </MarketingSection> : null}
 

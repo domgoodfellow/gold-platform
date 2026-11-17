@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { BrandStyle } from '@/features/branding/brand-style';
 import { MarketingShell } from '@/components/marketing/marketing-shell';
+import { LightingController } from '@/features/visual-composition/lighting-controller';
 import { getPublishedGoldHomepage } from '@/lib/domain/public-site/cached';
 import { getPublicDb } from '@/lib/db/public';
 import { PLATFORM_NAME } from '@/lib/brand';
@@ -30,6 +31,9 @@ export async function generateMetadata(): Promise<Metadata> {
  * **The header's right side is Log in, then the primary CTA — never two equal buttons**
  * (product reality audit, Slice 4). Request a consultation gets the strong treatment; signing in is the
  * plain link beside it.
+ *
+ * `LightingController` is the one light for whichever marketing page is open; a page with no lit
+ * composition costs it nothing. The sign-in screens share the shell but not the light.
  */
 export default async function MarketingLayout({ children }: LayoutProps<'/'>) {
   const site = await getPublishedGoldHomepage();
@@ -44,6 +48,7 @@ export default async function MarketingLayout({ children }: LayoutProps<'/'>) {
         contactPhone={site.profile.contactPhone}
       >
         {children}
+        <LightingController />
       </MarketingShell>
     </div>
   );

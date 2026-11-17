@@ -28,7 +28,7 @@ export default async function DemoPage({ searchParams }: { searchParams: Promise
 
   return (
     <MarketingPage>
-      <MarketingSection kind="content" variant="bridge">
+      <MarketingSection kind="content">
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
             Request a consultation
@@ -41,7 +41,7 @@ export default async function DemoPage({ searchParams }: { searchParams: Promise
         </div>
       </MarketingSection>
 
-      <MarketingSection kind="content" variant="products">
+      <MarketingSection kind="content">
         <div className="max-w-md">
           <DemoForm action={requestDemoAction} initialProduct={topic?.value ?? null} />
         </div>

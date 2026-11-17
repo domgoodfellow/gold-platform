@@ -1,6 +1,6 @@
 import { MarketingPage, MarketingSection } from '@/components/marketing/marketing-page';
 import type { Metadata } from 'next';
-import { CtaBand } from '@/components/marketing/cta-band';
+import { CtaBand } from '@/features/marketing-site/closing';
 import { PRICING_PACKAGES, PRICING_FACTORS } from '@/lib/marketing/content';
 
 export const metadata: Metadata = {
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export default function PricingPage() {
   return (
     <MarketingPage>
-      <MarketingSection kind="hero" variant="hero">
+      <MarketingSection kind="hero">
         <div className="flex flex-col gap-4">
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-subtle">Pricing</p>
           <h1 className="max-w-2xl text-4xl font-semibold leading-[1.04] tracking-tight sm:text-5xl">
@@ -30,7 +30,7 @@ export default function PricingPage() {
         </div>
       </MarketingSection>
 
-      <MarketingSection kind="content" variant="products">
+      <MarketingSection kind="content">
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {PRICING_PACKAGES.map((pkg) => (
             <div key={pkg.key} className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-6">
@@ -41,7 +41,7 @@ export default function PricingPage() {
         </div>
       </MarketingSection>
 
-      <MarketingSection kind="content" variant="process">
+      <MarketingSection kind="content">
         <section>
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">What changes the price</h2>
           <div className="mt-8 grid gap-x-8 gap-y-8 sm:grid-cols-2">

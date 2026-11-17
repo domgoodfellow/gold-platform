@@ -25,7 +25,7 @@ export function LegalDocument({
 }) {
   return (
     <MarketingPage as="article">
-      <MarketingSection kind="content" variant="bridge">
+      <MarketingSection kind="content">
         <header className="-mx-2 rounded-2xl bg-secondary px-6 py-12 sm:px-12">
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-subtle">Legal</p>
           <h1 className="mt-3 text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl">{title}</h1>
@@ -34,7 +34,7 @@ export function LegalDocument({
       </MarketingSection>
 
       {pendingReview ? (
-        <MarketingSection kind="content" variant="products">
+        <MarketingSection kind="content">
           <p role="note" className="max-w-3xl rounded-xl border border-border bg-surface p-4 text-sm leading-relaxed text-muted">
             This is an initial version and has not yet been confirmed by legal counsel. It may change
             before it is relied on as final.
@@ -42,7 +42,7 @@ export function LegalDocument({
         </MarketingSection>
       ) : null}
 
-      <MarketingSection kind="content" variant="process">
+      <MarketingSection kind="content">
         <div className="flex max-w-3xl flex-col gap-8">
           {sections.map((section) => (
             <section key={section.heading} className="flex flex-col gap-3">
@@ -53,7 +53,7 @@ export function LegalDocument({
         </div>
       </MarketingSection>
 
-      <MarketingSection kind="content" variant="trust">
+      <MarketingSection kind="content">
         <p className="max-w-3xl border-t border-border pt-6 text-sm text-muted">
           Questions about this page? <Link href="/contact" className="font-medium text-foreground underline underline-offset-4">Contact us</Link>.
         </p>
