@@ -34,6 +34,8 @@ Entries describe the product or operational change, not every file touched.
 
 ## 2026-11-16
 
+- Replaced GildOps' continuous page crack and zigzag section dividers with bounded, textured material panels, bevelled edges and raised gold joins. A restrained shimmer follows selected gold seams and stops under reduced motion; the treatment stays within the marketing site.
+
 - Fixed TypeScript errors blocking deployment builds of translated contact imports. Staging uses the normalized row contract, and whole-source translation plans stay separate from custom-field normalization.
 
 - The Kintsugi treatment now carries through every public marketing page, including product details, pricing, integrations, inquiry forms and legal pages. Shared section artwork keeps the gold repairs aligned, with quieter decoration around forms and legal copy; existing content and actions are preserved.

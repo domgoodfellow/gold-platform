@@ -10,7 +10,7 @@ export function productFracture(index: number): FractureVariant {
   return (['products', 'automation', 'connected'] as const)[index % 3]!;
 }
 
-/** Keeps repair junctions aligned while content, forms and semantics stay with their owner. */
+/** Bounded material accents; content, forms and semantics stay with their owner. */
 export function MarketingSection({ children, kind = 'content', variant = 'bridge' }: {
   children: ReactNode;
   kind?: string;
