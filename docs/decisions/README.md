@@ -197,7 +197,7 @@ It is not a duplicate specification.
 | ADR-051 | Organization Finance owns reusable commercial capabilities; GildOps sells through its own Finance; supersedes ADR-014 in part | [`ADR-051-reusable-commercial-capabilities.md`](ADR-051-reusable-commercial-capabilities.md) |
 | ADR-052 | Calendar is a shared organization destination; retains contextual previews and Work scheduling ownership | [`ADR-052-shared-organization-calendar.md`](ADR-052-shared-organization-calendar.md) |
 | ADR-053 | Organization Activity is an independently authorized global history utility, separate from page support and notifications | [`ADR-053-organization-activity-utility.md`](ADR-053-organization-activity-utility.md) |
-$row
+| ADR-054 | Imports translate sources into Businesses and People inside the existing pipeline | [`ADR-054-translated-imports.md`](ADR-054-translated-imports.md) |
 
 ## Adding a new decision
 
