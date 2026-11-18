@@ -159,7 +159,7 @@ test('Global Home operational queues, owning actions, Agent and responsive surfa
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await visit();
     // Each launcher opens the owning workspace's existing form, never a Home mutation path.
-    for (const [label, heading] of [['New case', 'New Case'], ['New campaign', 'New campaign'], ['New automation', 'New automation'], ['New form', 'New blank form']] as const) {
+    for (const [label, heading] of [['New case', 'New Case'], ['New campaign', 'New campaign'], ['New workflow', 'New workflow'], ['New form', 'New blank form']] as const) {
       await page.getByRole('button', { name: 'Quick actions', exact: true }).click();
       await page.getByRole('menuitem', { name: label, exact: false }).click();
       await expect(page.getByRole('dialog').getByRole('heading', { name: heading, exact: true })).toBeVisible();

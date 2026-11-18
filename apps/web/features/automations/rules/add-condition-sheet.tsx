@@ -1,8 +1,8 @@
 'use client';
 
 import { useActionState, useState } from 'react';
-import { Plus } from 'lucide-react';
-import { Button } from '@/components/controls/button';
+import { Pencil, Plus } from 'lucide-react';
+import { Button, type ButtonSize } from '@/components/controls/button';
 import { TextInput } from '@/components/controls/inputs';
 import {
   PageDrawer,
@@ -34,7 +34,12 @@ export function AddConditionSheet({
   definitions,
   types = [],
   condition,
+  label,
+  size = 'small',
 }: {
+  size?: ButtonSize;
+  /** The trigger's text, when it is not the default Add condition / Edit condition. */
+  label?: string;
   types?: { id: string; name: string }[];
   condition?: AutomationRule['conditions'][number];
   organizationId: string;
@@ -70,9 +75,9 @@ export function AddConditionSheet({
   return (
     <PageDrawer open={open} onOpenChange={setOpen}>
       <PageDrawerTrigger asChild>
-        <Button type="button" tone="secondary" size="small">
-          <Plus aria-hidden className="size-4" />{' '}
-          {condition ? 'Edit condition' : 'Add condition'}
+        <Button type="button" tone="secondary" size={size}>
+          {condition ? <Pencil aria-hidden className="size-4" /> : <Plus aria-hidden className="size-4" />}{' '}
+          {label ?? (condition ? 'Edit condition' : 'Add condition')}
         </Button>
       </PageDrawerTrigger>
       <PageDrawerContent>
@@ -81,8 +86,7 @@ export function AddConditionSheet({
             {condition ? 'Edit condition' : 'Add a condition'}
           </PageDrawerTitle>
           <PageDrawerDescription>
-            Every condition on this rule has to hold for it to act — add a
-            second rule if what you mean is &ldquo;or&rdquo;.
+            Every condition has to hold. For &ldquo;or&rdquo;, write a second workflow.
           </PageDrawerDescription>
         </PageDrawerHeader>
 

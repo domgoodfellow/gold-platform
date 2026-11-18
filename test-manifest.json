@@ -276,6 +276,16 @@
     },
     "apps/web/tests/unit/home-projection.test.ts": { "category": "unit", "concerns": ["home", "time", "projections"] },
     "apps/web/tests/integration/database/home-dashboard.test.ts": { "category": "database-integration", "concerns": ["home", "authorization", "tenant-isolation", "counts", "currencies"] },
+    "apps/web/tests/unit/workflow-graph.test.ts": {
+      "category": "unit",
+      "concerns": ["automations"],
+      "note": "A workflow graph is a projection of the stored rule rows with computed if/and/then edges; the node registry matches the rule vocabulary, planned steps never reach a palette, and managed automations follow switched-on features."
+    },
+    "apps/web/tests/component/workflow-workbench.test.tsx": {
+      "category": "component",
+      "concerns": ["automations", "responsive", "permissions", "accessibility"],
+      "note": "Phone workbench shows steps with full-screen step settings, a fixed trigger, Checks with recent runs, no edits for read-only roles; managed automations are inspectable and not editable."
+    },
     "apps/web/tests/component/automation-tool-action.test.tsx": {
       "category": "component",
       "concerns": [

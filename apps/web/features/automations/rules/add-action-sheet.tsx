@@ -1,8 +1,8 @@
 'use client';
 
 import { useActionState, useState } from 'react';
-import { Plus } from 'lucide-react';
-import { Button } from '@/components/controls/button';
+import { Pencil, Plus } from 'lucide-react';
+import { Button, type ButtonSize } from '@/components/controls/button';
 import { TextInput } from '@/components/controls/inputs';
 import {
   PageDrawer,
@@ -37,8 +37,16 @@ export function AddActionSheet({
   types,
   action,
   toolChoices = [],
+  initialKind,
+  label,
+  size = 'small',
 }: {
+  size?: ButtonSize;
   action?: AutomationRule['actions'][number];
+  /** Opens with this kind chosen — the workbench palette's entry point. */
+  initialKind?: AutomationRule['actions'][number]['kind'];
+  /** The trigger's text, when it is not the default Add action / Edit action. */
+  label?: string;
   organizationId: string;
   rule: AutomationRule;
   statuses: StatusChoice[];
@@ -50,6 +58,7 @@ export function AddActionSheet({
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState(
     action?.kind ??
+      initialKind ??
       (rule.triggerKind === 'counter_threshold'
         ? 'create_work_item'
         : 'change_status'),
@@ -74,9 +83,9 @@ export function AddActionSheet({
   return (
     <PageDrawer open={open} onOpenChange={setOpen}>
       <PageDrawerTrigger asChild>
-        <Button type="button" tone="secondary" size="small">
-          <Plus aria-hidden className="size-4" />{' '}
-          {action ? 'Edit action' : 'Add action'}
+        <Button type="button" tone="secondary" size={size}>
+          {action ? <Pencil aria-hidden className="size-4" /> : <Plus aria-hidden className="size-4" />}{' '}
+          {label ?? (action ? 'Edit action' : 'Add action')}
         </Button>
       </PageDrawerTrigger>
       <PageDrawerContent>

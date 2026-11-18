@@ -97,7 +97,7 @@ describe('the Settings context', () => {
 
   it('offers workspace configuration nowhere in the navigation', () => {
     const hrefs = projectSettingsNav(ORG, everything).flatMap((section) => section.items.map((item) => item.href)).join(' ');
-    for (const owned of ['pricing', 'work/configuration', 'schedule/configuration', 'comms/configuration/calling', 'sales-stages', 'ai/agents', 'automations/rules']) {
+    for (const owned of ['pricing', 'work/configuration', 'schedule/configuration', 'comms/configuration/calling', 'sales-stages', 'ai/agents', 'automations/workflows']) {
       expect(hrefs).not.toContain(owned);
     }
   });

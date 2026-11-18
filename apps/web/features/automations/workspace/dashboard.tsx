@@ -43,7 +43,7 @@ export function AutomationDashboard({
   const [ruleState, setRuleState] = useState('all');
   const base = `/organizations/${organizationId}/automations`;
   const periodQuery = `when=${data.period.when}`;
-  const activity = `${base}/activity?${periodQuery}`;
+  const activity = `${base}/runs?${periodQuery}`;
   const warningIds = new Set(data.warnings.map((w) => w.ruleId));
   const active = data.rules.filter((r) => r.enabled).length;
   const failures = data.summary.rules.filter((r) => r.failed > 0);
@@ -52,7 +52,7 @@ export function AutomationDashboard({
       label: 'Active automations',
       value: active,
       note: `${data.rules.length} rules in total`,
-      href: `${base}/rules?status=enabled`,
+      href: `${base}/workflows?status=enabled`,
       Icon: Play,
     },
     {
@@ -113,7 +113,7 @@ export function AutomationDashboard({
               problem: w.message,
               at: 'Now',
               state: 'Review',
-              href: `${base}/${w.ruleId}?node=diagnostics`,
+              href: `${base}/workflows/${w.ruleId}?node=diagnostics`,
             }));
   const filteredRules = data.rules.filter(
     (r) =>
@@ -176,7 +176,7 @@ export function AutomationDashboard({
                 ? `${activity}&outcome=failed`
                 : attention === 'deliveries'
                   ? `${activity}&stream=deliveries&state=failed`
-                  : `${base}/rules?health=attention`
+                  : `${base}/workflows?health=attention`
             }
           >
             <div
@@ -257,7 +257,7 @@ export function AutomationDashboard({
           </OperationalPanel>
           <OperationalPanel density="compact"
             title="Automation library"
-            href={`${base}/rules${search ? `?q=${encodeURIComponent(search)}` : ''}`}
+            href={`${base}/workflows${search ? `?q=${encodeURIComponent(search)}` : ''}`}
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex gap-1">

@@ -43,7 +43,7 @@ test.describe('owner', () => {
       const found = await doors(page);
       if (found.length === 0) {
         // Not entitled: the hub must then agree with the Settings directory, which hides the same door.
-        const listed = name === 'ai' ? 'Agent deployments' : name === 'automations' ? 'Automation rules' : null;
+        const listed = name === 'ai' ? 'Agent deployments' : name === 'automations' ? 'Automation workflows' : null;
         expect(listed, `${name} offers no door, so it must be an entitlement-gated workspace`).not.toBeNull();
         await page.goto(`${base}/settings/organization`);
         await expect(page.getByText(listed!, { exact: true })).toHaveCount(0);

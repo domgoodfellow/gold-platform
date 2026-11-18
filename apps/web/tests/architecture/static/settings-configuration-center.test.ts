@@ -148,7 +148,7 @@ describe('Pricing, Automations, Custom fields and Team are canonical, not Settin
     expect(existsSync(`${ROUTES}/finance/configuration/pricing/page.tsx`)).toBe(false);
   });
 
-  it('/automations is canonical Automations Home; Rules, Messages and Activity are its three pages, and a rule is its own detail route', () => {
+  it('/automations is canonical Automations Home; Workflows, Message templates and Runs are its three pages, and a workflow is its own detail route', () => {
     const page = readFileSync(`${ROUTES}/automations/page.tsx`, 'utf8');
     // Home summarizes the three pages rather than rendering Rules itself — a Home is never a
     // page's content wearing the parent's address.
@@ -162,19 +162,25 @@ describe('Pricing, Automations, Custom fields and Team are canonical, not Settin
     expect(page).toContain("redirect(areaHref(organizationId, 'automation-activity'))");
     expect(page).not.toContain('AutomationRuleCard');
 
-    const rules = readFileSync(`${ROUTES}/automations/rules/page.tsx`, 'utf8');
-    expect(rules).toContain('RulesTable');
-    expect(rules).toContain('NewAutomationSheet');
+    const workflows = readFileSync(`${ROUTES}/automations/workflows/page.tsx`, 'utf8');
+    expect(workflows).toContain('RulesTable');
+    expect(workflows).toContain('NewAutomationSheet');
+    expect(workflows).toContain('ManagedAutomations');
     expect(readFileSync(`${ROUTES}/automations/messages/page.tsx`, 'utf8')).toContain('MessagesView');
-    expect(readFileSync(`${ROUTES}/automations/activity/page.tsx`, 'utf8')).toContain('ActivityView');
+    expect(readFileSync(`${ROUTES}/automations/runs/page.tsx`, 'utf8')).toContain('ActivityView');
+    // The retired addresses redirect to their replacements rather than rendering a second copy.
+    for (const retired of ['rules/page.tsx', 'activity/page.tsx', '[ruleId]/page.tsx']) {
+      expect(readFileSync(`${ROUTES}/automations/${retired}`, 'utf8')).toContain('redirect(');
+    }
 
-    const detail = readFileSync(`${ROUTES}/automations/[ruleId]/page.tsx`, 'utf8');
-    expect(detail).toContain('RuleBuilder');
-    const builder = readFileSync(`${WEB_FEATURES}/automations/rules/rule-builder.tsx`, 'utf8');
-    expect(builder).toContain('RuleHeading');
-    expect(builder).toContain('AddConditionSheet');
-    expect(builder).toContain('AddActionSheet');
-    expect(builder).toContain('/activity?when=all&rule=');
+    const detail = readFileSync(`${ROUTES}/automations/workflows/[ruleId]/page.tsx`, 'utf8');
+    expect(detail).toContain('projectRule');
+    expect(detail).toContain('WorkflowWorkbench');
+    const workbench = readFileSync(`${WEB_FEATURES}/automations/workbench/workflow-workbench.tsx`, 'utf8');
+    expect(workbench).toContain('RuleHeading');
+    expect(workbench).toContain('AddConditionSheet');
+    expect(workbench).toContain('AddActionSheet');
+    expect(workbench).toContain('?when=all&rule=');
   });
 
   it('/fields is canonical and renders the shared, entity-scoped fields component', () => {

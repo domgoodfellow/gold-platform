@@ -96,7 +96,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     title: 'AI & Automations',
     entries: [
       entry('ai-agents', 'Agents', 'This business’s agents and where they answer.'),
-      entry('automation-rules', 'Automation rules', 'Triggers, conditions and actions, in Automations.'),
+      entry('automation-rules', 'Automation workflows', 'Triggers, conditions and actions, in Automations.'),
     ],
   },
   {

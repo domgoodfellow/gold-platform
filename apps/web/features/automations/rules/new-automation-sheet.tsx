@@ -51,14 +51,14 @@ export function NewAutomationSheet({
     <PageDrawer open={open} onOpenChange={setOpen}>
       <PageDrawerTrigger asChild>
         <Button type="button" size="small">
-          <Plus aria-hidden className="size-4" /> New automation
+          <Plus aria-hidden className="size-4" /> New workflow
         </Button>
       </PageDrawerTrigger>
       <PageDrawerContent>
         <PageDrawerHeader>
-          <PageDrawerTitle>New automation</PageDrawerTitle>
+          <PageDrawerTitle>New workflow</PageDrawerTitle>
           <PageDrawerDescription>
-            The new rule starts switched off.
+            The new workflow starts switched off.
           </PageDrawerDescription>
         </PageDrawerHeader>
 
@@ -70,8 +70,8 @@ export function NewAutomationSheet({
             type="text"
             required
             maxLength={120}
-            aria-label="What this rule is for"
-            placeholder="What this rule is for"
+            aria-label="What this workflow is for"
+            placeholder="What this workflow is for"
           />
 
           <SelectField name="triggerKind" aria-label="What sets it off" value={kind} onValueChange={(next) => setKind(next as TriggerKind)} options={[{ value: '', label: 'What sets it off', disabled: true }, ...TRIGGER_KINDS.map((entry) => ({ value: entry.kind, label: entry.label }))]} />
@@ -144,7 +144,7 @@ export function NewAutomationSheet({
             disabled={pending || kind === ''}
             className="w-fit"
           >
-            {pending ? 'Adding…' : 'Add rule'}
+            {pending ? 'Adding…' : 'Add workflow'}
           </Button>
           <ActionError state={state} />
         </form>

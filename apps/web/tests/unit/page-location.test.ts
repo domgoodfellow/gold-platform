@@ -39,8 +39,8 @@ describe('route recognition', () => {
   it('prefers a static segment over a dynamic one at the same position', () => {
     expect(at(`${ORG}/comms/inbox/new`).id).toBe('create:conversation');
     expect(at(`${ORG}/comms/inbox/c1`, { records: { conversationId: { state: 'ready', label: 'Ana' } } }).id).toBe('record:conversation');
-    expect(at(`${ORG}/automations/rules`).id).toBe('area:automation-rules');
-    expect(at(`${ORG}/automations/r1`, { records: { ruleId: { state: 'ready', label: 'Rain delay' } } }).id).toBe('record:rule');
+    expect(at(`${ORG}/automations/workflows`).id).toBe('area:automation-rules');
+    expect(at(`${ORG}/automations/workflows/r1`, { records: { ruleId: { state: 'ready', label: 'Rain delay' } } }).id).toBe('record:rule');
     expect(at(`${ORG}/work/dispatch`).id).toBe('view:dispatch');
     expect(at(`${ORG}/work/configuration`).id).toBe('target:work-configuration');
     expect(at(`${ORG}/crm/contacts/stages`).id).toBe('area:pipeline');
@@ -123,7 +123,7 @@ describe('every location is a real page, and every shell page has a location', (
     const expected = [
       'organizations/[organizationId]', 'organizations/[organizationId]/[...unmatched]', 'platform/[...unmatched]',
       ...['customers', 'follow-ups', 'opportunities', 'sales'].map((legacy) => `organizations/[organizationId]/${legacy}/[[...legacyPath]]`),
-      ...['comms/numbers', 'comms/numbers/[phoneNumberId]', 'finance/configuration', 'finance/economics', 'finance/economics/[targetOrganizationId]', 'finance/plans', 'finance/plans/[planKey]', 'insights/reports', 'integrations/[connectionId]', 'integrations/imports', 'integrations/imports/[runId]', 'integrations/imports/new', 'integrations/sources', 'integrations/sources/[resourceId]',
+      ...['automations/[ruleId]', 'automations/activity', 'automations/rules', 'comms/numbers', 'comms/numbers/[phoneNumberId]', 'finance/configuration', 'finance/economics', 'finance/economics/[targetOrganizationId]', 'finance/plans', 'finance/plans/[planKey]', 'insights/reports', 'integrations/[connectionId]', 'integrations/imports', 'integrations/imports/[runId]', 'integrations/imports/new', 'integrations/sources', 'integrations/sources/[resourceId]',
         'settings/calls', 'settings/commerce', 'settings/communications', 'settings/connections/apps', 'settings/data-automation', 'settings/opportunity-stages', 'settings/organization', 'settings/people', 'settings/pricing', 'settings/sales-stages', 'settings/website'].map((path) => `organizations/[organizationId]/${path}`),
     ];
     expect(uncovered.sort()).toEqual(expected.sort());

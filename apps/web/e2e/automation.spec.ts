@@ -130,24 +130,24 @@ test('authors, executes and monitors rules with responsive operating surfaces', 
   ).toBeVisible();
   await capture('01-empty-home-desktop');
   await page
-    .getByRole('button', { name: 'New automation', exact: true })
+    .getByRole('button', { name: 'New workflow', exact: true })
     .click();
   await page
-    .getByRole('textbox', { name: 'What this rule is for' })
+    .getByRole('textbox', { name: 'What this workflow is for' })
     .fill('Confirm controlled maintenance');
   await chooseOption(page.getByLabel('What sets it off'), 'event');
   await chooseOption(page.getByLabel('Which moment'), 'work_item.created');
-  await page.getByRole('button', { name: 'Add rule', exact: true }).click();
+  await page.getByRole('button', { name: 'Add workflow', exact: true }).click();
   await expect(
-    page.getByRole('heading', { name: 'Rule workflow' }),
+    page.getByRole('region', { name: 'Workflow canvas' }),
   ).toBeVisible();
   await expect(
     page.getByText('Disabled', { exact: true }).first(),
   ).toBeVisible();
   const ruleId = page.url().split('/').at(-1)!.split('?')[0];
   await page
-    .getByRole('button', { name: 'Add condition', exact: true })
-    .first()
+    .getByRole('navigation', { name: 'Add a step' })
+    .getByRole('button', { name: 'Job condition', exact: true })
     .click();
   await chooseOption(page.getByLabel('Part of the job'), 'title');
   await chooseOption(page.getByLabel('Comparison', { exact: true }), 'equals');
@@ -160,18 +160,18 @@ test('authors, executes and monitors rules with responsive operating surfaces', 
     .click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await page
-    .getByRole('button', { name: 'Add action', exact: true })
-    .first()
+    .getByRole('navigation', { name: 'Add a step' })
+    .getByRole('button', { name: 'Change stage', exact: true })
     .click();
   await chooseOption(page.getByLabel('What to do'), 'change_status');
-  await chooseOption(page.getByLabel('Status', { exact: true }), target);
+  await chooseOption(page.getByLabel('Stage', { exact: true }), target);
   await page
     .getByRole('dialog')
     .getByRole('button', { name: 'Add action', exact: true })
     .click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(
-    page.getByRole('button', { name: /Action 1.*Change Work status/ }),
+    page.getByRole('button', { name: /Action 1.*Change stage/ }),
   ).toBeVisible();
   await capture('05-builder-completed');
   const canvas = await page
@@ -181,13 +181,13 @@ test('authors, executes and monitors rules with responsive operating surfaces', 
   expect(inspector!.x).toBeGreaterThan(canvas!.x);
   expect(Math.abs(inspector!.y - canvas!.y)).toBeLessThan(2);
   await page
-    .getByRole('button', { name: /Trigger.*Starts this automation/ })
+    .getByRole('button', { name: /Trigger.*Something happens/ })
     .click();
   await capture('06-builder-trigger');
   const rule = (await listAutomationRules(db, { organizationId })).find(
     (r) => r.id === ruleId,
   )!;
-  await page.goto(`${base}/${ruleId}?node=${rule.conditions[0].id}`);
+  await page.goto(`${base}/workflows/${ruleId}?node=${rule.conditions[0].id}`);
   await capture('07-builder-condition');
   await page
     .getByRole('button', { name: 'Edit condition', exact: true })
@@ -199,10 +199,10 @@ test('authors, executes and monitors rules with responsive operating surfaces', 
     .getByRole('button', { name: 'Save condition', exact: true })
     .click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await page.goto(`${base}/${ruleId}?node=${rule.actions[0].id}`);
+  await page.goto(`${base}/workflows/${ruleId}?node=${rule.actions[0].id}`);
   await capture('08-builder-action');
   await page.getByRole('button', { name: 'Edit action', exact: true }).click();
-  await chooseOption(page.getByLabel('Status', { exact: true }), target);
+  await chooseOption(page.getByLabel('Stage', { exact: true }), target);
   await page.getByRole('button', { name: 'Save action', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.getByRole('button', { name: 'Enable', exact: true }).click();
@@ -383,14 +383,14 @@ test('authors, executes and monitors rules with responsive operating surfaces', 
     ),
   ).toBe(true);
   await capture('03-populated-home-mobile');
-  await page.goto(`${base}/${ruleId}`);
+  await page.goto(`${base}/workflows/${ruleId}`);
   await page
-    .getByRole('button', { name: /Trigger.*Starts this automation/ })
+    .getByRole('button', { name: /Trigger.*Something happens/ })
     .click();
   await expect(
-    page.getByRole('heading', { name: 'Trigger configuration' }),
+    page.getByRole('heading', { name: 'Trigger · Something happens' }),
   ).toBeVisible();
-  await page.getByRole('button', { name: 'Back to canvas' }).click();
+  await page.getByRole('button', { name: 'Back to steps' }).click();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
@@ -398,22 +398,22 @@ test('authors, executes and monitors rules with responsive operating surfaces', 
   ).toBe(true);
   await capture('builder-mobile');
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto(`${base}/rules?status=enabled`);
+  await page.goto(`${base}/workflows?status=enabled`);
   await capture('04-rules-collection');
-  await page.goto(`${base}/${failure}?node=diagnostics`);
+  await page.goto(`${base}/workflows/${failure}?node=diagnostics`);
   await capture('09-builder-diagnostics');
-  await page.goto(`${base}/activity?outcome=failed`);
+  await page.goto(`${base}/runs?outcome=failed`);
   await capture('10-run-history');
   const failed = (
     await listAutomationRuns(db, { organizationId, failedOnly: true })
   )[0];
-  await page.goto(`${base}/activity?run=${failed.id}`);
+  await page.goto(`${base}/runs?run=${failed.id}`);
   await expect(
     page.getByRole('heading', { name: 'Execution inspection' }),
   ).toBeVisible();
   await capture('11-execution-inspector');
   await page.goto(
-    `${base}/activity?stream=deliveries&delivery=${deliveries[0].id}`,
+    `${base}/runs?stream=deliveries&delivery=${deliveries[0].id}`,
   );
   await expect(
     page.getByRole('heading', { name: 'Delivery inspection' }),
@@ -427,7 +427,7 @@ test('authors, executes and monitors rules with responsive operating surfaces', 
     .click();
   await expect(page.getByRole('heading', { name: /Preview/ })).toBeVisible();
   await capture('13-template-editor');
-  await page.goto(`${base}/${ruleId}`);
+  await page.goto(`${base}/workflows/${ruleId}`);
   const historicalRun = (
     await listAutomationRuns(db, { organizationId, ruleId })
   )[0];
@@ -455,14 +455,14 @@ test('authors, executes and monitors rules with responsive operating surfaces', 
   await expect(
     page.getByRole('heading', { name: 'Needs attention', exact: true }),
   ).toBeVisible();
-  await page.goto(`${base}/activity?run=${historicalRun.id}`);
+  await page.goto(`${base}/runs?run=${historicalRun.id}`);
   await expect(
     page.getByText(
       'This rule was deleted. Its execution history remains recorded.',
     ),
   ).toBeVisible();
   await expect(
-    page.getByRole('link', { name: 'Open current Rule Builder', exact: true }),
+    page.getByRole('link', { name: 'Open current workflow', exact: true }),
   ).toHaveCount(0);
   expect(errors).toEqual([]);
 });

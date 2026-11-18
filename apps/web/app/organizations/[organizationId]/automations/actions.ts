@@ -28,7 +28,7 @@ function rootPath(organizationId: string): string {
 }
 
 function rulePath(organizationId: string, ruleId: string): string {
-  return `${rootPath(organizationId)}/${ruleId}`;
+  return `${rootPath(organizationId)}/workflows/${ruleId}`;
 }
 
 /**
@@ -47,9 +47,9 @@ async function run(paths: string[], write: () => Promise<unknown>): Promise<Auto
 
   for (const path of paths) revalidatePath(path);
   for (const path of paths.filter((entry) => entry.endsWith('/automations'))) {
-    revalidatePath(`${path}/rules`);
+    revalidatePath(`${path}/workflows`);
     revalidatePath(`${path}/messages`);
-    revalidatePath(`${path}/activity`);
+    revalidatePath(`${path}/runs`);
   }
   return { error: null };
 }

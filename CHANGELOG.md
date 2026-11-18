@@ -32,6 +32,10 @@ Entries describe the product or operational change, not every file touched.
 
 ---
 
+## 2026-11-17
+
+- Automations is now Dashboard, Workflows, Runs and Message templates. Opening a workflow shows it as a canvas on a wide screen or as a list of steps on a phone, both drawn from the stored rule; selecting a step opens its settings, and edits save through the existing rule commands and survive a reload. The chosen view and step stay in the address. The trigger is shown as fixed, conditions as "all must match" and actions in order; there are no branches or free connections. Checks show problems and the workflow's recent runs. Workflows also lists the automated work GildOps already does for the business (message sending, timed checks, connected tool calls, source synchronization, service update emails), each with where its settings and records live and marked as not editable; a business with no workflows still sees it. Platform → Failures lists the schedulers and callbacks behind that work for platform staff. The old Rules, Activity and rule addresses redirect. No database change.
+
 ## 2026-11-16
 
 - Library imports can read a source as businesses and people. A row naming a company and a contact becomes a Company, a Person and the link between them with the role; rows that describe the same business become one Company. Addresses in name columns, locations in title columns, personal-looking business names, disagreeing details and source bad-data flags are held for a decision instead of being imported as they are. A historical do-not-call value is kept on the business as a restriction, never as permission to call. Each staged row shows what it is, whom it belongs to, what needs attention and the source values it came from. GuildOps Import Workbench `contacts_flat.csv` exports are recognized directly. Column-by-column mapping remains available.

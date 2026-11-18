@@ -414,12 +414,12 @@ export const AREAS: readonly Area[] = [
   { segment: 'finance-reports', label: 'Financial reports', group: 'workspaces', workspace: 'finance', route: 'finance/reports', module: 'billing', relevantCapabilities: ['report.read'], featureKeys: ['invoices', 'invoice_history'] },
   // Automations: building, reviewing and observing rules is ongoing work, so it is a workspace.
   // Home carries Rules' own entitlement, so the workspace draws no row for a business without it.
-  // Rules, Messages and Activity are three pages of it, each its own route — the sidebar is the
-  // one navigation for them, and no page carries a second tab strip over the same three.
+  // Workflows, Runs and Message templates are three pages of it, each its own route — the sidebar
+  // is the one navigation for them, and no page carries a second tab strip over the same three.
   { segment: 'automations', label: 'Automations', group: 'workspaces', workspace: 'automations', module: 'automations', relevantCapabilities: ['automation.manage'], featureKeys: ['rule_authoring', 'domain_event_trigger', 'email_action', 'run_history'] },
-  { segment: 'automation-rules', label: 'Rules', group: 'workspaces', workspace: 'automations', route: 'automations/rules', module: 'automations', relevantCapabilities: ['automation.manage'], featureKeys: ['rule_authoring', 'domain_event_trigger', 'email_action', 'run_history'] },
-  { segment: 'automation-messages', label: 'Messages', group: 'workspaces', workspace: 'automations', route: 'automations/messages', module: 'automations', relevantCapabilities: ['automation.manage'], featureKeys: ['rule_authoring', 'domain_event_trigger', 'email_action', 'run_history'] },
-  { segment: 'automation-activity', label: 'Activity', group: 'workspaces', workspace: 'automations', route: 'automations/activity', module: 'automations', relevantCapabilities: ['automation.manage'], featureKeys: ['rule_authoring', 'domain_event_trigger', 'email_action', 'run_history'] },
+  { segment: 'automation-rules', label: 'Workflows', group: 'workspaces', workspace: 'automations', route: 'automations/workflows', module: 'automations', relevantCapabilities: ['automation.manage'], featureKeys: ['rule_authoring', 'domain_event_trigger', 'email_action', 'run_history'] },
+  { segment: 'automation-messages', label: 'Message templates', group: 'workspaces', workspace: 'automations', route: 'automations/messages', module: 'automations', relevantCapabilities: ['automation.manage'], featureKeys: ['rule_authoring', 'domain_event_trigger', 'email_action', 'run_history'] },
+  { segment: 'automation-activity', label: 'Runs', group: 'workspaces', workspace: 'automations', route: 'automations/runs', module: 'automations', relevantCapabilities: ['automation.manage'], featureKeys: ['rule_authoring', 'domain_event_trigger', 'email_action', 'run_history'] },
   // Field: what work is being done, where, when and with what. Home is a real page — kernel, like
   // Work and Schedule — and is never repeated as a child beneath it. Equipment & Assets is the one
   // page behind a module.
@@ -525,7 +525,7 @@ export const CONFIG_TARGETS: readonly ConfigTarget[] = [
   { key: 'resources', treatment: 'operating', scope: 'organization', workspace: 'field', path: 'resources', entitledBy: 'resources', permission: ['resource.create', 'resource.update'] },
   { key: 'locations', treatment: 'operating', scope: 'organization', workspace: 'field', path: 'locations', entitledBy: 'locations', permission: ['location.create'] },
   { key: 'website', treatment: 'operating', scope: 'organization', workspace: 'studio', path: 'studio/website', permission: ['organization.manage'] },
-  { key: 'automation-rules', treatment: 'operating', scope: 'organization', workspace: 'automations', path: 'automations/rules', entitledBy: 'automations', permission: ['automation.manage'] },
+  { key: 'automation-rules', treatment: 'operating', scope: 'organization', workspace: 'automations', path: 'automations/workflows', entitledBy: 'automations', permission: ['automation.manage'] },
   { key: 'ai-agents', scope: 'organization', workspace: 'ai', path: 'ai/agents', featureKeys: ['agent_tools'], permission: ['organization.manage'] },
   // Work types configure Work items, and scheduling hours configure Schedule: each is reached from the
   // page it configures (its Configure control), never from a Configuration row of its own.

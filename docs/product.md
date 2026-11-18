@@ -648,6 +648,13 @@ That does not make the automation AI-owned.
 
 Likewise, an AI assistant may invoke an automation capability without acquiring ownership of its state or execution history.
 
+The Automations workspace has four destinations: Dashboard, Workflows, Runs and Message templates (ADR-055). The former Rules and Activity addresses redirect to Workflows and Runs.
+
+- **Workflows** lists the rules a business wrote. Opening one shows it as a canvas (wide screens) or as a list of steps (the default on a phone), both drawn from the same stored rule. A person who may manage automations edits steps through the existing rule commands; the trigger stays fixed after creation, conditions must all hold, actions run in order, and there are no branches or free connections.
+- **Managed by GildOps**, below the business's own workflows, lists automated work GildOps already does for the business (sending workflow messages, timed workflow checks, connected tool calls, source synchronization, service update emails), shown only when the business has the matching feature. Each entry says what it does, when it runs, which workspace owns it and where its settings and records live. None is editable as a workflow. A business with no workflows still sees this list.
+- **Runs** is the history of rule executions and message deliveries.
+- The schedulers and outside callbacks behind this work are listed only to GildOps platform staff, on Platform → Failures.
+
 ---
 
 ## Core customer journey

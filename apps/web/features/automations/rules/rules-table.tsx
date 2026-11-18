@@ -4,7 +4,7 @@ import type { AutomationRule } from '@/lib/domain/automation/rules';
 import type { RuleWarning } from '@/lib/domain/automation/review';
 import type { AutomationSummary } from '@/lib/domain/automation/monitoring';
 import { AutomationState, automationTime } from '../workspace/operating-ui';
-import { describeTrigger } from './trigger';
+import { describeTrigger } from '@/lib/domain/automation/describe';
 import { RuleEnabledToggle } from './rule-enabled-toggle';
 
 export function RulesTable({
@@ -30,15 +30,15 @@ export function RulesTable({
       <DataTable
         rows={rules}
         rowKey={(r) => r.id}
-        empty="No matching automations."
+        empty="No matching workflows."
         columns={[
           {
             key: 'name',
-            header: 'Automation',
+            header: 'Workflow',
             emphasis: 'primary',
             cell: (r) => (
               <Link
-                href={`${base}/${r.id}`}
+                href={`${base}/workflows/${r.id}`}
                 className="block max-w-44 whitespace-normal text-xs font-medium text-accent-text hover:underline"
               >
                 {r.name}
@@ -88,7 +88,7 @@ export function RulesTable({
             header: 'Set up',
             cell: (r) => (
               <Link
-                href={`${base}/${r.id}?node=diagnostics`}
+                href={`${base}/workflows/${r.id}?node=diagnostics`}
                 className={`text-xs hover:underline ${warnings.some((w) => w.ruleId === r.id) ? 'text-warning' : 'text-subtle'}`}
               >
                 {!r.actions.length
@@ -108,7 +108,7 @@ export function RulesTable({
                     const last = summary?.rules.find((s) => s.rule_id === r.id);
                     return last ? (
                       <Link
-                        href={`${base}/activity?when=all&run=${last.last_id}`}
+                        href={`${base}/runs?when=all&run=${last.last_id}`}
                         className="text-xs text-accent-text hover:underline"
                       >
                         {automationTime(last.last_at, timezone)}
@@ -133,7 +133,7 @@ export function RulesTable({
                 <div className="flex items-center gap-2">
                   <Link
                     className="text-xs text-accent-text hover:underline"
-                    href={`${base}/${r.id}`}
+                    href={`${base}/workflows/${r.id}`}
                   >
                     Edit / inspect
                   </Link>

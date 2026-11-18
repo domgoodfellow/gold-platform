@@ -1,6 +1,7 @@
 'use client';
 import { useActionState } from 'react';
 import { ConfirmSubmit } from '@/components/controls/confirm-submit';
+import type { ButtonSize } from '@/components/controls/button';
 import {
   removeActionAction,
   removeConditionAction,
@@ -12,7 +13,9 @@ export function RemoveRuleNode({
   ruleId,
   nodeId,
   kind,
+  size = 'small',
 }: {
+  size?: ButtonSize;
   organizationId: string;
   ruleId: string;
   nodeId: string;
@@ -39,7 +42,7 @@ export function RemoveRuleNode({
         description={`Remove this ${kind} from the current rule? Historical executions remain recorded.`}
         pending={pending}
         tone="text"
-        size="small"
+        size={size}
       />
       <ActionError state={state} />
     </form>

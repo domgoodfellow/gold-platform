@@ -86,7 +86,7 @@ describe('owning workspace stays active on contextual and detail routes', () => 
     ['comms', 'workspace-communications'], ['calls/call-1', 'workspace-communications'], ['comms/inbox/conversation-1', 'workspace-communications'], ['comms/configuration/numbers/number-1', 'workspace-communications'],
     ['marketing', 'workspace-marketing'], ['support', 'workspace-support'], ['ai', 'workspace-ai'],
     ['finance/invoices/invoice-1', 'workspace-finance'], ['finance/payments/payment-1', 'workspace-finance'],
-    ['automations/activity', 'workspace-automations'], ['automations/rule-1', 'workspace-automations'],
+    ['automations/runs', 'workspace-automations'], ['automations/workflows/rule-1', 'workspace-automations'],
     ['field', 'workspace-field'], ['work/work-1', 'workspace-field'], ['schedule/date', 'workspace-field'], ['resources/person-1', 'workspace-field'], ['locations/site-1', 'workspace-field'], ['assets/asset-1', 'workspace-field'],
     ['studio/forms/form-1', 'workspace-studio'],
   ])('%s activates %s', (path, key) => {
@@ -303,7 +303,7 @@ describe('contextual workspace navigation', () => {
   it.each([
     ['crm/contacts/123', 'crm', 'customers'], ['crm/contacts/stages', 'crm', 'customers'],
     ['calls/123', 'communications', 'calls'], ['comms/inbox/123', 'communications', 'comms-inbox'],
-    ['finance/invoices/123', 'finance', 'finance-invoices'], ['automations/rules/123', 'automations', 'automation-rules'],
+    ['finance/invoices/123', 'finance', 'finance-invoices'], ['automations/workflows/123', 'automations', 'automation-rules'],
     ['work/dispatch', 'field', 'work'], ['studio/forms/123', 'studio', 'studio-forms'],
   ])('resolves %s with a single active destination', (path, owner, active) => {
     const href = `/organizations/${ORG}/${path}/?tab=x#top`;
@@ -321,7 +321,7 @@ describe('contextual workspace navigation', () => {
   });
   it('filters entitlement, role, readiness and shape before rendering destinations or entering context', () => {
     const reduced = project([], { enabledModules: new Set(), featureAvailability: new Set(), schedulableWork: false });
-    for (const path of ['comms', 'calls/123', 'customers/pipeline', 'finance/invoices/123', 'schedule', 'studio/forms', 'support', 'automations/rules']) {
+    for (const path of ['comms', 'calls/123', 'customers/pipeline', 'finance/invoices/123', 'schedule', 'studio/forms', 'support', 'automations/workflows']) {
       expect(workspaceNavigation(reduced, `/organizations/${ORG}/${path}`), path).toBeNull();
     }
     // Dashboard is available only while the registered Work landing is operable.

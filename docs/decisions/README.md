@@ -198,6 +198,7 @@ It is not a duplicate specification.
 | ADR-052 | Calendar is a shared organization destination; retains contextual previews and Work scheduling ownership | [`ADR-052-shared-organization-calendar.md`](ADR-052-shared-organization-calendar.md) |
 | ADR-053 | Organization Activity is an independently authorized global history utility, separate from page support and notifications | [`ADR-053-organization-activity-utility.md`](ADR-053-organization-activity-utility.md) |
 | ADR-054 | Imports translate sources into Businesses and People inside the existing pipeline | [`ADR-054-translated-imports.md`](ADR-054-translated-imports.md) |
+| ADR-055 | The workflow workbench draws stored rules; GildOps' own automated work is listed apart | [`ADR-055-workflow-workbench-projection.md`](ADR-055-workflow-workbench-projection.md) |
 
 ## Adding a new decision
 

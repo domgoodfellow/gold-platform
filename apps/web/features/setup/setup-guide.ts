@@ -19,7 +19,7 @@ const GROUPS = [
   { key: 'communications', label: 'Communications', description: 'Calling, numbers, messaging and the email addresses you send from.', targets: ['phone-numbers', 'communications', 'call-setup', 'email', 'integrations'] },
   { key: 'finance', label: 'Finance', description: 'Set up the prices this business charges its customers and how customers pay. Your GildOps subscription stays separate.', targets: ['price-book', 'payments'] },
   { key: 'presence', label: 'Public presence', description: 'Review branding, domain verification and your published website.', targets: ['branding', 'public-profile', 'domains', 'website'] },
-  { key: 'ai', label: 'AI and Automations', description: 'Agents and automation rules.', targets: ['ai-agents', 'automation-rules'] },
+  { key: 'ai', label: 'AI and Automations', description: 'Agents and automation workflows.', targets: ['ai-agents', 'automation-rules'] },
 ] as const;
 
 /** Group canonical destinations and observed readiness; navigation never creates completion state. */

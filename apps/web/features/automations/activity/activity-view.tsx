@@ -63,7 +63,7 @@ export function ActivityView({
       if (value) query.set(key, value);
       else query.delete(key);
     }
-    return `${base}/activity?${query}`;
+    return `${base}/runs?${query}`;
   };
   const close = () =>
     router.push(href({ run: '', delivery: '' }), { scroll: false });
@@ -93,7 +93,7 @@ export function ActivityView({
           Apply filters
         </Button>
         <Link
-          href={`${base}/activity?when=all`}
+          href={`${base}/runs?when=all`}
           className="text-xs text-accent-text"
         >
           Clear filters
@@ -113,8 +113,8 @@ export function ActivityView({
         <p className="mb-3 text-xs">
           Filtered to one rule.{' '}
           {presentRuleIds.includes(filters.rule) && (
-            <Link className="text-accent-text" href={`${base}/${filters.rule}`}>
-              Open Rule Builder
+            <Link className="text-accent-text" href={`${base}/workflows/${filters.rule}`}>
+              Open workflow
             </Link>
           )}
         </p>
@@ -278,9 +278,9 @@ export function ActivityView({
                 {presentRuleIds.includes(selectedRun.ruleId) ? (
                   <Link
                     className="block text-accent-text"
-                    href={`${base}/${selectedRun.ruleId}`}
+                    href={`${base}/workflows/${selectedRun.ruleId}`}
                   >
-                    Open current Rule Builder
+                    Open current workflow
                   </Link>
                 ) : (
                   <p className="text-xs text-subtle">

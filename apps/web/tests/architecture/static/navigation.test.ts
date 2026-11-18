@@ -1014,7 +1014,9 @@ describe('the organization shell taxonomy', () => {
     expect(labels.get('comms-inbox')).toBe('Conversations');
     expect(labels.get('comms-numbers')).toBe('Numbers');
     expect(labels.get('automations')).toBe('Automations');
-    expect(labels.get('automation-rules')).toBe('Rules');
+    expect(labels.get('automation-rules')).toBe('Workflows');
+    expect(labels.get('automation-activity')).toBe('Runs');
+    expect(labels.get('automation-messages')).toBe('Message templates');
     expect(labels.get('insights')).toBe('Insights');
     // Registered workspaces, in the order a customer meets them, with no Gild prefix and no ninth
     // Insights row. Which of them draw a row is a fact about pages.

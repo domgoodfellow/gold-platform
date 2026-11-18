@@ -36,7 +36,7 @@ Organization Settings does not contain:
 - personal Profile;
 - Connections;
 - Plan & usage;
-- workspace-owned configuration (work types, working hours, price book, stages, call routing, agents, automation rules, website).
+- workspace-owned configuration (work types, working hours, price book, stages, call routing, agents, automation workflows, website).
 
 ---
 
