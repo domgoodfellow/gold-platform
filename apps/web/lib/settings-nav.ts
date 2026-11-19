@@ -111,7 +111,7 @@ export function workspaceConfigCrumbs(organizationId: string, targetKey: string,
   // No workspace has a Configuration landing: "Configuration" is a plain-text grouping level.
   if (!home) return [];
   const crumbs: { label: string; href?: string }[] = [{ label: workspace.label, href: !gate || areaAvailable(home.segment, { ...gate, enabled: gate.enabledModules }) ? areaHref(organizationId, home.segment) : undefined }];
-  if (target.destination && workspaceKey === 'field') {
+  if (target.destination && (workspaceKey === 'field' || workspaceKey === 'crm')) {
     const destination = AREAS.find(area => area.segment === target.destination)!;
     crumbs.push({ label: destination.label, href: !gate || areaAvailable(destination.segment, { ...gate, enabled: gate.enabledModules }) ? areaHref(organizationId, destination.segment) : undefined });
   } else if (!target.treatment) crumbs.push({ label: 'Settings' });

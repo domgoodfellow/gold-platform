@@ -44,7 +44,7 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
   const { q, page, sort } = view;
   const { db, organization } = await requireOrganization(organizationId);
   if (create === '1') redirect(newWorkHref(organizationId, view.type));
-  const types = await listWorkItemTypes(db, { organizationId });
+  const types = await listWorkItemTypes(db, { organizationId, includeArchived: true });
   const selectedType = types.find((type) => type.id === view.type) ?? types[0] ?? null;
   const statuses = selectedType ? await listWorkItemStatuses(db, { organizationId, typeId: selectedType.id }) : [];
   const statusId = statuses.find(s => s.id === view.status)?.id;

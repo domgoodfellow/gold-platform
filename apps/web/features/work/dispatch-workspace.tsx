@@ -35,7 +35,7 @@ export async function DispatchWorkspace({ organizationId, query, db, organizatio
   const mode = ['schedule', 'map'].includes(one('mode')) ? one('mode') : 'list';
   const page = Math.max(1, Math.min(100000, Math.trunc(Number(one('page'))) || 1));
   const [data, types, resources, locations] = await Promise.all([
-    workOperations(db, organizationId, date, organization.timezone), listWorkItemTypes(db, { organizationId }),
+    workOperations(db, organizationId, date, organization.timezone), listWorkItemTypes(db, { organizationId, includeArchived: true }),
     listResources(db, { organizationId, limit: 1000 }), listLocations(db, { organizationId, limit: 1000 }),
   ]);
   const typeId = types.find(t => t.id === one('type'))?.id;

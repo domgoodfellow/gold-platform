@@ -8,5 +8,5 @@ export default async function CustomerFields({ params }: PageProps<'/organizatio
  const { organizationId } = await params;
  const { db, organization, gate } = await requireConfigurationTarget(organizationId, 'customer-fields');
  const definitions = await listFieldDefinitions(db, { organizationId, entityType: 'customer' });
- return <SettingsPageFrame><PageHeader title="Customer fields" crumbs={workspaceConfigCrumbs(organizationId, 'customer-fields', gate)} /><EntityFieldsConfiguration organizationId={organizationId} entityType="customer" role={organization.role} mayConfigure definitions={definitions} /></SettingsPageFrame>;
+ return <SettingsPageFrame><PageHeader title="Contact fields" crumbs={workspaceConfigCrumbs(organizationId, 'customer-fields', gate)} /><EntityFieldsConfiguration organizationId={organizationId} entityType="customer" role={organization.role} mayConfigure definitions={definitions} /></SettingsPageFrame>;
 }

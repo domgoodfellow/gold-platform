@@ -136,8 +136,8 @@ function configuresOwnDestination(target: ConfigTarget | undefined, workspace: s
 }
 
 /** A workspace page, which also stays selected while somebody edits the configuration behind it. */
-function destinationItem(organizationId: string, area: Area): NavItem {
-  const editors = CONFIG_TARGETS.filter((target) => target.destination === area.segment).map((target) => `/organizations/${organizationId}/${target.path}`);
+function destinationItem(organizationId: string, area: Area, offered?: readonly string[]): NavItem {
+  const editors = CONFIG_TARGETS.filter((target) => target.destination === area.segment).map((target) => `/organizations/${organizationId}/${target.path}`).filter(href => area.workspace !== 'crm' || !offered || offered.includes(href));
   if (area.segment === 'opportunity-pipeline') editors.push(areaHref(organizationId, 'opportunities'));
   return { ...areaItem(organizationId, area, 'workspaces'), ...(editors.length ? { activeHrefs: editors } : {}) };
 }
@@ -236,7 +236,10 @@ export function projectShell(input: ShellInput): ShellSection[] {
     const concerns = workspaceConfigureItems(organizationId, workspace.key, { enabledModules, featureAvailability, capabilities, schedulableWork });
     // A door that edits one of this workspace's destinations is that destination's, not a branch of
     // its own. Another workspace linking to the same editor (Communications' Business hours) keeps it.
-    const branch = concerns.filter(concern => !configuresOwnDestination(configTargetForHref(concern.href), workspace.key));
+    const branch = concerns.filter(concern => {
+      const target = configTargetForHref(concern.href);
+      return !configuresOwnDestination(target, workspace.key) || !areas.some(area => area.segment === target?.destination);
+    });
     if (!home && branch.length === 0) return [];
     // `{home}/configuration` only redirects; it is matched as active but never drawn as a link.
     const configurationHref = workspaceConfigurationHref(organizationId, workspace.key);
@@ -270,7 +273,7 @@ export function projectShell(input: ShellInput): ShellSection[] {
       configurationOnly: !home,
       destinations: [
         ...(home ? [{ ...destinationItem(organizationId, home), key: 'workspace-dashboard', label: 'Dashboard', exact: true }] : []),
-        ...areas.filter((area) => area.segment !== home?.segment).map((area) => destinationItem(organizationId, area)),
+        ...areas.filter((area) => area.segment !== home?.segment).map((area) => destinationItem(organizationId, area, concerns.map(concern => concern.href))),
       ],
     }];
   });

@@ -330,7 +330,7 @@ export async function configureBusiness(
     }
   }
 
-  const existingTypes = await listWorkItemTypes(db, { organizationId });
+  const existingTypes = await listWorkItemTypes(db, { organizationId, includeArchived: true });
   const configuredTypes: ConfiguredBusiness['workTypes'] = [];
   for (const type of types) {
     const typeId = await findOrCreate(existingTypes, (row) => same(row.name, type.name), () =>

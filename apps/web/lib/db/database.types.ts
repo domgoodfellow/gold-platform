@@ -3704,13 +3704,6 @@ export type Database = {
             foreignKeyName: "document_links_work_item_same_org"
             columns: ["organization_id", "work_item_id"]
             isOneToOne: false
-            referencedRelation: "finance_quote_records"
-            referencedColumns: ["organization_id", "work_item_id"]
-          },
-          {
-            foreignKeyName: "document_links_work_item_same_org"
-            columns: ["organization_id", "work_item_id"]
-            isOneToOne: false
             referencedRelation: "work_items"
             referencedColumns: ["organization_id", "id"]
           },
@@ -4163,13 +4156,6 @@ export type Database = {
             foreignKeyName: "engagement_work_items_organization_id_work_item_id_fkey"
             columns: ["organization_id", "work_item_id"]
             isOneToOne: false
-            referencedRelation: "finance_quote_records"
-            referencedColumns: ["organization_id", "work_item_id"]
-          },
-          {
-            foreignKeyName: "engagement_work_items_organization_id_work_item_id_fkey"
-            columns: ["organization_id", "work_item_id"]
-            isOneToOne: false
             referencedRelation: "work_items"
             referencedColumns: ["organization_id", "id"]
           },
@@ -4586,13 +4572,6 @@ export type Database = {
           submitted_by?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "form_submissions_booking_fk"
-            columns: ["organization_id", "booking_work_item_id"]
-            isOneToOne: false
-            referencedRelation: "finance_quote_records"
-            referencedColumns: ["organization_id", "work_item_id"]
-          },
           {
             foreignKeyName: "form_submissions_booking_fk"
             columns: ["organization_id", "booking_work_item_id"]
@@ -6315,13 +6294,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "customer_commercial_proposals"
             referencedColumns: ["organization_id", "id"]
-          },
-          {
-            foreignKeyName: "invoices_work_item_same_org"
-            columns: ["organization_id", "work_item_id"]
-            isOneToOne: false
-            referencedRelation: "finance_quote_records"
-            referencedColumns: ["organization_id", "work_item_id"]
           },
           {
             foreignKeyName: "invoices_work_item_same_org"
@@ -11322,6 +11294,7 @@ export type Database = {
           created_at: string
           created_by: string
           currency: string
+          delivery_type_id: string | null
           id: string
           name: string
           organization_id: string
@@ -11332,6 +11305,7 @@ export type Database = {
           created_at?: string
           created_by: string
           currency: string
+          delivery_type_id?: string | null
           id?: string
           name: string
           organization_id: string
@@ -11342,6 +11316,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           currency?: string
+          delivery_type_id?: string | null
           id?: string
           name?: string
           organization_id?: string
@@ -11349,6 +11324,13 @@ export type Database = {
           unit_amount_minor?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "price_book_delivery_type_same_org"
+            columns: ["organization_id", "delivery_type_id"]
+            isOneToOne: false
+            referencedRelation: "work_item_types"
+            referencedColumns: ["organization_id", "id"]
+          },
           {
             foreignKeyName: "price_book_items_organization_id_fkey"
             columns: ["organization_id"]
@@ -12933,13 +12915,6 @@ export type Database = {
             foreignKeyName: "support_case_links_organization_id_work_item_id_fkey"
             columns: ["organization_id", "work_item_id"]
             isOneToOne: false
-            referencedRelation: "finance_quote_records"
-            referencedColumns: ["organization_id", "work_item_id"]
-          },
-          {
-            foreignKeyName: "support_case_links_organization_id_work_item_id_fkey"
-            columns: ["organization_id", "work_item_id"]
-            isOneToOne: false
             referencedRelation: "work_items"
             referencedColumns: ["organization_id", "id"]
           },
@@ -14016,13 +13991,6 @@ export type Database = {
             foreignKeyName: "work_item_checklist_items_work_item_same_org"
             columns: ["organization_id", "work_item_id"]
             isOneToOne: false
-            referencedRelation: "finance_quote_records"
-            referencedColumns: ["organization_id", "work_item_id"]
-          },
-          {
-            foreignKeyName: "work_item_checklist_items_work_item_same_org"
-            columns: ["organization_id", "work_item_id"]
-            isOneToOne: false
             referencedRelation: "work_items"
             referencedColumns: ["organization_id", "id"]
           },
@@ -14081,13 +14049,6 @@ export type Database = {
             foreignKeyName: "work_item_costs_work_item_same_org"
             columns: ["organization_id", "work_item_id"]
             isOneToOne: false
-            referencedRelation: "finance_quote_records"
-            referencedColumns: ["organization_id", "work_item_id"]
-          },
-          {
-            foreignKeyName: "work_item_costs_work_item_same_org"
-            columns: ["organization_id", "work_item_id"]
-            isOneToOne: false
             referencedRelation: "work_items"
             referencedColumns: ["organization_id", "id"]
           },
@@ -14131,13 +14092,6 @@ export type Database = {
           work_item_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "work_item_priced_lines_work_item_same_org"
-            columns: ["organization_id", "work_item_id"]
-            isOneToOne: false
-            referencedRelation: "finance_quote_records"
-            referencedColumns: ["organization_id", "work_item_id"]
-          },
           {
             foreignKeyName: "work_item_priced_lines_work_item_same_org"
             columns: ["organization_id", "work_item_id"]
@@ -14200,13 +14154,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "resources"
             referencedColumns: ["organization_id", "id"]
-          },
-          {
-            foreignKeyName: "work_item_resource_assignments_work_item_same_org"
-            columns: ["organization_id", "work_item_id"]
-            isOneToOne: false
-            referencedRelation: "finance_quote_records"
-            referencedColumns: ["organization_id", "work_item_id"]
           },
           {
             foreignKeyName: "work_item_resource_assignments_work_item_same_org"
@@ -14334,13 +14281,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "resources"
             referencedColumns: ["organization_id", "id"]
-          },
-          {
-            foreignKeyName: "work_item_time_entries_work_item_same_org"
-            columns: ["organization_id", "work_item_id"]
-            isOneToOne: false
-            referencedRelation: "finance_quote_records"
-            referencedColumns: ["organization_id", "work_item_id"]
           },
           {
             foreignKeyName: "work_item_time_entries_work_item_same_org"
@@ -14579,6 +14519,7 @@ export type Database = {
       }
       work_item_types: {
         Row: {
+          archived_at: string | null
           booking_allow_same_day: boolean
           booking_cadence_minutes: number | null
           booking_cancel_cutoff_minutes: number | null
@@ -14598,6 +14539,7 @@ export type Database = {
           schedulable: boolean
         }
         Insert: {
+          archived_at?: string | null
           booking_allow_same_day?: boolean
           booking_cadence_minutes?: number | null
           booking_cancel_cutoff_minutes?: number | null
@@ -14617,6 +14559,7 @@ export type Database = {
           schedulable: boolean
         }
         Update: {
+          archived_at?: string | null
           booking_allow_same_day?: boolean
           booking_cadence_minutes?: number | null
           booking_cancel_cutoff_minutes?: number | null
@@ -14692,6 +14635,8 @@ export type Database = {
           occupies: unknown
           organization_id: string
           scheduled_during: unknown
+          source_proposal_id: string | null
+          source_proposal_position: number | null
           status_id: string
           status_releases_resource: boolean
           title: string
@@ -14708,6 +14653,8 @@ export type Database = {
           occupies?: unknown
           organization_id: string
           scheduled_during?: unknown
+          source_proposal_id?: string | null
+          source_proposal_position?: number | null
           status_id: string
           status_releases_resource?: boolean
           title: string
@@ -14724,6 +14671,8 @@ export type Database = {
           occupies?: unknown
           organization_id?: string
           scheduled_during?: unknown
+          source_proposal_id?: string | null
+          source_proposal_position?: number | null
           status_id?: string
           status_releases_resource?: boolean
           title?: string
@@ -14791,6 +14740,13 @@ export type Database = {
             columns: ["organization_id", "type_id"]
             isOneToOne: false
             referencedRelation: "work_item_types"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "work_source_proposal_same_org"
+            columns: ["organization_id", "source_proposal_id"]
+            isOneToOne: false
+            referencedRelation: "customer_commercial_proposals"
             referencedColumns: ["organization_id", "id"]
           },
         ]
@@ -15218,13 +15174,6 @@ export type Database = {
             foreignKeyName: "invoices_work_item_same_org"
             columns: ["organization_id", "work_item_id"]
             isOneToOne: false
-            referencedRelation: "finance_quote_records"
-            referencedColumns: ["organization_id", "work_item_id"]
-          },
-          {
-            foreignKeyName: "invoices_work_item_same_org"
-            columns: ["organization_id", "work_item_id"]
-            isOneToOne: false
             referencedRelation: "work_items"
             referencedColumns: ["organization_id", "id"]
           },
@@ -15288,48 +15237,14 @@ export type Database = {
           invoiced: boolean | null
           line_count: number | null
           organization_id: string | null
+          proposal_id: string | null
+          quote_id: string | null
           status: string | null
           title: string | null
           total_minor: number | null
           work_item_id: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "work_items_customer_same_org"
-            columns: ["organization_id", "customer_id"]
-            isOneToOne: false
-            referencedRelation: "contact_directory"
-            referencedColumns: ["organization_id", "id"]
-          },
-          {
-            foreignKeyName: "work_items_customer_same_org"
-            columns: ["organization_id", "customer_id"]
-            isOneToOne: false
-            referencedRelation: "contacts"
-            referencedColumns: ["organization_id", "id"]
-          },
-          {
-            foreignKeyName: "work_items_customer_same_org"
-            columns: ["organization_id", "customer_id"]
-            isOneToOne: false
-            referencedRelation: "customers"
-            referencedColumns: ["organization_id", "id"]
-          },
-          {
-            foreignKeyName: "work_items_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "work_items_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "platform_tenants"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       opportunity_worklist: {
         Row: {
@@ -15772,6 +15687,10 @@ export type Database = {
       }
       archive_contact: {
         Args: { p_contact_id: string; p_organization_id: string }
+        Returns: undefined
+      }
+      archive_work_item_type: {
+        Args: { p_archived: boolean; p_type_id: string }
         Returns: undefined
       }
       assign_conversation: {
@@ -16520,6 +16439,35 @@ export type Database = {
         }
         Returns: string
       }
+      create_work_from_proposal: {
+        Args: {
+          p_asset_id: string
+          p_custom: Json
+          p_location_id: string
+          p_organization_id: string
+          p_position: number
+          p_proposal_id: string
+          p_resource_ids: string[]
+          p_status_id: string
+          p_title: string
+        }
+        Returns: string
+      }
+      create_work_from_service: {
+        Args: {
+          p_asset_id: string
+          p_custom: Json
+          p_customer_id: string
+          p_item_id: string
+          p_location_id: string
+          p_organization_id: string
+          p_quantity: number
+          p_resource_ids: string[]
+          p_status_id: string
+          p_title: string
+        }
+        Returns: string
+      }
       create_work_item: {
         Args: {
           p_asset_id: string
@@ -16713,6 +16661,10 @@ export type Database = {
       delete_role: { Args: { p_role_id: string }; Returns: undefined }
       delete_secret_reference: {
         Args: { p_organization_id: string; p_secret_id: string }
+        Returns: undefined
+      }
+      delete_unused_work_type: {
+        Args: { p_type_id: string }
         Returns: undefined
       }
       detach_plan_addon: {
@@ -18978,6 +18930,10 @@ export type Database = {
         Args: { p_number: string; p_organization_id: string }
         Returns: undefined
       }
+      set_catalog_delivery_type: {
+        Args: { p_item_id: string; p_type_id: string }
+        Returns: undefined
+      }
       set_checklist_item_done: {
         Args: { p_checklist_item_id: string; p_done: boolean }
         Returns: undefined
@@ -19749,6 +19705,7 @@ export type Database = {
           jobs: number
         }[]
       }
+      work_type_deletable: { Args: { p_type_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

@@ -96,7 +96,7 @@ export function CustomerDetail(props: {
   callList?: CallListStanding;
   /** Archive, restore and delete, offered to a member who holds `customer.delete`. */
   removal?: ContactRemoval;
-  permissions: { edit: boolean; call: boolean; attach: boolean; portal: boolean; priceManage: boolean };
+  permissions: { edit: boolean; call: boolean; attach: boolean; portal: boolean; priceManage: boolean; createWork?: boolean };
 }) {
   const { organizationId, customer, stage, stages, definitions, features, permissions, mayPropose, role, timezone } = props;
   const base = `/organizations/${organizationId}/crm/contacts/${customer.id}`;
@@ -140,7 +140,7 @@ export function CustomerDetail(props: {
       case 'opportunities': return props.opportunities;
       case 'discovery': return <DiscoverySnapshotSection organizationId={organizationId} customerId={customer.id} snapshot={props.discoverySnapshot} mayEdit={permissions.edit} role={role} />;
       case 'configuration': return props.configurationRecommendation ? <ConfigurationRecommendationSection recommendation={props.configurationRecommendation} /> : <CompactEmptyState>No proposed setup yet. It comes from the answers on Discovery.</CompactEmptyState>;
-      case 'commercial': return <CommercialProposalSection accessibleTenantIds={props.accessibleTenantIds} organizationId={organizationId} customerId={customer.id} proposals={props.commercialProposals} invites={props.proposalInvites} handoffsByProposalId={props.handoffsByProposalId} mayHandoff={props.mayHandoff} origin={props.origin} catalogItems={props.catalogItems} mayBuild={features.billing && permissions.priceManage} mayEdit={permissions.priceManage} role={role} currency={props.currency} invoicesByProposalId={props.invoicesByProposalId} invoicing={props.proposalInvoicing ?? null} />;
+      case 'commercial': return <CommercialProposalSection timezone={timezone} deliveries={props.work} mayCreateWork={permissions.createWork} accessibleTenantIds={props.accessibleTenantIds} organizationId={organizationId} customerId={customer.id} proposals={props.commercialProposals} invites={props.proposalInvites} handoffsByProposalId={props.handoffsByProposalId} mayHandoff={props.mayHandoff} origin={props.origin} catalogItems={props.catalogItems} mayBuild={features.billing && permissions.priceManage} mayEdit={permissions.priceManage} role={role} currency={props.currency} invoicesByProposalId={props.invoicesByProposalId} invoicing={props.proposalInvoicing ?? null} />;
       case 'invoices': return <CustomerFinancialSummary organizationId={organizationId} invoices={props.invoices} timezone={timezone} />;
       case 'timeline': return <ActivityList timeline={props.timeline} timezone={timezone} />;
       case 'calls': return <>{<CallHistory organizationId={organizationId} timeZone={timezone} calls={props.calls} empty="No calls with this contact." />}{permissions.call ? null : <Hint className="mt-4">Your role, {role}, cannot call contacts.</Hint>}</>;

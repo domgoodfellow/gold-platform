@@ -90,9 +90,9 @@ test.describe.serial('UX drift and guided configuration', () => {
         await expect(page.getByRole('button', { name: 'Save scheduling behavior', exact: true })).toBeVisible();
         await capture('work-type-general', `${base}/work/configuration`);
       }
-      await page.goto(`${base}/finance/quotes?create=1`);
+      await page.goto(`${base}/finance/quotes?create=1&quoteSource=work`);
       await expect(page.getByRole('dialog')).toBeVisible();
-      await expect(page.getByRole('dialog').getByText(/There are none yet|starts from a Work item|No Work items yet/)).toBeVisible();
+      await expect(page.getByRole('dialog').getByText(/There are none yet|To price existing Work|No Work items yet/)).toBeVisible();
       await capture('quote-empty', `${base}/finance/quotes`, true);
       await page.goto(`${base}/crm/configuration/relationship-stages`);
       await capture('relationship-stages', `${base}/crm/configuration/relationship-stages`);
@@ -105,7 +105,7 @@ test.describe.serial('UX drift and guided configuration', () => {
   test('New quote creates Work through starting-stage recovery and continues to its Financials', async ({ page }) => {
     if (before) return;
     const base = `/organizations/${organizationId}`;
-    await page.goto(`${base}/finance/quotes?create=1`);
+    await page.goto(`${base}/finance/quotes?create=1&quoteSource=work`);
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByRole('link', { name: 'Create Work', exact: true })).toBeVisible();
     await expect(dialog.getByRole('searchbox')).toHaveCount(0);
@@ -123,7 +123,7 @@ test.describe.serial('UX drift and guided configuration', () => {
     await expect(page.getByRole('dialog').getByRole('status')).toContainText('Priced line added to quote.');
     const { db } = await signInOwner();
     expect(await listCustomerStages(db, { organizationId })).toEqual([]); // CRM stages are never a Work-quote prerequisite.
-    await page.goto(`${base}/finance/quotes?create=1`);
+    await page.goto(`${base}/finance/quotes?create=1&quoteSource=work`);
     await page.getByRole('dialog').getByRole('searchbox').fill('No matching Work fixture');
     await expect(page.getByRole('dialog').getByText(/No Work matches this search/)).toBeVisible();
     await expect(page.getByRole('dialog').getByRole('link', { name: 'Create Work', exact: true })).toHaveCount(0);
@@ -251,7 +251,7 @@ test.describe.serial('UX drift and guided configuration', () => {
     if (before) return;
     const fx = await emptyBusiness(`No catalog guided fixture ${Date.now()}`);
     const base = `/organizations/${fx.organizationId}`;
-    await page.goto(`${base}/finance/quotes?create=1`);
+    await page.goto(`${base}/finance/quotes?create=1&quoteSource=work`);
     await page.getByRole('dialog').getByRole('link', { name: 'Open Catalog & pricing', exact: true }).click();
     await expect(page).toHaveURL(`${base}/finance/catalog?returnTo=quote`);
     await page.getByRole('button', { name: 'Add price item', exact: true }).click();

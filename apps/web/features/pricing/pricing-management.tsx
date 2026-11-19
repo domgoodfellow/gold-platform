@@ -8,6 +8,8 @@ import { Badge } from '@/components/display/data';
 import { PriceItemRowForm } from './price-forms';
 import type { PriceBookItem } from '@/lib/domain/pricing/price-book';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
+import { DeliveryTypeForm } from './delivery-type-form';
+import type { WorkItemType } from '@/lib/domain/work-items/types';
 
 const ROW = 'grid gap-1 px-3 py-3 @min-[40rem]/prices:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] @min-[40rem]/prices:items-center @min-[40rem]/prices:gap-2';
 
@@ -19,7 +21,7 @@ const ROW = 'grid gap-1 px-3 py-3 @min-[40rem]/prices:grid-cols-[minmax(0,2fr)_m
  * actions; items keep their name order, and there is no delete or archive to offer. An item priced
  * in an earlier trading currency says so rather than being converted.
  */
-export function PricingManagement({ organizationId, items, currency, mayManage }: { organizationId: string; items: PriceBookItem[]; currency: string | null; mayManage: boolean }) {
+export function PricingManagement({ organizationId, items, currency, mayManage, types = [], mayCreate = false }: { organizationId: string; items: PriceBookItem[]; currency: string | null; mayManage: boolean; types?: WorkItemType[]; mayCreate?: boolean }) {
   const [editing, setEditing] = useState<string | null>(null);
   const triggers = useRef(new Map<string, HTMLButtonElement | null>());
   // Focus goes back to the control that opened the row, once the row has closed and it is drawn again.
@@ -53,6 +55,7 @@ export function PricingManagement({ organizationId, items, currency, mayManage }
                 <span className="pl-9.5 text-sm text-muted @min-[40rem]/prices:pl-0">per {item.unit}</span>
                 <span className="pl-9.5 text-sm font-semibold tabular-nums @min-[40rem]/prices:pl-0 @min-[40rem]/prices:text-right">{formatMoney(item.unitAmountMinor, item.currency)} <span className="text-xs font-normal text-subtle">{item.currency}</span></span>
                 {mayManage ? <span className="pl-9.5 @min-[40rem]/prices:w-24 @min-[40rem]/prices:pl-0 @min-[40rem]/prices:text-right"><Button ref={(node) => { triggers.current.set(item.id, node); }} tone="secondary" size="tiny" disabled={editing !== null} aria-label={`Edit ${item.name}`} onClick={() => setEditing(item.id)}>Edit</Button></span> : <span />}
+                <DeliveryTypeForm organizationId={organizationId} item={item} types={types} mayManage={mayManage} mayCreate={mayCreate} />
               </li>
             ))}
           </ul>

@@ -18,6 +18,8 @@ export type WorkItemRef = {
 export type WorkItem = {
   id: string;
   title: string;
+  sourceProposalId?: string | null;
+  sourceProposalPosition?: number | null;
   /** What kind of work this is. Scopes the statuses; nothing branches on it. */
   type: WorkItemRef & {
     /** Whether this kind of work occupies a scheduled time; Schedule controls follow it, never the window alone. */
@@ -46,7 +48,7 @@ const TITLE_MAX = 300;
 // status hint names the three-column constraint, which carries type_id as well — a work item
 // cannot sit in another type's status, and that is a database fact rather than a convention.
 const WORK_ITEM_SELECT =
-  'id, title, custom, created_at, scheduled_during, type:work_item_types!work_items_type_same_org!inner (id, name, schedulable), status:work_item_statuses!work_items_status_same_org_and_type!inner (id, name, releases_resource), customer:contacts!work_items_customer_same_org (id, name), location:locations!work_items_location_same_org (id, label), assignments:work_item_resource_assignments!work_item_resource_assignments_work_item_same_org (resource:resources!work_item_resource_assignments_resource_same_org (id, name)), assignment_filter:work_item_resource_assignments!work_item_resource_assignments_work_item_same_org (resource_id), asset:assets!work_items_asset_same_org (id, name)';
+  'id, title, source_proposal_id, source_proposal_position, custom, created_at, scheduled_during, type:work_item_types!work_items_type_same_org!inner (id, name, schedulable), status:work_item_statuses!work_items_status_same_org_and_type!inner (id, name, releases_resource), customer:contacts!work_items_customer_same_org (id, name), location:locations!work_items_location_same_org (id, label), assignments:work_item_resource_assignments!work_item_resource_assignments_work_item_same_org (resource:resources!work_item_resource_assignments_resource_same_org (id, name)), assignment_filter:work_item_resource_assignments!work_item_resource_assignments_work_item_same_org (resource_id), asset:assets!work_items_asset_same_org (id, name)';
 
 function one<T>(value: T | T[] | null): T | undefined {
   if (value === null) return undefined;
@@ -159,6 +161,8 @@ export async function listWorkItems(
         {
           id: row.id,
           title: row.title,
+    sourceProposalId: row.source_proposal_id,
+    sourceProposalPosition: row.source_proposal_position,
           type: { id: type.id, label: type.name, schedulable: type.schedulable },
           status: { id: status.id, label: status.name },
           customer: customer ? { id: customer.id, label: customer.name } : null,
@@ -202,6 +206,8 @@ export async function getWorkItem(
   return {
     id: row.id,
     title: row.title,
+    sourceProposalId: row.source_proposal_id,
+    sourceProposalPosition: row.source_proposal_position,
     type: { id: type.id, label: type.name, schedulable: type.schedulable },
     status: { id: status.id, label: status.name },
     customer: customer ? { id: customer.id, label: customer.name } : null,
@@ -230,6 +236,10 @@ export async function createWorkItem(
   db: Db,
   input: {
     organizationId: string;
+    proposalId?: string;
+    proposalPosition?: number;
+    priceBookItemId?: string;
+    quantity?: number;
     title: string;
     statusId: string;
     customerId?: string | null;
@@ -264,7 +274,16 @@ export async function createWorkItem(
     custom: input.custom,
   });
 
-  const { data, error } = await db.rpc('create_work_item', {
+  if (input.proposalId) {
+    const { data, error } = await db.rpc('create_work_from_proposal', {
+      p_organization_id: input.organizationId, p_proposal_id: input.proposalId, p_position: input.proposalPosition!, p_title: title, p_status_id: input.statusId,
+      p_location_id: (input.locationId || null) as string, p_resource_ids: (input.resourceIds ?? null) as string[], p_asset_id: (input.assetId || null) as string, p_custom: custom,
+    });
+    if (error) throw fromDatabaseError(error, 'work_items.proposal_delivery_failed');
+    return data;
+  }
+  const { data, error } = await db.rpc(input.priceBookItemId ? 'create_work_from_service' : 'create_work_item', {
+    ...(input.priceBookItemId ? { p_item_id: input.priceBookItemId, p_quantity: input.quantity ?? 1 } : {}),
     p_organization_id: input.organizationId,
     p_title: title,
     p_status_id: input.statusId,
@@ -278,6 +297,7 @@ export async function createWorkItem(
   });
 
   if (error) {
+    if (error.code === '22023') throw new DomainError(error.message, 'work_items.type_unavailable');
     // 23503 is a composite reference refusing something that is not in this organization.
     // From the caller's position that row does not exist, so the message says so rather than
     // hinting that it exists somewhere else.

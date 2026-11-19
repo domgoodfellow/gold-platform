@@ -94,30 +94,30 @@ describe('New quote', () => {
     expect(finance.financeMutation).not.toHaveBeenCalled();
   });
 
-  it('explains that a quote needs Work first when there is none', async () => {
+  it('offers Work creation only in the existing-Work source when there is none', async () => {
     const user = userEvent.setup();
     finance.financeChoices.mockResolvedValue({ total: 0, rows: [] });
     render(<QuoteDialog organizationId="org" mayCreateWork />);
     await user.click(screen.getByRole('button', { name: 'New quote' }));
     await settle();
-    expect(screen.getByText(/A quote starts from a Work item/)).toBeVisible();
+    expect(screen.getByText(/To price existing Work/)).toBeVisible();
     expect(screen.getByRole('link', { name: 'Create Work' })).toHaveAttribute('href', '/organizations/org/work/new?returnTo=quote');
     expect(screen.queryByRole('searchbox')).toBeNull();
     expect(screen.queryByText('0 matching Work items.')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Add to quote' })).toBeNull();
   });
 
-  it('offers the catalog prerequisite before Work creation and keeps permission refusals distinct', async () => {
+  it('offers the Work catalog prerequisite and keeps permission refusals distinct', async () => {
     const user = userEvent.setup();
     finance.financeChoices.mockResolvedValue({ total: 0, rows: [], quotePrerequisite: 'catalog', mayManageCatalog: true, mayCreateWork: true });
-    render(<QuoteDialog organizationId="org" mayCreateWork mayManageCatalog />);
+    render(<QuoteDialog organizationId="org" initialSource="work" mayCreateWork mayManageCatalog />);
     await user.click(screen.getByRole('button', { name: 'New quote' }));
     await settle();
     expect(screen.getByRole('link', { name: 'Open Catalog & pricing' })).toHaveAttribute('href', '/organizations/org/finance/catalog?returnTo=quote');
     expect(screen.queryByRole('link', { name: 'Create Work' })).toBeNull();
     cleanup();
     finance.financeChoices.mockResolvedValue({ total: 0, rows: [], quotePrerequisite: 'forbidden' });
-    render(<QuoteDialog organizationId="org" mayCreateWork mayManageCatalog />);
+    render(<QuoteDialog organizationId="org" initialSource="work" mayCreateWork mayManageCatalog />);
     await user.click(screen.getByRole('button', { name: 'New quote' }));
     await settle();
     expect(screen.getByText(/Your role cannot price Work/)).toBeVisible();
@@ -460,5 +460,28 @@ describe('emailing an issued invoice from its inspector', () => {
     expect(screen.getAllByRole('button', { name: 'Try sending again' })).toHaveLength(1);
     expect(screen.getByRole('button', { name: 'Send again' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Send invoice' })).toBeNull();
+  });
+});
+
+
+describe('Customer quotes before Work', () => {
+  it('chooses a contact and catalog lines, creates a proposal and sends no monetary fields', async () => {
+    const user = userEvent.setup();
+    finance.financeChoices.mockResolvedValue({ total: 1, rows: [{ id: 'c1', title: 'North Shore Plumbing', detail: '', meta: '' }] });
+    finance.financeDirectInvoiceReview.mockResolvedValue({ customer: { id: 'c1', name: 'North Shore Plumbing' }, items, currency: 'CAD' });
+    finance.financeMutation.mockResolvedValue({ error: null, success: 'Customer quote created.', href: '/organizations/org/crm/contacts/c1?section=sales&view=commercial' });
+    render(<QuoteDialog organizationId="org" mayManageCatalog />);
+    await user.click(screen.getByRole('button', { name: 'New quote' }));
+    await settle();
+    expect(screen.getByRole('radio', { name: /^Customer quote$/ })).toBeChecked();
+    await user.click(screen.getByRole('radio', { name: /^North Shore Plumbing$/ }));
+    await settle();
+    await chooseOption(screen.getByLabelText('Price item 1'), 'labour');
+    await user.clear(screen.getByLabelText('Quantity 1'));
+    await user.type(screen.getByLabelText('Quantity 1'), '2');
+    await user.click(screen.getByRole('button', { name: 'Create quote' }));
+    await waitFor(() => expect(finance.financeMutation).toHaveBeenCalled());
+    expect(sent()).toEqual({ organizationId: 'org', kind: 'quote', source: 'catalog', customerId: 'c1', lines: JSON.stringify([{ priceBookItemId: 'labour', quantity: 2 }]), notes: '' });
+    expect(screen.getByRole('link', { name: 'Open quote' })).toHaveAttribute('href', '/organizations/org/crm/contacts/c1?section=sales&view=commercial');
   });
 });

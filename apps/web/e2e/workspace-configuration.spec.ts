@@ -22,7 +22,7 @@ for (const width of [1440, 768, 390]) test(`canonical workspace configuration at
   ['field/configuration', 'Work configuration'],
   ['sales/configuration/relationship-stages', 'Relationship stages'],
   ['sales/configuration/opportunity-stages', 'Opportunity stages'],
-  ['sales/configuration/fields', 'Customer fields'],
+  ['sales/configuration/fields', 'Contact fields'],
   ['support/configuration/queues', 'Queues & assignment'],
   ['support/configuration/service-levels', 'Service levels'],
   ['work/configuration', 'Work configuration'],

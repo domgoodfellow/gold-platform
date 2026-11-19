@@ -141,6 +141,7 @@ test.describe.serial('Finance V2.0', () => {
       const before = await listPricedLines(owner.db, { organizationId: fx.organizationId, workItemId: fx.work.quoted });
       await main(page).getByRole('button', { name: 'New quote' }).click();
       const dialog = page.getByRole('dialog', { name: 'New quote' });
+      await dialog.getByRole('radio', { name: 'Price existing Work', exact: true }).check();
       await dialog.getByLabel('Search Work items').fill('Heat pump');
       await choose(dialog, /Heat pump estimate/);
       await expect(dialog.getByText('Cedar Tree Properties')).toBeVisible();

@@ -456,22 +456,27 @@ describe('workspace Configuration authority', () => {
 });
 
 
-describe('CRM Configuration children', () => {
-  it('uses eligible registry destinations and selects the deepest child on direct access', () => {
+describe('CRM configuration belongs to its operating destination', () => {
+  it('selects Contacts for relationship stages and fields, and Pipeline for opportunity stages', () => {
     const sections = project();
-    const parent = projectedItems(sections).find(item => item.key === 'workspace-crm')!.configuration!;
-    expect(parent.children?.map(item => item.label)).toEqual(['Relationship stages', 'Opportunity stages', 'Customer fields']);
-    for (const child of parent.children!) {
-      const context = workspaceNavigation(sections, child.href)!;
-      expect(activeItemKey(context.sections, child.href)).toBe(child.key);
-      expect(activeItemKey(context.sections, `${child.href}/record`)).toBe(child.key);
+    const crm = projectedItems(sections).find(item => item.key === 'workspace-crm')!;
+    expect(crm.configuration).toBeUndefined();
+    for (const [path, key] of [['relationship-stages', 'customers'], ['fields', 'customers'], ['opportunity-stages', 'opportunity-pipeline']]) {
+      const href = `/organizations/${ORG}/crm/configuration/${path}`;
+      const context = workspaceNavigation(sections, href)!;
+      expect(activeItemKey(context.sections, href)).toBe(key);
+      expect(activeItemKey(context.sections, `${href}/record`)).toBe(key);
     }
-    expect(activeItemKey(workspaceNavigation(sections, parent.href)!.sections, parent.href)).toBe('workspace-configuration');
   });
-  it('omits unentitled and unauthorized children independently of operating access', () => {
-    const limited = projectedItems(project(['field.manage'], { enabledModules: new Set(), featureAvailability: new Set() })).find(item => item.key === 'workspace-crm')!.configuration!;
-    expect(limited.children?.map(item => item.key)).toEqual(['opportunity-stages', 'customer-fields']);
-    expect(projectedItems(project(['customer.create'])).find(item => item.key === 'workspace-crm')?.configuration).toBeUndefined();
+  it('keeps independently gated doors for configuration-only members and denies unauthorized editors', () => {
+    const sections = project(['field.manage'], { enabledModules: new Set(), featureAvailability: new Set() });
+    const crm = projectedItems(sections).find(item => item.key === 'workspace-crm')!;
+    expect(crm.configureDoors?.map(item => item.key)).toEqual(['opportunity-stages', 'customer-fields']);
+    expect(workspaceNavigation(sections, `/organizations/${ORG}/crm/configuration/fields`)).not.toBeNull();
+    expect(workspaceNavigation(sections, `/organizations/${ORG}/crm/configuration/relationship-stages`)).toBeNull();
+    const noConfiguration = project(['customer.read']);
+    expect(projectedItems(noConfiguration).find(item => item.key === 'workspace-crm')?.configuration).toBeUndefined();
+    expect(workspaceNavigation(noConfiguration, `/organizations/${ORG}/crm/configuration/fields`)).toBeNull();
   });
 });
 
@@ -657,7 +662,7 @@ describe('contextual configuration of an existing destination', () => {
   it('lets another workspace keep a link to the same editor and keeps standalone editors as a branch', () => {
     expect(row('communications').configuration?.children?.map(item => item.key)).toContain('schedule-configuration');
     expect(row('ai').configuration?.children?.map(item => item.key)).toEqual(['ai-agents', 'ai-deployments', 'ai-knowledge', 'ai-tools']);
-    expect(row('crm').configuration).toBeDefined();
+    expect(row('crm').configuration).toBeUndefined();
     expect(row('support').configuration).toBeUndefined();
     expect(row('finance').configuration).toBeUndefined();
   });

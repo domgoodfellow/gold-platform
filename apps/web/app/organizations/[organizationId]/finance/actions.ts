@@ -15,7 +15,7 @@ import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
 import { todayInZone, zonedTimeToInstant } from '@/lib/domain/scheduling/window';
 import { listUsableModules } from '@/lib/domain/tenancy/modules';
 import { ensureInvoiceDocument, renderDraftInvoice, retainCurrentLogo } from '@/lib/domain/billing/invoice-documents';
-import { getCommercialProposal } from '@/lib/domain/customers/commercial-proposals';
+import { buildCatalogProposal, getCommercialProposal } from '@/lib/domain/customers/commercial-proposals';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
 
 export type FinanceChoice = { id: string; title: string; detail: string; meta: string };
@@ -34,8 +34,8 @@ export async function financeChoices(organizationId: string, kind: 'invoice' | '
     return { total: r.total, rows: r.map(contact => ({ id: contact.id, title: contact.name, detail: contact.email ?? contact.phone ?? '', meta: '' })) };
   }
   if (kind === 'invoice') {
-    const r = await readFinanceQuotes(db, organizationId, { q, status: 'not-invoiced' });
-    return { total: r.total, rows: r.rows.map(r => ({ id: r.workItemId, title: r.title, detail: r.customer?.name ?? 'No contact', meta: r.quoted ? formatMoney(r.quoted.totalMinor, r.quoted.currency) : '' })) };
+    const r = await readFinanceQuotes(db, organizationId, { q, status: 'not-invoiced', source: 'work' });
+    return { total: r.total, rows: r.rows.map(r => ({ id: r.workItemId!, title: r.title, detail: r.customer?.name ?? 'No contact', meta: r.quoted ? formatMoney(r.quoted.totalMinor, r.quoted.currency) : '' })) };
   }
   if (kind === 'payment') {
     const r = await readFinanceInvoices(db, organizationId, { q, status: options.includeSettled ? undefined : 'outstanding', sort: 'due' });
@@ -93,14 +93,15 @@ export async function financeMutation(_previous: FinanceActionState, form: FormD
   const workItemId = String(form.get('workItemId') ?? '');
   const invoiceId = String(form.get('invoiceId') ?? '');
   const kind = String(form.get('kind') ?? '');
+  const catalogQuote = kind === 'quote' && form.get('source') === 'catalog';
   const direct = kind === 'invoice' && form.get('source') === 'direct';
   const fromProposal = kind === 'invoice' && form.get('source') === 'proposal';
   const confirmed = form.get('confirmed') === '1';
   try {
-    const capability = kind === 'invoice' ? 'invoice.issue' : kind === 'quote' ? 'work_item.price' : 'payment.record';
+    const capability = catalogQuote ? 'price.manage' : kind === 'invoice' ? 'invoice.issue' : kind === 'quote' ? 'work_item.price' : 'payment.record';
     if (!organization.capabilities.includes(capability)) throw new DomainError('Your role cannot perform this action.', 'finance.forbidden');
     if (!(await listUsableModules(db, { organizationId })).has('billing')) throw new DomainError('Billing is not available for this organization.', 'finance.unavailable');
-    const byWork = !direct && !fromProposal && !(kind === 'payment' && invoiceId);
+    const byWork = !catalogQuote && !direct && !fromProposal && !(kind === 'payment' && invoiceId);
     if (byWork && !await getWorkItem(db, { organizationId, workItemId })) throw new DomainError('Work item is unavailable.', 'finance.work_unavailable');
     const date = (name: string) => { const value = String(form.get(name) ?? ''); if (!value) return null; if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(Date.parse(value)) || new Date(value).toISOString().slice(0,10) !== value) throw new DomainError('Enter a valid date.', 'finance.date_invalid'); return zonedTimeToInstant(value, '00:00', organization.timezone); };
     let record: string | undefined;
@@ -108,7 +109,13 @@ export async function financeMutation(_previous: FinanceActionState, form: FormD
     // Before issuing, so the presentation recorded with the invoice can keep the current logo. Best effort.
     if (kind === 'invoice' && confirmed) await retainCurrentLogo(db, { organizationId }).catch(() => undefined);
     let href = `/organizations/${organizationId}/work/${workItemId}?tab=financials`;
-    if (direct) {
+    if (catalogQuote) {
+      const customerId = String(form.get('customerId') ?? '');
+      const proposal = await buildCatalogProposal(db, { organizationId, customerId, lines: directLines(form.get('lines')), notes: String(form.get('notes') ?? '') });
+      href = `/organizations/${organizationId}/crm/contacts/${customerId}?section=sales&view=commercial`;
+      record = `Quote v${proposal.version}`;
+      revalidatePath(`/organizations/${organizationId}/crm/contacts/${customerId}`);
+    } else if (direct) {
       if (!confirmed) throw new DomainError('Review and confirm the invoice before issuing it.', 'finance.confirmation_required');
       const issuedAt = date('issuedAt'), dueAt = date('dueAt');
       if (dueAt && dueAt < (issuedAt ?? zonedTimeToInstant(todayInZone(organization.timezone), '00:00', organization.timezone))) throw new DomainError('Due date must be on or after the invoice date.', 'finance.due_invalid');
@@ -157,7 +164,7 @@ export async function financeMutation(_previous: FinanceActionState, form: FormD
     });
     revalidatePath(`/organizations/${organizationId}/finance`, 'layout');
     if (byWork) revalidatePath(`/organizations/${organizationId}/work/${workItemId}`);
-    return { documentError, error: null, success: kind === 'invoice' ? 'Invoice issued.' : kind === 'quote' ? 'Priced line added to quote.' : form.get('entry') === 'correction' ? 'Correction recorded.' : 'Payment recorded.', href, record };
+    return { documentError, error: null, success: catalogQuote ? 'Customer quote created.' : kind === 'invoice' ? 'Invoice issued.' : kind === 'quote' ? 'Priced line added to quote.' : form.get('entry') === 'correction' ? 'Correction recorded.' : 'Payment recorded.', href, record };
   } catch (error) { if (error instanceof DomainError) return { error: error.message }; throw error; }
 }
 

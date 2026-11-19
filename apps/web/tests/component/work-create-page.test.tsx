@@ -33,7 +33,7 @@ describe('New work page', () => {
     const dialog = screen.getByRole('region', { name: 'New work' });
     const typeSelect = within(dialog).getByLabelText('Work type');
     // A type that cannot start work yet says so in the list, so anyone can choose one that is ready.
-    expect(await optionLabels(typeSelect)).toEqual(['Install', 'Repair', 'Survey (needs a starting stage)']);
+    expect(await optionLabels(typeSelect)).toEqual(['Choose a Work type', 'Install', 'Repair', 'Survey (needs a starting stage)']);
     expect(fieldValue(typeSelect)).toBe('t2');
     const stages = () => optionLabels(within(dialog).getByLabelText('Starting stage'));
     expect(await stages()).toEqual(['Diagnosing', 'Fixing']);
@@ -92,4 +92,37 @@ describe('New work page', () => {
     expect(screen.getByRole('button', { name: 'Create type' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open Work type settings' })).toHaveAttribute('href', '/organizations/org/work/configuration?new=1&returnTo=create');
   });
+});
+
+
+it('does not choose an unrelated unusable type and always offers type creation to managers', async () => {
+  await open(<WorkCreatePage options={options({ types: [type('oil', 'Oil Change')], statusesByType: { oil: [] } })} mayConfigure />);
+  expect(fieldValue(screen.getByLabelText('Work type'))).toBe('');
+  expect(screen.queryByLabelText('Starting stage')).toBeNull();
+  expect(screen.queryByRole('form', { name: 'Add a starting stage to Oil Change' })).toBeNull();
+  expect(screen.getByRole('link', { name: 'New Work type' })).toHaveAttribute('href', '/organizations/org/work/configuration?new=1&returnTo=create');
+});
+
+it('selects the linked service delivery type and submits the service, never its amount', async () => {
+  const service = { id: 'service', name: 'Repair service', unit: 'visit', currency: 'CAD', unitAmountMinor: 25000, createdAt: '', deliveryTypeId: 't2' };
+  await open(<WorkCreatePage options={options({ services: [service] })} initialServiceId="service" mayConfigure />);
+  expect(fieldValue(screen.getByLabelText('Work type'))).toBe('t2');
+  const form = screen.getByRole('form', { name: 'Create work' }) as HTMLFormElement;
+  const data = new FormData(form);
+  expect(data.get('serviceId')).toBe('service');
+  expect(data.get('serviceQuantity')).toBe('1');
+  expect([...data.keys()]).not.toContain('unitAmountMinor');
+});
+
+it('preserves a changed service in the address and discards the old draft after confirmation', async () => {
+  const service = { id: 'first', name: 'First service', unit: 'visit', currency: 'CAD', unitAmountMinor: 25000, createdAt: '', deliveryTypeId: 't2' };
+  const user = await open(<WorkCreatePage options={options({ services: [service, { ...service, id: 'second', name: 'Second service' }] })} initialServiceId="first" mayConfigure />);
+  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+  await user.type(screen.getByLabelText('Job title'), 'Old draft');
+  await chooseOption(screen.getByLabelText(/^Catalog service/), 'second');
+  expect(confirm).toHaveBeenCalled();
+  expect(screen.getByLabelText('Job title')).toHaveValue('');
+  expect(new URL(window.location.href).searchParams.get('service')).toBe('second');
+  expect(new FormData(screen.getByRole('form', { name: 'Create work' }) as HTMLFormElement).get('serviceId')).toBe('second');
+  confirm.mockRestore();
 });

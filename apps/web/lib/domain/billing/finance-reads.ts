@@ -25,7 +25,9 @@ export type FinanceInvoiceRow = {
 };
 
 export type FinanceQuoteRow = {
-  workItemId: string;
+  workItemId: string | null;
+  quoteId?: string;
+  proposalId?: string | null;
   title: string;
   status: string;
   customer: { id: string; name: string } | null;
@@ -123,15 +125,17 @@ export async function readFinanceInvoice(db: Db, organizationId: string, invoice
 
 export async function readFinanceQuotes(db: Db, organizationId: string, f: FinanceFilter = {}) {
   let query = db.from('finance_quote_records').select('*', { count: 'exact' }).eq('organization_id', organizationId);
-  if (f.status === 'not-invoiced') query = query.eq('invoiced', false);
+  if (f.status === 'not-invoiced' || f.status === 'ready-to-invoice') query = query.eq('invoiced', false).or('proposal_id.is.null,status.neq.declined');
+  if (f.status === 'ready-to-invoice') query = query.or('proposal_id.is.null,status.eq.accepted');
+  if (f.source === 'work') query = query.is('proposal_id', null);
   if (f.status === 'invoiced') query = query.eq('invoiced', true);
   if (f.customer) query = query.eq('customer_id', f.customer);
   if (f.from) query = query.gte('created_at', f.from);
   if (f.to) query = query.lt('created_at', f.to);
   if (f.q && searchTerm(f.q)) { const q = searchTerm(f.q); query = query.or(`title.ilike.%${q}%,customer_name.ilike.%${q}%`); }
-  const { data, error, count } = await ordered(query, 'quotes', f.sort, 'work_item_id').range(...bounds(f));
+  const { data, error, count } = await ordered(query, 'quotes', f.sort, 'quote_id').range(...bounds(f));
   if (error) throw fromDatabaseError(error, 'quotes.list_failed');
-  const rows: FinanceQuoteRow[] = (data ?? []).map(r => ({ workItemId: r.work_item_id!, title: r.title!, status: r.status ?? '', customer: r.customer_id ? { id: r.customer_id, name: r.customer_name ?? 'Contact' } : null,
+  const rows: FinanceQuoteRow[] = (data ?? []).map(r => ({ workItemId: r.work_item_id, quoteId: r.quote_id!, proposalId: r.proposal_id, title: r.title!, status: r.status ?? '', customer: r.customer_id ? { id: r.customer_id, name: r.customer_name ?? 'Contact' } : null,
     createdAt: r.created_at!, lineCount: r.line_count ?? 0, quoted: r.total_minor === null ? null : { totalMinor: safeMinor(r.total_minor), currency: r.currency! }, invoiced: r.invoiced ?? false }));
   return { rows, total: count ?? 0 };
 }

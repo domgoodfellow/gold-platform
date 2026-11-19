@@ -22,10 +22,12 @@ import { SelectField } from '@/components/controls/select-field';
  * as Work type settings, and lands straight back on the form with the type still chosen. Anybody
  * else is told what is missing and offered any type that is ready.
  */
-export function WorkCreatePage({ options, initialTypeId, mayConfigure, returnToQuote = false, setupStep }: { options: WorkCreateOptions; initialTypeId?: string; mayConfigure: boolean; returnToQuote?: boolean; setupStep?: string }) {
+export function WorkCreatePage({ options, initialTypeId, delivery, initialServiceId, initialCustomerId, mayConfigure, returnToQuote = false, setupStep }: { options: WorkCreateOptions; delivery?: { proposalId: string; position: number; customerId: string; name: string }; initialTypeId?: string; initialServiceId?: string; initialCustomerId?: string; mayConfigure: boolean; returnToQuote?: boolean; setupStep?: string }) {
   const router = useRouter();
   const ready = (id: string) => (options.statusesByType[id]?.length ?? 0) > 0;
-  const [typeId, setTypeId] = useState(options.types.find(t => t.id === initialTypeId)?.id ?? options.types.find(t => ready(t.id))?.id ?? options.types[0]?.id ?? '');
+  const [serviceId, setServiceId] = useState(initialServiceId ?? '');
+  const service = options.services?.find(item => item.id === serviceId);
+  const [typeId, setTypeId] = useState(options.types.find(t => t.id === (service?.deliveryTypeId ?? initialTypeId))?.id ?? '');
   const [dirty, setDirty] = useState(false);
   useUnsavedChanges(dirty);
   const selected = options.types.find(t => t.id === typeId);
@@ -41,27 +43,47 @@ export function WorkCreatePage({ options, initialTypeId, mayConfigure, returnToQ
   const settingsQuery = new URLSearchParams(selected ? { type: typeId, tab: 'workflow', returnTo: 'create' } : { new: '1', returnTo: 'create' });
   if (returnToQuote) settingsQuery.set('quote', '1');
   const settingsHref = setupStep ? withSetupContext(`${base}/configuration?${settingsQuery}`, setupStep) : `${base}/configuration?${settingsQuery}`;
-  const destination = returnToQuote ? `/organizations/${options.organizationId}/finance/quotes?create=1` : typeId ? `${base}?${new URLSearchParams({ type: typeId })}` : base;
+  const newTypeQuery = new URLSearchParams({ new: '1', returnTo: 'create', ...(returnToQuote ? { quote: '1' } : {}) });
+  const newTypePath = `${base}/configuration?${newTypeQuery}`;
+  const newTypeHref = setupStep ? withSetupContext(newTypePath, setupStep) : newTypePath;
+  const destination = returnToQuote ? `/organizations/${options.organizationId}/finance/quotes?create=1&quoteSource=work` : typeId ? `${base}?${new URLSearchParams({ type: typeId })}` : base;
   const cancelHref = setupStep ? withSetupContext(destination, setupStep) : destination;
 
   return <Card as="section" aria-label="New work">
     <div className="flex flex-col gap-5">
-      {selected ? <FormField id="new-work-type" label="Work type">{field =>
-        <SelectField {...field} value={typeId} onValueChange={(next) => {
+      {!delivery && options.services?.some(item => item.deliveryTypeId) ? <FormField id="new-work-service" label="Catalog service" optional>{field => <SelectField {...field} value={serviceId} onValueChange={next => {
+        if (dirty && !window.confirm('Discard unsaved work and change service?')) return;
+        setDirty(false); setServiceId(next);
+        const url = new URL(window.location.href);
+        if (next) url.searchParams.set('service', next); else url.searchParams.delete('service');
+        window.history.replaceState(null, '', url);
+        const linked = options.services?.find(item => item.id === next)?.deliveryTypeId;
+        if (linked) chooseType(linked);
+      }} options={[{ value: '', label: 'No catalog service' }, ...(options.services ?? []).filter(item => options.types.some(type => type.id === item.deliveryTypeId)).map(item => ({ value: item.id, label: item.name }))]} />}</FormField> : null}
+      {delivery ? <p className="text-sm">Delivery for {delivery.name}. The accepted quote keeps its prices; invoice it from the customer&rsquo;s quote.</p> : null}
+      {options.types.length ? <FormField id="new-work-type" label="Work type">{field =>
+        <SelectField {...field} disabled={Boolean(delivery)} value={typeId} onValueChange={(next) => {
           if (dirty && !window.confirm('Discard unsaved work and change Work type?')) return;
           setDirty(false);
+          if (service && service.deliveryTypeId !== next) {
+            setServiceId('');
+            const url = new URL(window.location.href); url.searchParams.delete('service');
+            window.history.replaceState(null, '', url);
+          }
           chooseType(next);
-        }} options={[...options.types.map((t) => ({ value: t.id, label: ready(t.id) ? t.name : `${t.name} (needs a starting stage)` }))]} />
+        }} options={[{ value: '', label: 'Choose a Work type' }, ...options.types.map((t) => ({ value: t.id, label: ready(t.id) ? t.name : `${t.name} (needs a starting stage)` }))]} />
       }</FormField> : null}
 
+      {mayConfigure && options.types.length ? <ButtonLink size="small" tone="secondary" href={newTypeHref}>New Work type</ButtonLink> : null}
+
       {returnToQuote ? <Hint>Create the Work item, then continue to its Financials to add a quoted price.</Hint> : null}
-      {selected && statuses.length ? <CreateWorkItemForm key={typeId} {...options} typeId={typeId} statuses={statuses} onDirtyChange={setDirty} cancelHref={cancelHref} returnToQuote={returnToQuote} setupStep={setupStep} />
+      {selected && statuses.length ? <CreateWorkItemForm key={`${typeId}:${serviceId}`} {...options} typeId={typeId} statuses={statuses} onDirtyChange={setDirty} cancelHref={cancelHref} returnToQuote={returnToQuote || Boolean(service) || Boolean(delivery)} setupStep={setupStep} service={service} initialCustomerId={delivery?.customerId ?? initialCustomerId} delivery={delivery} />
         : <div className="flex flex-col gap-4" role="region" aria-labelledby="new-work-prerequisite">
           <div>
-            <SectionHeading id="new-work-prerequisite">{selected ? `${selected.name} needs a starting stage` : 'No work types yet'}</SectionHeading>
-            <Hint className="mt-1">{selected ? 'A starting stage is required before work of this type can be created.' : 'A Work type and a starting stage are required before creating work.'}</Hint>
+            <SectionHeading id="new-work-prerequisite">{selected ? `${selected.name} needs a starting stage` : options.types.length ? 'Choose a Work type' : 'No work types yet'}</SectionHeading>
+            {selected || !options.types.length ? <Hint className="mt-1">{selected ? 'A starting stage is required before work of this type can be created.' : 'A Work type and a starting stage are required before creating work.'}</Hint> : null}
           </div>
-          {mayConfigure
+          {!selected && options.types.length ? null : mayConfigure
             ? selected
               ? <StartingStageForm key={typeId} organizationId={options.organizationId} typeId={typeId} typeName={selected.name} onAdded={() => router.refresh()} />
               : <CreateTypeForm organizationId={options.organizationId} onCreated={created => { chooseType(created); router.refresh(); }} />

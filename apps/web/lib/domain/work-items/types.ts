@@ -23,6 +23,7 @@ export type WorkItemType = {
    * reverse), not whether any is scheduled now, and never inferred from resources or bookings.
    */
   schedulable: boolean;
+  archivedAt?: string | null;
 };
 
 const NAME_MAX = 64;
@@ -36,19 +37,33 @@ const NAME_MAX = 64;
  */
 export async function listWorkItemTypes(
   db: Db,
-  input: { organizationId: string },
+  input: { organizationId: string; includeArchived?: boolean },
 ): Promise<WorkItemType[]> {
-  const { data, error } = await db
+  let query = db
     .from('work_item_types')
-    .select('id, name, schedulable')
+    .select('id, name, schedulable, archived_at')
     .eq('organization_id', input.organizationId)
     .order('name', { ascending: true });
+  if (!input.includeArchived) query = query.is('archived_at', null);
+  const { data, error } = await query;
 
   if (error) {
     throw fromDatabaseError(error, 'work_item_types.list_failed');
   }
 
-  return (data ?? []).map((row) => ({ id: row.id, name: row.name, schedulable: row.schedulable }));
+  return (data ?? []).map((row) => ({ id: row.id, name: row.name, schedulable: row.schedulable, archivedAt: row.archived_at }));
+}
+
+export async function retireWorkItemType(db: Db, typeId: string, archived: boolean): Promise<void> {
+  await requireActor(db);
+  const { error } = await db.rpc('archive_work_item_type', { p_type_id: typeId, p_archived: archived });
+  if (error) throw fromDatabaseError(error, 'work_item_types.archive_failed');
+}
+
+export async function deleteUnusedWorkType(db: Db, typeId: string): Promise<void> {
+  await requireActor(db);
+  const { error } = await db.rpc('delete_unused_work_type', { p_type_id: typeId });
+  if (error) throw fromDatabaseError(error, 'work_item_types.delete_failed');
 }
 
 /**

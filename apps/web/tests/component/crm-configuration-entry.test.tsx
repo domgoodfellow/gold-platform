@@ -8,7 +8,7 @@ import { workspaceConfigCrumbs } from '@/lib/settings-nav';
 import { resolveLocation, type ResolvedLocation } from '@/lib/route/page-location';
 import type { Capability } from '@/lib/domain/tenancy/capabilities';
 
-/** Package 3A: how CRM configuration is found — Home's Configure menu, plain-text Configuration ancestry. */
+/** Package 3A: how CRM configuration is found — the shared settings menu and destination-owned editor ancestry. */
 
 const ORG = 'org';
 const all = new Set<Capability>(CONFIG_TARGETS.flatMap((target) => [...target.permission, ...(target.requiresAll ?? [])]) as Capability[]);
@@ -27,7 +27,7 @@ describe('CRM Home Configure control (ConfigureMenu over workspaceConfigureItems
     expect(workspaceConfigureItems(ORG, 'crm', gate()).map((item) => [item.label, item.href])).toEqual([
       ['Relationship stages', `/organizations/${ORG}/crm/configuration/relationship-stages`],
       ['Opportunity stages', `/organizations/${ORG}/crm/configuration/opportunity-stages`],
-      ['Customer fields', `/organizations/${ORG}/crm/configuration/fields`],
+      ['Contact fields', `/organizations/${ORG}/crm/configuration/fields`],
     ]);
   });
 
@@ -48,7 +48,7 @@ describe('CRM Home Configure control (ConfigureMenu over workspaceConfigureItems
     const fields = workspaceConfigureItems(ORG, 'crm', gate()).find((item) => item.key === 'customer-fields')!;
     render(<ConfigureMenu items={[fields]} />);
     expect(screen.queryByRole('button', { name: 'Settings' })).toBeNull();
-    expect(screen.getByRole('link', { name: 'Customer fields' })).toHaveAttribute('href', `/organizations/${ORG}/crm/configuration/fields`);
+    expect(screen.getByRole('link', { name: 'Contact fields' })).toHaveAttribute('href', `/organizations/${ORG}/crm/configuration/fields`);
   });
 
   it('opens a menu of direct links from the keyboard, and Escape returns focus to the control', async () => {
@@ -61,7 +61,7 @@ describe('CRM Home Configure control (ConfigureMenu over workspaceConfigureItems
     expect(items.map((item) => [item.textContent, item.getAttribute('href')])).toEqual([
       ['Relationship stages', `/organizations/${ORG}/crm/configuration/relationship-stages`],
       ['Opportunity stages', `/organizations/${ORG}/crm/configuration/opportunity-stages`],
-      ['Customer fields', `/organizations/${ORG}/crm/configuration/fields`],
+      ['Contact fields', `/organizations/${ORG}/crm/configuration/fields`],
     ]);
     await user.keyboard('{ArrowDown}');
     expect(document.activeElement?.getAttribute('role')).toBe('menuitem');
@@ -72,21 +72,21 @@ describe('CRM Home Configure control (ConfigureMenu over workspaceConfigureItems
 });
 
 describe('CRM configuration page identity', () => {
-  it('names Configuration as a plain-text ancestor on a CRM configuration page', () => {
-    expect(workspaceConfigCrumbs(ORG, 'sales-stages', gate())).toEqual([
+  it('names Contacts as the relationship editor parent', () => {
+    expect(workspaceConfigCrumbs(ORG, 'sales-stages', gate(new Set([...all, 'customer.read'])))).toEqual([
       { label: 'CRM', href: `/organizations/${ORG}/crm` },
-      { label: 'Settings', href: undefined },
+      { label: 'Contacts', href: `/organizations/${ORG}/crm/contacts` },
     ]);
     // No workspace has a landing to link to (Batch A).
     expect(workspaceConfigCrumbs(ORG, 'call-setup', gate())[1]).toEqual({ label: 'Settings' });
   });
 
-  it('resolves CRM configuration under a non-linking Configuration level, with Up going to CRM', () => {
-    const location = resolveLocation({ pathname: `/organizations/${ORG}/crm/configuration/relationship-stages`, access: { gate: gate() } }) as ResolvedLocation;
+  it('resolves relationship configuration under Contacts with the same Up destination', () => {
+    const location = resolveLocation({ pathname: `/organizations/${ORG}/crm/configuration/relationship-stages`, access: { gate: gate(new Set([...all, 'customer.read'])) } }) as ResolvedLocation;
     expect(location.status).toBe('resolved');
     const configuration = location.trail.find((crumb) => crumb.label === 'Settings');
-    expect(configuration).toBeDefined();
+    expect(configuration).toBeUndefined();
     expect(configuration?.href).toBeUndefined();
-    expect(location.up).toBe(`/organizations/${ORG}/crm`);
+    expect(location.up).toBe(`/organizations/${ORG}/crm/contacts`);
   });
 });

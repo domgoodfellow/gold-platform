@@ -1,3 +1,5 @@
+import { ButtonLink } from '@/components/controls/button';
+import { listUsableModules } from '@/lib/domain/tenancy/modules';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { AppPage } from '@/components/layout/app-page';
@@ -21,11 +23,12 @@ export default async function OpportunityPage({ params }: { params: Promise<{ or
   const item = await getOpportunity(db, { organizationId, opportunityId });
   if (!item) notFound();
   const [stages, members, timeline] = await Promise.all([listOpportunityStages(db, { organizationId }), listMembers(db, { organizationId }), listRecentActivity(db, { organizationId, scope: 'opportunities', opportunityId, limit: 100 })]);
+  const mayQuote = organization.capabilities.includes('price.manage') && (await listUsableModules(db, { organizationId })).has('billing');
   const mayUpdate = organization.capabilities.includes('opportunity.update');
   const followUpsEnabled = await followUpsAvailable(db, organizationId);
   const followUps = followUpsEnabled ? await relatedFollowUps(db, organizationId, item.customerId, opportunityId) : null;
   return <AppPage>
-    <RecordHeader location={{ records: { opportunityId: { state: 'ready', label: item.title } } }} summary={item.stage ? `${item.stage.name} · ${item.stage.kind}` : 'Unstaged'} actions={mayUpdate ? <OpportunitySheet organizationId={organizationId} stages={stages} members={members} defaultCurrency={organization.currency ?? ''} opportunity={item} /> : undefined} />
+    <RecordHeader location={{ records: { opportunityId: { state: 'ready', label: item.title } } }} summary={item.stage ? `${item.stage.name} · ${item.stage.kind}` : 'Unstaged'} actions={<>{mayQuote ? <ButtonLink tone="secondary" href={`/organizations/${organizationId}/finance/quotes?create=1&customer=${item.customerId}`}>New quote</ButtonLink> : null}{mayUpdate ? <OpportunitySheet organizationId={organizationId} stages={stages} members={members} defaultCurrency={organization.currency ?? ''} opportunity={item} /> : null}</>} />
     <Section><SectionHeading>Details</SectionHeading><dl className="mt-4 grid gap-4 sm:grid-cols-2">
       <div><dt className="text-sm text-muted">Customer</dt><dd><Link className="underline underline-offset-4" href={`/organizations/${organizationId}/crm/contacts/${item.customerId}`}>{item.customerName}</Link></dd></div>
       <div><dt className="text-sm text-muted">Value</dt><dd>{item.amountMinor !== null && item.currency ? formatOpportunityValue(item.amountMinor, item.currency) : 'Not set'}</dd></div>

@@ -77,7 +77,7 @@ export default async function CustomerPage({ params, searchParams }: PageProps<'
   }) : null;
   const modules = activeModuleKeys(resolvedFeatures);
   const mayPriceManage = organization.capabilities.includes('price.manage');
-  const catalogItems = modules.has('billing') && mayPriceManage ? await listPriceBookItems(db, { organizationId }) : [];
+  const catalogItems = modules.has('billing') && (mayPriceManage || organization.capabilities.includes('work_item.create')) ? await listPriceBookItems(db, { organizationId }) : [];
   const followUpsEnabled = await followUpsAvailable(db, organizationId);
   const followUps = followUpsEnabled ? await relatedFollowUps(db, organizationId, customerId) : null;
   const voice = modules.has('reception');
@@ -160,6 +160,7 @@ export default async function CustomerPage({ params, searchParams }: PageProps<'
         role={organization.role}
         features={{ voice, billing: modules.has('billing'), portal: modules.has('portal') }}
         permissions={{
+          createWork: organization.capabilities.includes('work_item.create'),
           edit: organization.capabilities.includes('customer.update'),
           call: organization.capabilities.includes('call.place'),
           attach: organization.capabilities.includes('document.create'),

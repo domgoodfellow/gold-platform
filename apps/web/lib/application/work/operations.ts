@@ -30,11 +30,11 @@ export async function workOperations(db: Db, organizationId: string, date: strin
     listWorkItems(db, { organizationId, active: true, within: upcomingWindow(date, timezone), sort: 'schedule', limit: 6 }),
     listWorkItems(db, { organizationId, active: true, limit: 1 }),
     listWorkItems(db, { organizationId, limit: 1 }),
-    listWorkItemTypes(db, { organizationId }),
+    listWorkItemTypes(db, { organizationId, includeArchived: true }),
     listResources(db, { organizationId, limit: 1 }),
   ]);
   const stages = await Promise.all(types.map(type => listWorkItemStatuses(db, { organizationId, typeId: type.id })));
-  const setup = { types: types.map((type, i) => ({ ...type, ready: stages[i].length > 0 })), resources: resources.total };
+  const setup = { types: types.map((type, i) => ({ ...type, ready: stages[i].length > 0 })).filter(type => !type.archivedAt), resources: resources.total };
   const day = days[6];
   const ids = scheduledIds(day);
   const records = await listWorkItems(db, { organizationId, ids, limit: 5, sort: 'schedule' });

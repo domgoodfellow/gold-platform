@@ -20,6 +20,8 @@ export type PriceBookItem = {
   /** As it was when this item was priced, not as the organization reads today. */
   currency: string;
   createdAt: string;
+  deliveryTypeId?: string | null;
+  deliveryTypeArchived?: boolean;
 };
 
 const NAME_MAX = 200;
@@ -79,7 +81,7 @@ export async function listPriceBookItems(
 ): Promise<PriceBookItem[]> {
   const { data, error } = await db
     .from('price_book_items')
-    .select('id, name, unit, unit_amount_minor, currency, created_at')
+    .select('id, name, unit, unit_amount_minor, currency, created_at, delivery_type_id, delivery:work_item_types!price_book_delivery_type_same_org(archived_at)')
     .eq('organization_id', input.organizationId)
     .order('name', { ascending: true });
 
@@ -94,7 +96,15 @@ export async function listPriceBookItems(
     unitAmountMinor: row.unit_amount_minor,
     currency: row.currency,
     createdAt: row.created_at,
+    deliveryTypeId: row.delivery_type_id,
+    deliveryTypeArchived: Boolean(row.delivery?.archived_at),
   }));
+}
+
+export async function setCatalogDeliveryType(db: Db, itemId: string, typeId: string | null): Promise<void> {
+  await requireActor(db);
+  const { error } = await db.rpc('set_catalog_delivery_type', { p_item_id: itemId, p_type_id: typeId as string });
+  if (error) throw fromDatabaseError(error, 'prices.delivery_type_failed');
 }
 
 /** Currency is never an argument — `create_price_book_item` reads it from the organization, so a caller can't assert what a business prices in. */

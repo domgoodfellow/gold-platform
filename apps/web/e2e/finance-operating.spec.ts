@@ -72,7 +72,8 @@ test.describe('Finance operating journey', () => {
     await page.goto(finance);
     await page.getByRole('button',{name:'New quote',exact:true}).click();
     let dialog = page.getByRole('dialog',{name:'New quote',exact:true});
-    await dialog.getByLabel('Search Work items').fill('Service quote acceptance');
+    await dialog.getByRole('radio', { name: 'Price existing Work', exact: true }).check();
+      await dialog.getByLabel('Search Work items').fill('Service quote acceptance');
     await choose(dialog,/Service quote acceptance/);
     await chooseOption(dialog.getByLabel('Price item'), price.id);
     await dialog.getByRole('button',{name:'Add to quote',exact:true}).click();

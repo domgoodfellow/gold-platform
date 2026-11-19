@@ -533,11 +533,11 @@ export const CONFIG_TARGETS: readonly ConfigTarget[] = [
   { key: 'schedule-configuration', scope: 'organization', workspace: 'field', path: 'schedule/configuration', entitledBy: 'schedule', permission: ['field.manage'], destination: 'schedule' },
   // The operating price book, linked from the Settings directory and setup the way Resources and Locations are; it is its own sidebar destination.
   { key: 'price-book', treatment: 'operating', scope: 'organization', workspace: 'finance', path: 'finance/catalog', entitledBy: 'finance-catalog', permission: ['price.manage'], destination: 'finance-catalog' },
-  { key: 'customer-fields', scope: 'organization', workspace: 'crm', path: 'crm/configuration/fields', permission: ['field.manage'], directory: false },
+  { key: 'customer-fields', scope: 'organization', workspace: 'crm', path: 'crm/configuration/fields', permission: ['field.manage'], directory: false, destination: 'customers' },
   { key: 'custom-fields', treatment: 'shared', scope: 'organization', path: 'settings/custom-fields', permission: ['field.manage'] },
   // Entitled through Pipeline, permitted through field.manage: naming stages is not moving a customer between them.
-  { key: 'sales-stages', scope: 'organization', workspace: 'crm', path: 'crm/configuration/relationship-stages', entitledBy: 'pipeline', permission: ['field.manage'] },
-  { key: 'opportunity-stages', scope: 'organization', workspace: 'crm', path: 'crm/configuration/opportunity-stages', entitledBy: 'opportunity-pipeline', permission: ['field.manage'] },
+  { key: 'sales-stages', scope: 'organization', workspace: 'crm', path: 'crm/configuration/relationship-stages', entitledBy: 'pipeline', permission: ['field.manage'], directory: false, destination: 'customers' },
+  { key: 'opportunity-stages', scope: 'organization', workspace: 'crm', path: 'crm/configuration/opportunity-stages', entitledBy: 'opportunity-pipeline', permission: ['field.manage'], directory: false, destination: 'opportunity-pipeline' },
   // Entitled through Calls, permitted through field.manage: configuring outcomes and routing is not making calls.
   // A dedicated settings route, never `calls#setup` — a fragment into an operational page is not a canonical destination.
   { key: 'call-setup', scope: 'organization', workspace: 'communications', path: 'comms/configuration/calling', entitledBy: 'calls', permission: ['field.manage', 'organization.manage'] },
@@ -820,7 +820,7 @@ export type WorkspaceConfigureDoor = {
  * The order is the order of the concerns, most frequently changed first.
  */
 export const WORKSPACE_CONFIGURE: Partial<Record<WorkspaceKey, readonly WorkspaceConfigureDoor[]>> = {
-  crm: [{ target: 'sales-stages', label: 'Relationship stages' }, { target: 'opportunity-stages', label: 'Opportunity stages' }, { target: 'customer-fields', label: 'Customer fields' }],
+  crm: [{ target: 'sales-stages', label: 'Relationship stages' }, { target: 'opportunity-stages', label: 'Opportunity stages' }, { target: 'customer-fields', label: 'Contact fields' }],
   communications: [
     { target: 'call-setup', label: 'Calling & routing' },
     { target: 'communications', label: 'Messaging' },

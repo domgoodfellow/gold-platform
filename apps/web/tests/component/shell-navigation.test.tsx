@@ -147,28 +147,18 @@ describe('workspace header icon utilities', () => {
 
 
 describe('contextual sidebar rendering', () => {
-  // Package 3A: CRM's Configuration parent groups its doors; it expands and collapses and is not a link.
-  it('expands and collapses CRM Configuration from its heading, which is a button, and selects direct child links', async () => {
+  it('selects Contacts or Pipeline for CRM editors without a duplicate Settings branch', () => {
     vi.stubGlobal('innerWidth', 1440);
     const org = '11111111-1111-4111-8111-111111111111';
     const sections = projectShell({ organizationId: org, enabledModules: new Set(['reception']), featureAvailability: new Set(AREAS.flatMap(area => area.featureKeys ?? [])), capabilities: new Set(ALL_CAPABILITIES) });
-    route.pathname = `/organizations/${org}/crm/configuration/relationship-stages`;
-    render(<TooltipProvider><SidebarProvider><OrgNav sections={sections} organizationId={org} /></SidebarProvider></TooltipProvider>);
-    expect(screen.queryByRole('link', { name: 'Settings' })).not.toBeInTheDocument();
-    const heading = screen.getByRole('button', { name: 'Settings' });
-    expect(heading).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('link', { name: 'Relationship stages' })).toHaveAttribute('aria-current', 'page');
-    for (const name of ['Relationship stages', 'Opportunity stages', 'Customer fields']) expect(screen.getByRole('link', { name }).querySelector('svg')).toBeNull();
-    const user = userEvent.setup();
-    await user.click(heading);
-    expect(heading).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByRole('link', { name: 'Customer fields' })).not.toBeInTheDocument();
-    heading.focus();
-    await user.keyboard('{Enter}');
-    expect(heading).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('link', { name: 'Customer fields' })).toHaveAttribute('href', `/organizations/${org}/crm/configuration/fields`);
-    await user.keyboard(' ');
-    expect(heading).toHaveAttribute('aria-expanded', 'false');
+    for (const [suffix, owner] of [['relationship-stages', 'Contacts'], ['fields', 'Contacts'], ['opportunity-stages', 'Pipeline']]) {
+      route.pathname = `/organizations/${org}/crm/configuration/${suffix}`;
+      render(<TooltipProvider><SidebarProvider><OrgNav sections={sections} organizationId={org} /></SidebarProvider></TooltipProvider>);
+      expect(screen.getByRole('link', { name: new RegExp(`^${owner}$`) })).toHaveAttribute('aria-current', 'page');
+      expect(screen.queryByRole('button', { name: 'Settings' })).toBeNull();
+      expect(screen.queryByRole('link', { name: 'Settings' })).toBeNull();
+      cleanup();
+    }
     vi.unstubAllGlobals();
   });
 

@@ -142,11 +142,12 @@ test.describe.serial('Finance structural correction', () => {
       expect(edited.indexOf('attention')).toBeLessThan(edited.indexOf('overview'));
       await page.getByRole('button', { name: 'Save changes' }).click();
       await expect(page.getByRole('status').filter({ hasText: 'Dashboard layout saved.' })).toBeVisible();
-      // New quote opens; with no Work yet it says a quote starts from Work, and closing returns focus.
+      // New quote starts with contacts even when there is no Work; closing returns focus.
       const newQuote = page.getByRole('main').getByRole('button', { name: 'New quote', exact: true });
       await newQuote.click();
       const dialog = page.getByRole('dialog', { name: 'New quote' });
-      await expect(dialog).toContainText('A quote is priced Work, so it starts from a Work item.');
+      await expect(dialog.getByRole('radio', { name: 'Customer quote', exact: true })).toBeChecked();
+      await expect(dialog.getByLabel('Search contacts')).toBeVisible();
       await dialog.getByRole('button', { name: 'Cancel' }).click();
       await expect(dialog).toHaveCount(0);
       await expect(newQuote).toBeFocused();
@@ -189,10 +190,10 @@ test.describe.serial('Finance structural correction', () => {
       await expect(row).toHaveCount(0);
       expect(await count(owner.db, 'price_book_items', empty)).toBe(1);
       expect({ types: await count(owner.db, 'work_item_types', empty), work: await count(owner.db, 'work_items', empty) }).toEqual(before);
-      // Priced, but nothing quoted yet: the Dashboard stays, and Getting started moves to pricing Work.
+      // Priced, but nothing quoted yet: the Dashboard stays, and Getting started offers customer quoting.
       await page.goto(`${base}/finance`);
-      await expect(page.getByRole('region', { name: 'Getting started' })).toContainText('Prices are ready');
-      await expect(page.getByRole('region', { name: 'Getting started' }).getByRole('button', { name: 'Price Work' })).toBeVisible();
+      await expect(page.getByRole('region', { name: 'Getting started' })).toContainText('Pricing configured');
+      await expect(page.getByRole('region', { name: 'Getting started' }).getByRole('button', { name: 'New quote' })).toBeVisible();
     });
 
     test('captures each Finance journey at desktop, tablet and phone, only after the guard passes', async ({ page }) => {
@@ -211,7 +212,8 @@ test.describe.serial('Finance structural correction', () => {
         await page.goto(`${base}/finance`);
         await headerAction(page, 'New quote');
         let dialog = page.getByRole('dialog', { name: 'New quote' });
-        await dialog.getByLabel('Search Work items').fill('Heat pump');
+        await dialog.getByRole('radio', { name: 'Price existing Work', exact: true }).check();
+      await dialog.getByLabel('Search Work items').fill('Heat pump');
         await choose(dialog, /Heat pump estimate/);
         await chooseOption(dialog.getByLabel('Price item'), { label: 'Labour · CA$95.50 / hour' });
         await expect(dialog.getByLabel('Quote totals')).toContainText('Quote after this line');

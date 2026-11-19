@@ -1,3 +1,5 @@
+import { ConfigureMenu } from '@/components/controls/configure-menu';
+import { workspaceConfigureDoors } from '@/features/settings/workspace-configure';
 import { BusinessLabel } from '@/lib/context/business-vocabulary';
 import { AppPage } from '@/components/layout/app-page';
 import { SupportRegistrar } from '@/components/panels/support-registrar';
@@ -67,6 +69,7 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
       capabilities: new Set(organization.capabilities),
       featureAvailability: availableFeatureKeys(resolvedFeatures),
     }) && organization.capabilities.includes('report.read');
+  const configureItems = (await workspaceConfigureDoors(organizationId, 'crm')).filter(item => item.key === 'sales-stages' || item.key === 'customer-fields');
   const visibleStages = salesEnabled ? stages : [];
   // Adding, importing and synchronizing are offered through one intake dialog; each path follows the
   // capability its destination enforces (`contactIntakeOptions`). Library's file import needs
@@ -123,13 +126,13 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
       <ContactIntakeProvider organizationId={organizationId} definitions={definitions} options={intake} initialType={query.type==='company'?'company':query.type==='person'?'person':''} defaultOpen={mayCreate && query.create === '1'} initialImport={query.import === '1'} initialAccountId={single(query.connection)} oauthError={single(query.oauth_error)}>
         <CollectionHeader
           location={{}}
-          actions={!emptyCollection ? (
+          actions={<> <ConfigureMenu items={configureItems} label="Contact settings" compact />{!emptyCollection ? (
             <>
               {relationshipBoardAvailable ? <ButtonLink tone="secondary" href={`/organizations/${organizationId}/crm/contacts/stages`}>Relationship stages</ButtonLink> : null}
               {mayAddToList ? <AddToListMenu organizationId={organizationId} target={{ view: directoryView }} /> : null}
               {mayIntake ? <AddContactsTrigger /> : null}
             </>
-          ) : undefined}
+          ) : null}</>}
           activity={!emptyCollection}
           insights={mayInsight && !emptyCollection}
         />
@@ -154,9 +157,8 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
               salesEnabled={salesEnabled}
             />
           </SupportRegistrar>
-        ) : null}
-        {/* CRM configuration is reached from CRM's own sidebar group and Home Configure menu; this
-            page has no configuration of its own to offer, so it registers no Configure panel. */}
+            ) : null}
+        {/* Contacts owns relationship stages and contact fields; Pipeline owns opportunity stages. */}
         {emptyCollection ? (
           <section className="mt-6 rounded-lg border border-border bg-surface px-5 py-12 text-center" aria-labelledby="customers-empty-heading">
             <h2 id="customers-empty-heading" className="text-base font-semibold"><BusinessLabel>No contacts yet</BusinessLabel></h2>

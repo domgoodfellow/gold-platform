@@ -13,6 +13,8 @@ import { CustomFieldInputs } from '@/features/custom-fields/inputs';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import type { WorkItemStatus } from '@/lib/domain/work-items/statuses';
 import { withSetupContext } from '@/lib/route/setup-context';
+import type { PriceBookItem } from '@/lib/domain/pricing/price-book';
+import { formatMoney } from '@/lib/domain/work-items/consumption';
 import { SelectField } from '@/components/controls/select-field';
 
 const INITIAL: WorkActionState = { error: null };
@@ -32,6 +34,9 @@ export function CreateWorkItemForm({
   onDirtyChange,
   returnToQuote = false,
   setupStep,
+  service,
+  delivery,
+  initialCustomerId,
 }: {
   organizationId: string;
   typeId: string;
@@ -46,6 +51,9 @@ export function CreateWorkItemForm({
   onDirtyChange?: (dirty: boolean) => void;
   returnToQuote?: boolean;
   setupStep?: string;
+  service?: PriceBookItem;
+  delivery?: { proposalId: string; position: number; customerId: string; name: string };
+  initialCustomerId?: string;
 }) {
   const [state, formAction, pending] = useActionState(createWorkItemAction, INITIAL);
   const router = useRouter();
@@ -70,6 +78,7 @@ export function CreateWorkItemForm({
   return (
     <form action={formAction} onChange={() => onDirtyChange?.(true)} onReset={event => event.preventDefault()} className="flex flex-col gap-4" aria-label="Create work">
       <input type="hidden" name="organizationId" value={organizationId} />
+      {delivery ? <><input type="hidden" name="proposalId" value={delivery.proposalId} /><input type="hidden" name="proposalPosition" value={delivery.position} /></> : service ? <><input type="hidden" name="serviceId" value={service.id} /><label className="flex flex-col gap-1 text-sm">Quantity: {formatMoney(service.unitAmountMinor, service.currency)} / {service.unit}<TextInput name="serviceQuantity" type="number" min={1} max={1000000} step={1} defaultValue="1" required /></label></> : null}
       <div className="grid gap-3 sm:grid-cols-2">
         <FormField id={`new-work-title-${organizationId}`} label="Job title">
           {(field) => (
@@ -93,7 +102,7 @@ export function CreateWorkItemForm({
           <span className="text-muted">
             Customer <span className="text-subtle">(optional)</span>
           </span>
-          <OptionalSelect name="customerId" label="Customer" options={customers} />
+          <>{delivery ? <span>{customers.find(customer => customer.id === delivery.customerId)?.label ?? 'From accepted quote'}</span> : <OptionalSelect name="customerId" label="Customer" options={customers} value={initialCustomerId} />}</>
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-muted">

@@ -76,7 +76,7 @@ function EditWorkItemForm({ organizationId, workItem, customers, locations, asse
           {(field) => <TextInput {...field} name="title" required maxLength={300} defaultValue={workItem.title} />}
         </FormField>
         <div data-slot="field-group" className="grid gap-3 sm:grid-cols-2">
-          <label className="flex flex-col gap-1 text-sm"><span className="text-muted"><BusinessLabel>Customer</BusinessLabel> <span className="text-subtle">(optional)</span></span><OptionalSelect name="customerId" label="Customer" options={customers} value={workItem.customer?.id} /></label>
+          <label className="flex flex-col gap-1 text-sm"><span className="text-muted"><BusinessLabel>Customer</BusinessLabel> <span className="text-subtle">(optional)</span></span><>{workItem.sourceProposalId ? <><input type="hidden" name="customerId" value={workItem.customer?.id ?? ''} /><span>{workItem.customer?.label} (accepted quote)</span></> : <OptionalSelect name="customerId" label="Customer" options={customers} value={workItem.customer?.id} />}</></label>
           <label className="flex flex-col gap-1 text-sm"><span className="text-muted">Location <span className="text-subtle">(optional)</span></span><OptionalSelect name="locationId" label="Location" options={locations} value={workItem.location?.id} /></label>
           {assetsEnabled ? <label className="flex flex-col gap-1 text-sm"><span className="text-muted">Asset <span className="text-subtle">(optional)</span></span><OptionalSelect name="assetId" label="Asset" options={assets} value={workItem.asset?.id} /></label> : null}
         </div>

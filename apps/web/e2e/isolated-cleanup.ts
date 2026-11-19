@@ -25,9 +25,10 @@ function local(value: string) {
  * run. Ordered so each is emptied before any table it depends on; a cycle among them is refused.
  */
 async function blockingTables(pg: Client, organizationIds: string[]): Promise<string[]> {
-  const { rows: allEdges } = await pg.query<{ child: string; parent: string; restricted: boolean }>(`
+  const { rows: allEdges } = await pg.query<{ child: string; parent: string; restricted: boolean; columns: string[] }>(`
     select c.conrelid::regclass::text as child, c.confrelid::regclass::text as parent,
-           c.confdeltype in ('a', 'r') as restricted
+           c.confdeltype in ('a', 'r') as restricted,
+           array(select a.attname::text from unnest(c.conkey) k join pg_attribute a on a.attrelid=c.conrelid and a.attnum=k) as columns
     from pg_constraint c
     where c.contype = 'f' and c.conrelid <> c.confrelid`);
   const descendants = new Set<string>();
@@ -49,12 +50,21 @@ async function blockingTables(pg: Client, organizationIds: string[]): Promise<st
     if (rows.length) holding.add(name);
   }
   const ordered: string[] = [];
+  // A nullable reference with no value in this run cannot block deletion. In particular,
+  // catalog delivery and online-booking prices point in opposite directions by design.
+  const activeEdges: typeof edges = [];
+  for (const edge of edges) {
+    if (!holding.has(edge.child)) continue;
+    const columns = edge.columns.map(column => `"${column.replaceAll('"', '""')}" is not null`).join(' and ');
+    const { rowCount } = await pg.query(`select 1 from ${edge.child} where organization_id=any($1::uuid[]) and ${columns} limit 1`, [organizationIds]);
+    if (rowCount) activeEdges.push(edge);
+  }
   const visiting = new Set<string>();
   const visit = (table: string) => {
     if (ordered.includes(table)) return;
     if (visiting.has(table)) throw new Error(`Cleanup order is cyclic at ${table}; refusing to guess.`);
     visiting.add(table);
-    for (const edge of edges) if (edge.parent === table && holding.has(edge.child)) visit(edge.child);
+    for (const edge of activeEdges) if (edge.parent === table && holding.has(edge.child)) visit(edge.child);
     visiting.delete(table);
     ordered.push(table);
   };
@@ -75,6 +85,9 @@ export async function cleanupRun(manifest: RunManifest, env: NodeJS.ProcessEnv =
     await pg.query('begin');
     try {
       await pg.query('delete from platform_staff where user_id = any($1::uuid[])', [userIds]);
+      // These are disposable fixture associations only. Clear the optional catalog-to-type link
+      // before resolving lawful deletion order; retain every FK and immutable monetary snapshot.
+      await pg.query('update price_book_items set delivery_type_id=null where organization_id=any($1::uuid[])', [organizationIds]);
       // A blocking table that is not business-scoped cannot be cleaned by business; the delete below then fails and names it.
       for (const table of await blockingTables(pg, organizationIds)) {
         await pg.query(`delete from ${table} where organization_id = any($1::uuid[])`, [organizationIds]);

@@ -26,6 +26,7 @@ import {
   type SendProposalInviteState,
   type HandoffProposalState,
 } from '@/app/organizations/[organizationId]/crm/contacts/[contactId]/actions';
+import type { WorkItem } from '@/lib/domain/work-items/work-items';
 import { SelectField } from '@/components/controls/select-field';
 
 const BUILD_INITIAL: BuildCommercialProposalState = { error: null, created: false };
@@ -83,7 +84,11 @@ export function ProposalTerms({ proposal }: { proposal: CommercialProposal }) {
 /** Who may issue an invoice from an accepted proposal here: `invoice.issue` with Billing usable. Null hides the control; the database refuses anyone else regardless. */
 export type ProposalInvoicing = { today: string; customerName: string } | null;
 
-function ProposalRow({ proposal, organizationId, customerId, mayEdit, mayHandoff, handoff, accessibleTenantIds, invoice, invoicing }: {
+function ProposalRow({ proposal, organizationId, customerId, mayEdit, mayHandoff, handoff, accessibleTenantIds, invoice, invoicing, catalogItems, deliveries, mayCreateWork, timezone }: {
+  timezone: string;
+  catalogItems: PriceBookItem[];
+  deliveries: WorkItem[];
+  mayCreateWork: boolean;
   proposal: CommercialProposal;
   organizationId: string;
   customerId: string;
@@ -96,6 +101,7 @@ function ProposalRow({ proposal, organizationId, customerId, mayEdit, mayHandoff
 }) {
   const [state, formAction, pending] = useActionState(sendCommercialProposalAction, SEND_INITIAL);
   const [handoffState, handoffFormAction, handoffPending] = useActionState(handoffProposalAction, HANDOFF_INITIAL);
+  const timestamp = (value: string) => new Intl.DateTimeFormat('en-GB', { timeZone: timezone, dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
   const createdOrganizationId = handoff?.createdOrganizationId ?? handoffState.createdOrganizationId;
 
   return (
@@ -108,7 +114,7 @@ function ProposalRow({ proposal, organizationId, customerId, mayEdit, mayHandoff
       {proposal.notes ? <p className="mt-2 text-sm text-subtle">{proposal.notes}</p> : null}
       {proposal.status === 'accepted' && proposal.acceptedAt ? (
         <Hint className="mt-2">
-          Accepted {new Date(proposal.acceptedAt).toLocaleString()}. The customer agreed to this version at these prices.{invoice ? '' : ' Nothing has been invoiced or charged.'}
+          Accepted {timestamp(proposal.acceptedAt)}. The customer agreed to this version at these prices.{invoice ? '' : ' Nothing has been invoiced or charged.'}
         </Hint>
       ) : null}
       {proposal.status === 'accepted' && proposal.basis === 'catalog' && proposal.billingInterval === 'one_time' ? (
@@ -124,7 +130,13 @@ function ProposalRow({ proposal, organizationId, customerId, mayEdit, mayHandoff
           </div>
         ) : null
       ) : null}
-      {proposal.status === 'declined' && proposal.declinedAt ? <Hint className="mt-2">Declined {new Date(proposal.declinedAt).toLocaleString()}.</Hint> : null}
+      {proposal.status === 'accepted' && proposal.basis === 'catalog' ? <div className="mt-3 flex flex-wrap gap-2">{proposal.lines.map(line => {
+        const delivered = deliveries.find(work => work.sourceProposalId === proposal.id && work.sourceProposalPosition === line.position);
+        const service = catalogItems.find(item => item.id === line.priceBookItemId);
+        return delivered ? <ButtonLink key={line.position} size="small" tone="secondary" href={`/organizations/${organizationId}/work/${delivered.id}`}>Open delivery: {line.name}</ButtonLink>
+          : mayCreateWork && service?.deliveryTypeId && !service.deliveryTypeArchived ? <ButtonLink key={line.position} size="small" tone="secondary" href={`/organizations/${organizationId}/work/new?${new URLSearchParams({ type: service.deliveryTypeId, service: service.id, customer: customerId, proposal: proposal.id, line: String(line.position) })}`}>Create delivery: {line.name}</ButtonLink> : null;
+      })}</div> : null}
+      {proposal.status === 'declined'  && proposal.declinedAt ? <Hint className="mt-2">Declined {timestamp(proposal.declinedAt)}.</Hint> : null}
 
       {mayEdit && proposal.status === 'draft' ? (
         <form action={formAction} className="mt-3">
@@ -291,6 +303,9 @@ export function CommercialProposalSection({
   accessibleTenantIds = [],
   invoicesByProposalId = {},
   invoicing = null,
+  timezone = 'UTC',
+  deliveries = [],
+  mayCreateWork = false,
 }: {
   organizationId: string;
   customerId: string;
@@ -309,6 +324,9 @@ export function CommercialProposalSection({
   /** The invoice issued from each accepted proposal, at most one each. */
   invoicesByProposalId?: Record<string, { id: string; number: number }>;
   invoicing?: ProposalInvoicing;
+  timezone?: string;
+  deliveries?: WorkItem[];
+  mayCreateWork?: boolean;
 }) {
   const [inviteState, inviteFormAction, invitePending] = useActionState(sendProposalInviteAction, INVITE_INITIAL);
   const hasSendableProposal = proposals.some((proposal) => proposal.status !== 'draft');
@@ -333,6 +351,10 @@ export function CommercialProposalSection({
               handoff={handoffsByProposalId[proposal.id]}
               invoice={invoicesByProposalId[proposal.id]}
               invoicing={invoicing}
+              timezone={timezone}
+              catalogItems={catalogItems}
+              deliveries={deliveries}
+              mayCreateWork={mayCreateWork}
             />
           ))
         )}

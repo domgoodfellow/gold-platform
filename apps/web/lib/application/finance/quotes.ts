@@ -3,7 +3,7 @@ import { invoicedWorkItemIds } from '@/lib/domain/billing/invoices';
 import { listPricedWork, priceWorkItem } from '@/lib/domain/pricing/prices';
 
 /**
- * A quote is a job with priced lines — there is no quote table. The amount is
+ * This legacy Work-only projection reads jobs with priced lines — customer quotes use Commercial Proposals through readFinanceQuotes. The amount is
  * `priceWorkItem` over the lines the job holds, which are snapshots of the price book as it read
  * when each was added; nothing here reads the price book.
  */

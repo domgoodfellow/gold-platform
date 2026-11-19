@@ -9,9 +9,10 @@ import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import type { WorkItemType } from '@/lib/domain/work-items/types';
 import type { WorkItemStatus } from '@/lib/domain/work-items/statuses';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
+import type { PriceBookItem } from '@/lib/domain/pricing/price-book';
 type Option = { id: string; label: string };
 export type WorkCreateOptions = { organizationId: string; types: WorkItemType[]; statusesByType: Record<string, WorkItemStatus[]>;
-  customers: Option[]; locations: Option[]; resources: Option[]; assets: Option[]; definitions: FieldDefinition[]; assetsEnabled: boolean };
+  services?: PriceBookItem[]; customers: Option[]; locations: Option[]; resources: Option[]; assets: Option[]; definitions: FieldDefinition[]; assetsEnabled: boolean };
 
 
 export async function workCreateOptions(db: Db, organizationId: string, assetsEnabled: boolean): Promise<WorkCreateOptions> {

@@ -22,6 +22,7 @@ export const proposalHref = (organizationId: string, customerId: string) => `/or
  */
 export const invoiceHref = (organizationId: string, invoice: { id: string; workItemId: string | null }) =>
   invoice.workItemId ? workHref(organizationId, invoice.workItemId) : `/organizations/${organizationId}/finance/invoices?invoice=${invoice.id}`;
+export const quoteHref = (organizationId: string, row: Pick<FinanceQuoteRow, 'workItemId' | 'customer'>) => row.workItemId ? workHref(organizationId, row.workItemId) : row.customer ? proposalHref(organizationId, row.customer.id) : `/organizations/${organizationId}/finance/quotes`;
 const customerHref = (organizationId: string, customerId: string) => `/organizations/${organizationId}/crm/contacts/${customerId}`;
 
 /** Settled, overdue or outstanding — told by word and icon as well as colour. */
@@ -90,13 +91,13 @@ export function QuotesTable({ organizationId, rows, empty, mayIssue = false, tod
   return (
     <DataTable
       rows={rows}
-      rowKey={(row) => row.workItemId}
+      rowKey={(row) => row.quoteId ?? row.workItemId!}
       empty={empty}
       actions={row => row.invoiced
-        ? <Link className="text-xs font-medium text-accent-text underline-offset-4 hover:underline" href={workHref(organizationId, row.workItemId)}>View invoice</Link>
-        : mayIssue && today && row.quoted ? <InvoiceDialog organizationId={organizationId} workItemId={row.workItemId} today={today} label="Invoice" ariaLabel={`Invoice ${row.title}`} size="tiny" /> : null}
+        ? <Link className="text-xs font-medium text-accent-text underline-offset-4 hover:underline" href={quoteHref(organizationId, row)}>View invoice</Link>
+        : row.proposalId ? <Link className={LINK} href={quoteHref(organizationId, row)}>Open quote</Link> : mayIssue && today && row.quoted && row.workItemId ? <InvoiceDialog organizationId={organizationId} workItemId={row.workItemId} today={today} label="Invoice" ariaLabel={`Invoice ${row.title}`} size="tiny" /> : null}
       columns={[
-        { key: 'work', header: 'Work', emphasis: 'primary', cell: (row) => <Link className={LINK} href={workHref(organizationId, row.workItemId)}>{row.title}</Link> },
+        { key: 'work', header: 'Quote', emphasis: 'primary', cell: (row) => <Link className={LINK} href={quoteHref(organizationId, row)}>{row.title}</Link> },
         { key: 'customer', header: 'Contact', cell: (row) => row.customer ? <Link className="underline-offset-4 hover:underline" href={customerHref(organizationId, row.customer.id)}>{row.customer.name}</Link> : 'No contact' },
         { key: 'quoted', header: 'Quoted', numeric: true, cell: (row) => row.quoted ? <span className="font-semibold">{formatMoney(row.quoted.totalMinor, row.quoted.currency)}</span> : '—' },
         { key: 'currency', header: 'Currency', cell: (row) => row.quoted?.currency ?? '—', cardValue: () => null },

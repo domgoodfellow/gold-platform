@@ -53,7 +53,7 @@ export function WorkList({ title, crumbs, organizationId, timezone, types, selec
   const shortfall = (id: string) => coverage[id]?.shortfall ?? null;
   const header = <CollectionHeader title={title} crumbs={crumbs} activity={activity} insights={insights} configure={configure} actions={<>
     {scheduled ? <ButtonLink tone="secondary" size="small" href={`${base}/work/dispatch`}><Route aria-hidden className="size-4" /><span className="max-sm:sr-only">Dispatch</span></ButtonLink> : null}
-    {mayAdd && ready ? <NewWorkAction organizationId={organizationId} typeId={selectedType?.id} /> : null}
+    {mayAdd && ready && !selectedType?.archivedAt ? <NewWorkAction organizationId={organizationId} typeId={selectedType?.id} /> : null}
   </>} />;
 
   if (!selectedType || !ready) return <>
@@ -104,7 +104,7 @@ export function WorkList({ title, crumbs, organizationId, timezone, types, selec
       <p role="status" className="mb-2 text-sm text-muted"><span className="font-medium tabular-nums text-foreground">{total}</span> {total === 1 ? 'work item' : 'work items'}{filtered ? (total === 1 ? ' matches this view' : ' match this view') : ''}</p>
       {firstRun ? <div data-slot="compact-empty" className="flex flex-col gap-3 rounded-[var(--visual-radius,0.625rem)] border border-border bg-surface p-5 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm">No {typeName} work yet.</p>
-        {mayAdd ? <NewWorkAction organizationId={organizationId} typeId={selectedType.id} /> : null}
+        {mayAdd && !selectedType.archivedAt ? <NewWorkAction organizationId={organizationId} typeId={selectedType.id} /> : null}
       </div>
         : view.view === 'list' ? <DataTable tableFrom="medium" columns={columns} rows={[...workItems]} rowKey={w => w.id} actions={maySchedule && scheduled ? placement : undefined}
           empty={<>No work matches this view. <Link className="text-accent-text underline underline-offset-4" href={href({ q: '', status: undefined })}>Reset</Link></>} />

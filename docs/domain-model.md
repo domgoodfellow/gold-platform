@@ -711,7 +711,9 @@ Work Type may determine:
 - requirements;
 - checklist/template policy.
 
-A Work type is not ready to create Work until it has a starting stage. Setup observes this from the existing type and stage records and reports an optional gap; naming a type alone does not complete that area. The first stage is always an explicit authorized operation. A URL explicitly requesting a configuration tab retains it; a zero-stage type otherwise opens Workflow. Naming and scheduling behavior remain separately saved operations.
+Work types can be archived and restored by `field.manage`. Archival retains IDs, stages, Work and catalog references, withdraws online booking and blocks new-Work inserts at the database boundary. Historical Work reads include archived types. Deletion requires an archived type without foreign-key or automation-rule references, rechecked in the deleting transaction.
+
+A Work type is not ready to create Work until it has a starting stage. Setup observes this from the existing type and stage records and reports an optional gap; naming a type alone does not complete that area. Hand-created types start with editable Booked, In progress and Done stages and moves. Legacy or explicitly blank types require an authorized starting-stage operation. A URL explicitly requesting a configuration tab retains it; a zero-stage type otherwise opens Workflow. Naming and scheduling behavior remain separately saved operations.
 
 ---
 
@@ -930,7 +932,7 @@ It is separate from GildOps' SaaS catalogue.
 
 **Definition:** One reusable price definition in the organization's Price Book.
 
-When applied to committed work, historical pricing should be snapshotted rather than resolved forever against the mutable Price Book row.
+A Price Book Item optionally names a delivery Work Type in the same Organization. This is an association, never a price stored on the Work Type. Non-job items leave it empty. Archival retains the association but prevents new delivery. Proposals and independently priced Work snapshot catalog name, unit, quantity, currency and amount; current catalog changes never reprice them.
 
 ---
 
@@ -946,9 +948,9 @@ It captures the commercial meaning required to preserve the agreed amount even i
 
 **Definition:** A commercial offer from the Organization to its Customer.
 
-A Quote is tenant Finance.
+A Quote is tenant Finance. Before Work exists it uses the existing catalog-basis Commercial Proposal and immutable versioned lines; no second quotation persistence model exists. Finance's quote projection combines priced Work with the latest customer proposal version and accepted or invoiced historical versions, retaining distinct Work and proposal identities. Declined proposals remain readable but are excluded from amounts awaiting invoicing. Only priced Work and accepted proposals are ready to invoice.
 
-It is not a GildOps subscription proposal.
+An accepted proposal line can initiate one delivery Work item when its catalog item has a linked active Work Type. Work records the source proposal and line position, derives its Contact server-side and holds no second priced quote; it links to the accepted terms for invoicing. Repeated delivery creation returns that Work. Independently created linked-service Work atomically copies current catalog prices through the existing priced-line operation. Historical invoices and proposal terms never read current catalog prices.
 
 ---
 

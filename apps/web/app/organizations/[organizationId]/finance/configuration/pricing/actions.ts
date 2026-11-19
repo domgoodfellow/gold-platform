@@ -12,8 +12,22 @@ import { setTradingCurrency, updateOrganization } from '@/lib/domain/tenancy/org
 import { requireOrganization } from '@/lib/route/organization';
 
 import { parseMoneyInput } from '@/lib/domain/pricing/money-input';
+import { setCatalogDeliveryType } from '@/lib/domain/pricing/price-book';
 
 export type PriceItemState = { error: string | null; success?: string };
+
+export async function setDeliveryTypeAction(_previous: PriceItemState, form: FormData): Promise<PriceItemState> {
+  const organizationId = String(form.get('organizationId') ?? '');
+  const { db, organization } = await requireOrganization(organizationId);
+  try {
+    if (!organization.capabilities.includes('price.manage')) return { error: 'Your role cannot manage prices.' };
+    const itemId = String(form.get('itemId') ?? '');
+    if (!(await listPriceBookItems(db, { organizationId })).some(item => item.id === itemId)) return { error: 'Price item is unavailable.' };
+    await setCatalogDeliveryType(db, itemId, String(form.get('typeId') ?? '') || null);
+  } catch (error) { if (error instanceof DomainError) return { error: error.message }; throw error; }
+  revalidatePath(`/organizations/${organizationId}`, 'layout');
+  return { error: null, success: 'Delivery type saved.' };
+}
 
 export async function createPriceItemAction(
   _previous: PriceItemState,

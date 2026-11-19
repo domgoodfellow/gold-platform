@@ -61,13 +61,14 @@ export async function loadFinanceOperating(db: Db, input: { organizationId: stri
   const period = financePeriod(input.today, input.month);
   const now = input.now ?? new Date();
   const soon = dueSoonWindow(input.timezone, now);
-  const [invoiced, priced, open, overdue, dueSoon, quotes, payments, activity, enabled, priceBook, summary, financials] = await Promise.all([
+  const [invoiced, priced, open, overdue, dueSoon, quotes, readyToInvoice, payments, activity, enabled, priceBook, summary, financials] = await Promise.all([
     readFinanceInvoices(db, input.organizationId, { limit: 1 }),
     readFinanceQuotes(db, input.organizationId, { limit: 1 }),
     readFinanceInvoices(db, input.organizationId, { status: 'outstanding', limit: 1 }),
     readFinanceInvoices(db, input.organizationId, { status: 'overdue', sort: 'due', limit: 5 }),
     readFinanceInvoices(db, input.organizationId, { status: 'outstanding', ...soon, sort: 'due', limit: 5 }),
     readFinanceQuotes(db, input.organizationId, { status: 'not-invoiced', limit: 5 }),
+    readFinanceQuotes(db, input.organizationId, { status: 'ready-to-invoice', limit: 5 }),
     readFinancePayments(db, input.organizationId, { limit: 1 }),
     readFinanceActivity(db, input.organizationId, 6),
     listUsableModules(db, { organizationId: input.organizationId }),
@@ -81,7 +82,7 @@ export async function loadFinanceOperating(db: Db, input: { organizationId: stri
     cardCollection = !provider ? 'unavailable' : (await getPaymentAccount(db, { organizationId: input.organizationId, provider: provider.name })) ? 'connected' : 'not-connected';
   }
   return {
-    period, open, overdue, dueSoon, quotes, payments, activity, summary,
+    period, open, overdue, dueSoon, quotes, readyToInvoice, payments, activity, summary,
     overdueAmounts: summary ? overdueByCurrency(summary.aging) : null,
     priceBookCount: priceBook.length,
     /** No priced Work, invoice or payment yet: the Dashboard offers a starting path instead of zero-valued figures. */

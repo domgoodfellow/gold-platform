@@ -11,7 +11,7 @@ import { CreateTypeForm } from './work-config-forms';
 /**
  * Creating a kind of work is its own focused task, apart from configuring one and apart from
  * creating work: it makes the type and nothing else — no stage, no work, no price. On success the
- * person lands on the new type's Workflow tab, because a type with no stage cannot hold work yet.
+ * person lands on the new type's Workflow tab, where the operator reviews the starting stage and allowed moves.
  */
 export function NewTypeDialog({
   organizationId,

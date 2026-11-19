@@ -26,11 +26,11 @@ const PAGE_SIZE = 25;
 /** Each collection's quick scopes (one URL parameter), sort orders and the parameters its view keeps. */
 const VIEW = {
   invoices: { scope: 'status', scopes: [['', 'All'], ['outstanding', 'Outstanding'], ['due-soon', 'Due soon'], ['overdue', 'Overdue'], ['settled', 'Settled']], sorts: [['', 'Newest first'], ['due', 'Due date'], ['outstanding', 'Largest balance'], ['customer', 'Customer']], keys: ['q', 'status', 'customer', 'from', 'to', 'due', 'sort'] },
-  quotes: { scope: 'status', scopes: [['', 'All'], ['not-invoiced', 'Not invoiced'], ['invoiced', 'Invoiced']], sorts: [['', 'Newest first'], ['amount', 'Largest amount'], ['title', 'Work title']], keys: ['q', 'status', 'customer', 'from', 'to', 'sort'] },
+  quotes: { scope: 'status', scopes: [['', 'All'], ['not-invoiced', 'Not invoiced'], ['invoiced', 'Invoiced'], ['ready-to-invoice', 'Ready to invoice']], sorts: [['', 'Newest first'], ['amount', 'Largest amount'], ['title', 'Quote title']], keys: ['q', 'status', 'customer', 'from', 'to', 'sort'] },
   payments: { scope: 'entry', scopes: [['', 'All'], ['receipts', 'Receipts'], ['corrections', 'Corrections']], sorts: [['', 'Newest first'], ['oldest', 'Oldest first'], ['amount', 'Largest amount']], keys: ['q', 'entry', 'customer', 'source', 'from', 'to', 'sort'] },
 } as const;
 const TITLES = { invoices: 'Invoices', quotes: 'Quotes', payments: 'Payments' } as const;
-const NOUN = { invoices: ['invoice', 'invoices'], quotes: ['priced Work item', 'priced Work items'], payments: ['payment entry', 'payment entries'] } as const;
+const NOUN = { invoices: ['invoice', 'invoices'], quotes: ['quote', 'quotes'], payments: ['payment entry', 'payment entries'] } as const;
 
 /**
  * Quotes, Invoices and Payments share one collection grammar: quick scopes and search, then sort,
@@ -71,7 +71,7 @@ export async function FinanceCollection({ organizationId, kind, query }: { organ
   const page = filter.page ?? 1, pages = Math.max(1, Math.ceil(result.total / PAGE_SIZE));
   const create = !billing ? null
     : kind === 'invoices' && may('invoice.issue') ? <InvoiceDialog organizationId={organizationId} today={today} tone="primary" initiallyOpen={query.create === '1'} />
-    : kind === 'quotes' && may('work_item.price') ? <QuoteDialog organizationId={organizationId} tone="primary" initiallyOpen={query.create === '1'} mayCreateWork={may('work_item.create')} mayManageCatalog={may('price.manage')} />
+    : kind === 'quotes' && (may('work_item.price') || may('price.manage')) ? <QuoteDialog organizationId={organizationId} tone="primary" initiallyOpen={query.create === '1'} initialSource={query.quoteSource === 'work' ? 'work' : undefined} customerId={typeof query.customer === 'string' ? query.customer : undefined} mayCreateWork={may('work_item.create')} mayManageCatalog={may('price.manage')} />
     : kind === 'payments' && may('payment.record') ? <PaymentDialog organizationId={organizationId} today={today} tone="primary" initiallyOpen={query.create === '1'} />
     : null;
   const [one, many] = NOUN[kind];
@@ -94,7 +94,7 @@ export async function FinanceCollection({ organizationId, kind, query }: { organ
   return <AppPage>
     <CollectionHeader title={TITLES[kind]} crumbs={[{ label: 'Finance', href: base }]} actions={create ?? undefined} />
     <CollectionToolbar action={path} viewId={`finance-${kind}`} scopes={scopes} scopeLabel={`${TITLES[kind]} views`}
-      search={{ name: 'q', value: filter.q, label: `Search ${TITLES[kind].toLowerCase()}`, placeholder: kind === 'quotes' ? 'Work title or contact' : kind === 'invoices' ? 'Contact or invoice number' : 'Contact, invoice number or reference' }}
+      search={{ name: 'q', value: filter.q, label: `Search ${TITLES[kind].toLowerCase()}`, placeholder: kind === 'quotes' ? 'Quote, Work title or contact' : kind === 'invoices' ? 'Contact or invoice number' : 'Contact, invoice number or reference' }}
       hidden={{ [view.scope]: scopeValue || undefined }}
       filterCount={active.filter(filter => filter.key !== 'q').length}
       filters={<>

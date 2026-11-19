@@ -21,6 +21,14 @@ import { listMembers } from '@/lib/domain/tenancy/members';
 import { assignRole, createRole } from '@/lib/domain/tenancy/roles';
 import { foundBusiness } from '@/tests/support/founding';
 import { seedLegacyPlanProposal } from '@/tests/support/legacy-proposals';
+import { createWorkItemType, listWorkItemTypes, retireWorkItemType, deleteUnusedWorkType, setTypeBookable, getTypeBooking } from '@/lib/domain/work-items/types';
+import { createWorkItem, getWorkItem } from '@/lib/domain/work-items/work-items';
+import { listWorkItemStatuses } from '@/lib/domain/work-items/statuses';
+import { setCatalogDeliveryType } from '@/lib/domain/pricing/price-book';
+import { listPricedLines, addPricedLine } from '@/lib/domain/pricing/prices';
+import { readFinanceQuotes, readFinanceSummary } from '@/lib/domain/billing/finance-reads';
+import { loadFinanceOperating } from '@/lib/application/finance/operating';
+import { issueInvoiceFromProposal, getInvoice } from '@/lib/domain/billing/invoices';
 
 /**
  * Commercial proposals built from a business's own catalog (ADR-051, second slice).
@@ -367,5 +375,112 @@ describe('Platform Plan proposals made before this slice', () => {
     expect(old).toMatchObject({ id: legacy.id, version: 1, basis: 'platform_plan', planId: start!.id, planLabel: start!.label, billingInterval: 'month', catalogTotalMinor: null, lines: [] });
     expect(old.addons).toHaveLength(1);
     expect(commercialProposalTotalMinor(old)).toBe(old.planPriceMinor + old.addonPriceMinor);
+  });
+});
+
+
+describe('Catalog to customer quote to delivery', () => {
+  it('distinguishes configured pricing from recorded quotes and creates a quote without Work', async () => {
+    const tenant = await newTenant('workflow-ready');
+    const input = { organizationId: tenant.organizationId, today: '2026-11-19', timezone: 'America/Toronto', canReadReports: false };
+    const before = await loadFinanceOperating(tenant.db, input);
+    expect(before).toMatchObject({ priceBookCount: 1, started: false });
+    const quote = await buildCatalogProposal(tenant.db, { organizationId: tenant.organizationId, customerId: tenant.customerId, lines: [{ priceBookItemId: tenant.itemId, quantity: 2 }] });
+    expect((await tenant.db.from('work_items').select('id').eq('organization_id', tenant.organizationId)).data).toEqual([]);
+    expect(await readFinanceQuotes(tenant.db, tenant.organizationId)).toMatchObject({ total: 1, rows: [{ workItemId: null, proposalId: quote.id, quoted: { totalMinor: 24000, currency: 'CAD' } }] });
+    const after = await loadFinanceOperating(tenant.db, input);
+    expect(after.started).toBe(true);
+    expect(after.readyToInvoice.total).toBe(0); // Drafts are offers, not ready invoices.
+    const summary = await readFinanceSummary(tenant.db, tenant.organizationId, '2026-11-01', '2026-12-01');
+    expect(summary.quoteCount).toBe(1);
+    expect(summary.quoted).toMatchObject([{ currency: 'CAD', amount: '24000' }]);
+    const visitor = await recipientOf(tenant, quote.id);
+    await declineCommercialProposal(visitor, { proposalId: quote.id });
+    expect((await readFinanceSummary(tenant.db, tenant.organizationId, '2026-11-01', '2026-12-01')).quoteCount).toBe(0);
+  });
+
+  it('creates and prices linked Work atomically, retains snapshots and history after archival', async () => {
+    const tenant = await newTenant('workflow-linked');
+    const typeId = await createWorkItemType(tenant.db, { organizationId: tenant.organizationId, name: 'Garden delivery', schedulable: false, withStarterStages: true });
+    const [stage] = await listWorkItemStatuses(tenant.db, { organizationId: tenant.organizationId, typeId });
+    await setCatalogDeliveryType(tenant.db, tenant.itemId, typeId);
+    const work = await createWorkItem(tenant.db, { organizationId: tenant.organizationId, title: 'Garden job', statusId: stage.id, customerId: tenant.customerId, priceBookItemId: tenant.itemId, quantity: 3 });
+    const lines = await listPricedLines(tenant.db, { organizationId: tenant.organizationId, workItemId: work });
+    expect(lines).toMatchObject([{ unitAmountMinor: 12000, quantity: 3 }]);
+    await updatePriceBookItem(tenant.db, { id: tenant.itemId, name: 'Garden design', unit: 'hour', unitAmountMinor: 99000 });
+    await retireWorkItemType(tenant.db, typeId, true);
+    expect(await listWorkItemTypes(tenant.db, { organizationId: tenant.organizationId })).toEqual([]);
+    expect(await listWorkItemTypes(tenant.db, { organizationId: tenant.organizationId, includeArchived: true })).toMatchObject([{ id: typeId, archivedAt: expect.any(String) }]);
+    expect(await getWorkItem(tenant.db, { organizationId: tenant.organizationId, workItemId: work })).toMatchObject({ id: work, type: { id: typeId } });
+    expect(await listPricedLines(tenant.db, { organizationId: tenant.organizationId, workItemId: work })).toEqual(lines);
+    await expect(createWorkItem(tenant.db, { organizationId: tenant.organizationId, title: 'Refused', statusId: stage.id })).rejects.toThrow(/archived/);
+    expect((await tenant.db.rpc('work_type_deletable', { p_type_id: typeId })).data).toBe(false);
+    await expect(deleteUnusedWorkType(tenant.db, typeId)).rejects.toThrow();
+    await retireWorkItemType(tenant.db, typeId, false);
+    expect(await listWorkItemTypes(tenant.db, { organizationId: tenant.organizationId })).toMatchObject([{ id: typeId, archivedAt: null }]);
+    // A bad quantity is refused inside the same transaction, leaving no orphan delivery.
+    const count = (await tenant.db.from('work_items').select('id').eq('organization_id', tenant.organizationId)).data!.length;
+    await expect(createWorkItem(tenant.db, { organizationId: tenant.organizationId, title: 'Bad quantity', statusId: stage.id, priceBookItemId: tenant.itemId, quantity: 0 })).rejects.toThrow();
+    expect((await tenant.db.from('work_items').select('id').eq('organization_id', tenant.organizationId)).data).toHaveLength(count);
+  });
+
+  it('fulfils accepted terms without a second quote or charge and invoices the unchanged snapshot', async () => {
+    const tenant = await newTenant('workflow-accepted');
+    const typeId = await createWorkItemType(tenant.db, { organizationId: tenant.organizationId, name: 'Garden work', schedulable: false, withStarterStages: true });
+    const [stage] = await listWorkItemStatuses(tenant.db, { organizationId: tenant.organizationId, typeId });
+    await setCatalogDeliveryType(tenant.db, tenant.itemId, typeId);
+    const proposal = await buildCatalogProposal(tenant.db, { organizationId: tenant.organizationId, customerId: tenant.customerId, lines: [{ priceBookItemId: tenant.itemId, quantity: 2 }] });
+    const input = { organizationId: tenant.organizationId, proposalId: proposal.id, proposalPosition: proposal.lines[0].position, title: 'Deliver garden', statusId: stage.id };
+    await expect(createWorkItem(tenant.db, input)).rejects.toThrow(/Accept/);
+    const visitor = await recipientOf(tenant, proposal.id);
+    await acceptCommercialProposal(visitor, { proposalId: proposal.id });
+    await updatePriceBookItem(tenant.db, { id: tenant.itemId, name: 'Garden design', unit: 'hour', unitAmountMinor: 99000 });
+    const [work, repeated] = await Promise.all([createWorkItem(tenant.db, input), createWorkItem(tenant.db, input)]);
+    expect(repeated).toBe(work);
+    expect(await getWorkItem(tenant.db, { organizationId: tenant.organizationId, workItemId: work })).toMatchObject({ sourceProposalId: proposal.id, customer: { id: tenant.customerId } });
+    expect(await listPricedLines(tenant.db, { organizationId: tenant.organizationId, workItemId: work })).toEqual([]);
+    const otherCustomer = await createCustomer(tenant.db, { organizationId: tenant.organizationId, name: 'Different recipient' });
+    expect((await tenant.db.from('work_items').update({ customer_id: otherCustomer }).eq('id', work)).error?.code).toBe('22023');
+    await buildCatalogProposal(tenant.db, { organizationId: tenant.organizationId, customerId: tenant.customerId, lines: [{ priceBookItemId: tenant.itemId, quantity: 1 }] });
+    // Drafting another offer must not hide accepted terms that remain ready to invoice.
+
+    await expect(addPricedLine(tenant.db, { workItemId: work, priceBookItemId: tenant.itemId, quantity: 1 })).rejects.toThrow(/accepted customer quote/);
+    expect((await readFinanceQuotes(tenant.db, tenant.organizationId, { status: 'ready-to-invoice' })).total).toBe(1);
+    const invoiceId = await issueInvoiceFromProposal(tenant.db, { proposalId: proposal.id, issuanceKey: randomUUID() });
+    const invoice = await getInvoice(tenant.db, { organizationId: tenant.organizationId, invoiceId });
+    expect(invoice?.lines).toMatchObject([{ unitAmountMinor: 12000, quantity: 2 }]);
+    await retireWorkItemType(tenant.db, typeId, true);
+    expect(await getInvoice(tenant.db, { organizationId: tenant.organizationId, invoiceId })).toEqual(invoice);
+  });
+
+  it('withdraws archived online booking and requires explicit republication after restore', async () => {
+    const tenant = await newTenant('workflow-booking');
+    const typeId = await createWorkItemType(tenant.db, { organizationId: tenant.organizationId, name: 'Bookable delivery', schedulable: true, withStarterStages: true });
+    const [stage] = await listWorkItemStatuses(tenant.db, { organizationId: tenant.organizationId, typeId });
+    await setTypeBookable(tenant.db, { id: typeId, statusId: stage.id, durationMinutes: 30, priceItemId: tenant.itemId });
+    expect(await getTypeBooking(tenant.db, { organizationId: tenant.organizationId, typeId })).not.toBeNull();
+    await retireWorkItemType(tenant.db, typeId, true);
+    expect(await getTypeBooking(tenant.db, { organizationId: tenant.organizationId, typeId })).toBeNull();
+    await expect(setTypeBookable(tenant.db, { id: typeId, statusId: stage.id, durationMinutes: 30 })).rejects.toThrow(/Restore/);
+    await retireWorkItemType(tenant.db, typeId, false);
+    expect(await getTypeBooking(tenant.db, { organizationId: tenant.organizationId, typeId })).toBeNull();
+  });
+
+  it('keeps tenant and capability boundaries on linking, retiring and deleting types', async () => {
+    const tenant = await newTenant('workflow-permissions');
+    const typeId = await createWorkItemType(tenant.db, { organizationId: tenant.organizationId, name: 'Unused test', schedulable: false });
+    expect((await bob.db.rpc('archive_work_item_type', { p_type_id: typeId, p_archived: true })).error?.code).toBe('42501');
+    expect((await bob.db.rpc('set_catalog_delivery_type', { p_item_id: tenant.itemId, p_type_id: typeId })).error?.code).toBe('42501');
+    await expect(setCatalogDeliveryType(tenant.db, tenant.itemId, (await createWorkItemType(bob.db, { organizationId: bob.organizationId, name: 'Foreign delivery', schedulable: false })))).rejects.toThrow();
+    const clerk = await signIn('workflow-clerk');
+    const roleId = await createRole(tenant.db, { organizationId: tenant.organizationId, name: 'Reader', capabilities: ['customer.read'] });
+    await pg.query(`insert into public.memberships(organization_id,user_id,role_id,created_by,display_name) values($1,$2,$3,$4,'Reader')`, [tenant.organizationId, clerk.userId, roleId, tenant.userId]);
+    expect((await clerk.db.rpc('archive_work_item_type', { p_type_id: typeId, p_archived: true })).error?.code).toBe('42501');
+    expect((await clerk.db.rpc('set_catalog_delivery_type', { p_item_id: tenant.itemId, p_type_id: typeId })).error?.code).toBe('42501');
+    await retireWorkItemType(tenant.db, typeId, true);
+    expect((await clerk.db.rpc('work_type_deletable', { p_type_id: typeId })).data).toBe(false);
+    expect((await tenant.db.rpc('work_type_deletable', { p_type_id: typeId })).data).toBe(true);
+    await deleteUnusedWorkType(tenant.db, typeId);
+    expect((await tenant.db.from('work_item_types').select('id').eq('id', typeId)).data).toEqual([]);
   });
 });

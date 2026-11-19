@@ -175,10 +175,9 @@ function hasConfigurationLevel(workspace: WorkspaceKey): boolean {
 
 /**
  * Workspaces whose editors are reached from the page they configure and have no Configuration row,
- * so an editor's parent is that page rather than a "Configuration" level nobody can see. Work only for
- * now; Support's Queues and Service levels have the same shape and await their own navigation decision.
+ * so an editor's parent is that page rather than a "Configuration" level nobody can see. Work and CRM; Support's Queues and Service levels have the same shape and await their own navigation decision.
  */
-const CONTEXTUAL_EDITOR_WORKSPACES: ReadonlySet<WorkspaceKey> = new Set(['field']);
+const CONTEXTUAL_EDITOR_WORKSPACES: ReadonlySet<WorkspaceKey> = new Set(['field', 'crm']);
 
 function targetParent(target: ConfigTarget): string {
   return target.destination && target.workspace && CONTEXTUAL_EDITOR_WORKSPACES.has(target.workspace)

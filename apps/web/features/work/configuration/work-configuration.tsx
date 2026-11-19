@@ -15,6 +15,7 @@ import type { TypeChecklistItem } from '@/lib/domain/work-items/checklists';
 import type { ResourceCapability } from '@/lib/domain/resources/resource-capabilities';
 import type { ResourceRequirement } from '@/lib/domain/work-items/requirements';
 import { NewTypeDialog } from './new-type-dialog';
+import { TypeLifecycle } from './type-lifecycle';
 import { ResourceRequirementsEditor } from './resource-requirements';
 import {
   AddTypeChecklistItemForm,
@@ -61,6 +62,7 @@ export type WorkConfigurationData = {
   listHref?: string;
   /** Opens the New type drawer on load (`?new=1`). */
   createOpen?: boolean;
+  deletable?: boolean;
 };
 
 /**
@@ -105,7 +107,7 @@ export function WorkConfiguration(props: WorkConfigurationData) {
         <div className="mb-1 flex min-h-9 items-center justify-between gap-2">
           <h2 className="text-sm font-medium">Work types</h2>{newType}
         </div>
-        <NavigationList label="Work types" density="compact" current={selectedType?.id} items={types.map(type => ({ key: type.id, title: type.name, href: typeHref(type.id), metadata: `${type.schedulable ? 'Scheduled' : 'Not scheduled'}${type.id === selectedType?.id ? ' · Selected' : ''}`, chevron: true }))} />
+        <NavigationList label="Work types" density="compact" current={selectedType?.id} items={types.map(type => ({ key: type.id, title: type.name, href: typeHref(type.id), metadata: type.archivedAt ? 'Archived' : `${type.schedulable ? 'Scheduled' : 'Not scheduled'}${type.id === selectedType?.id ? ' · Selected' : ''}`, chevron: true }))} />
       </div>
 
       <div className={cx('min-w-0', !showDetail && 'hidden @3xl:block')}>
@@ -139,6 +141,7 @@ function TypeDetail({
   capabilities,
   intakeForms,
   initialTab,
+  deletable = false,
 }: WorkConfigurationData) {
   if (!selectedType) return null;
 
@@ -179,6 +182,7 @@ function TypeDetail({
                 published={booking !== null}
                 disabled={false}
               />
+              <TypeLifecycle organizationId={organizationId} typeId={selectedType.id} archived={Boolean(selectedType.archivedAt)} deletable={deletable} />
             </>
           ) : (
             <p className="text-sm">{selectedType.schedulable ? 'Scheduled work.' : 'Not scheduled.'}</p>

@@ -34,6 +34,8 @@ Entries describe the product or operational change, not every file touched.
 
 ## 2026-11-19
 
+- Repaired Finance → customer quote → Work: configured catalog pricing leads to quotes without prerequisite Work using existing proposal snapshots; accepted quote lines can initiate delivery without another charge, and linked services can atomically create independently priced Work. Work types support explicit selection, creation, rename and safe retirement with historical references retained. Contacts owns relationship-stage and contact-field settings; Pipeline owns opportunity-stage settings with one empty-state setup action.
+
 - A translated import remembers its choices. The next source with the same columns, such as a fresh export of the same sheet, opens on Interpret your source with the earlier column choices, decisions, lifecycle, do-not-call handling and kept columns filled in. A decision carries over only for a reading that was offered before; a new one is proposed as usual. Another business never sees these choices.
 - Library imports can fill the price book. A CSV or connected worksheet of items, such as an accounting system's product export, is read by its own column names into item name, price, unit and source ID; the person confirms the columns and the unit for rows that name none, and previews the first rows. Items are matched by the source's ID or by name: new ones are created, changed ones updated, unchanged ones skipped, and rows with no name, an unclear or negative price, or another currency are left out with the reason. Prices are kept in the business's own currency. Catalog & Pricing links to it. Importing items needs permission to manage prices as well as to import.
 

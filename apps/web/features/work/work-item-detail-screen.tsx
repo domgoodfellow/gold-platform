@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { ActivityList } from '@/features/timeline/activity-list';
 import { WorkItemIntake } from '@/features/work/work-item-intake';
 import { DocumentsSection } from '@/features/documents/section';
@@ -47,10 +48,11 @@ export function WorkItemDetailScreen({ organizationId, organization, model, sect
       <WorkTimeSection organizationId={organizationId} workItemId={workItemId} timeEntries={timeEntries} resources={resourceOptions} timezone={organization.timezone} mayRecord={can('work_item.record')} />
     </>,
     financials: () => <>
-      {billingEnabled ? <WorkQuoteSection organizationId={organizationId} workItemId={workItemId} lines={lines} price={price} priceBookCount={priceBook.length}
-        mayPrice={can('work_item.price')} mayManageCatalog={can('price.manage')} /> : null}
+      {workItem.sourceProposalId && workItem.customer ? <Link className="text-sm font-medium text-accent-text underline underline-offset-4" href={`/organizations/${organizationId}/crm/contacts/${workItem.customer.id}?section=sales&view=commercial`}>Open accepted customer quote</Link> : null}
+      {billingEnabled && !workItem.sourceProposalId ? <WorkQuoteSection organizationId={organizationId} workItemId={workItemId} lines={lines} price={price} priceBookCount={priceBook.length}
+        mayPrice={!workItem.sourceProposalId && can('work_item.price')} mayManageCatalog={can('price.manage')} /> : null}
       <WorkCostSection organizationId={organizationId} workItemId={workItemId} costs={costs} economics={economics} currency={organization.currency} mayRecord={can('work_item.record')} />
-      {billingEnabled ? <WorkInvoiceSection organizationId={organizationId} workItemId={workItemId} invoice={invoice} standing={standing} price={price} timezone={organization.timezone}
+      {billingEnabled && !workItem.sourceProposalId ? <WorkInvoiceSection organizationId={organizationId} workItemId={workItemId} invoice={invoice} standing={standing} price={price} timezone={organization.timezone}
         today={today} cardsAccepted={cardsAccepted} mayInvoice={can('invoice.issue')} mayBePaid={can('payment.record')} /> : null}
       {billingEnabled ? <WorkMarginSection economics={economics} /> : null}
     </>,

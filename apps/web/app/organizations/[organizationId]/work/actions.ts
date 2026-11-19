@@ -37,6 +37,10 @@ export async function createWorkItemAction(
     // submitted at all — it follows from the status.
     createdWorkItemId = await createWorkItem(db, {
       organizationId,
+      proposalId: String(formData.get('proposalId') ?? '') || undefined,
+      proposalPosition: Number(formData.get('proposalPosition')),
+      priceBookItemId: String(formData.get('serviceId') ?? '') || undefined,
+      quantity: Number(formData.get('serviceQuantity') ?? 1),
       title: String(formData.get('title') ?? ''),
       statusId: String(formData.get('statusId') ?? ''),
       customerId: String(formData.get('customerId') ?? ''),

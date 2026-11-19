@@ -34,7 +34,7 @@ export default async function WorkConfigurationPage({
   const listHref = `/organizations/${organizationId}/work/configuration${context.size ? `?${context}` : ''}`;
   const { db, organization, gate } = await requireConfigurationTarget(organizationId, 'work-configuration');
 
-  const types = await listWorkItemTypes(db, { organizationId });
+  const types = await listWorkItemTypes(db, { organizationId, includeArchived: true });
   const selectedType = types.find((type) => type.id === requestedType) ?? types[0] ?? null;
 
   const [statuses, transitions, templateSteps, fieldDefinitions, prices, booking, enabledModules, requirements, capabilities, intakeForms] = await Promise.all([
@@ -60,6 +60,7 @@ export default async function WorkConfigurationPage({
     listBookingIntakeForms(db, { organizationId }),
   ]);
 
+  const deletable = selectedType?.archivedAt ? (await db.rpc('work_type_deletable', { p_type_id: selectedType.id })).data === true : false;
   const mayConfigure = organization.capabilities.includes('field.manage');
 
   return (
@@ -70,7 +71,7 @@ export default async function WorkConfigurationPage({
         breadcrumbLabel={selectedType?.name ?? 'Work types'}
         crumbs={[...workspaceConfigCrumbs(organizationId, 'work-configuration', gate), ...(selectedType ? [{ label: 'Work types', href: `/organizations/${organizationId}/work/configuration` }] : [])]}
         className="mb-0"
-        actions={(returnTo === 'create' || statuses.length > 0) && organization.capabilities.includes('work_item.create') ? <NewWorkAction organizationId={organizationId} typeId={selectedType?.id} returnTo={quote === '1' ? 'quote' : undefined} setupStep={step ?? undefined} /> : undefined}
+        actions={!selectedType?.archivedAt && (returnTo === 'create' || statuses.length > 0) && organization.capabilities.includes('work_item.create') ? <NewWorkAction organizationId={organizationId} typeId={selectedType?.id} returnTo={quote === '1' ? 'quote' : undefined} setupStep={step ?? undefined} /> : undefined}
       />
       <WorkConfiguration
         variant="page"
@@ -81,6 +82,7 @@ export default async function WorkConfigurationPage({
         organizationId={organizationId}
         role={organization.role}
         mayConfigure={mayConfigure}
+        deletable={deletable}
         types={types}
         selectedType={selectedType}
         statuses={statuses}

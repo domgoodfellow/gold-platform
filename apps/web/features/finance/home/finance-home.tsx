@@ -5,7 +5,7 @@ import { WorkspaceHome } from '@/components/patterns/workspace-home';
 import { MetricTile, OperationalPanel, PanelState } from '@/components/operational/primitives';
 import { cx } from '@/components/class-names';
 import { QuoteDialog } from '../transactions/quote-dialog';
-import { invoiceHref, workHref } from '../collections/finance-tables';
+import { invoiceHref, workHref, quoteHref } from '../collections/finance-tables';
 import { AttentionCategories, type AttentionCategory } from '@/components/operational/attention-categories';
 import type { FinanceOperating } from '@/lib/application/finance/operating';
 import { DUE_SOON_DAYS } from '@/lib/application/finance/operating';
@@ -53,7 +53,7 @@ export function FinanceHome({ organizationId, timezone, today, data, capabilitie
   const categories: AttentionCategory[] = [
     { key: 'overdue', label: 'Overdue', count: overdue.total, href: `${finance}/invoices?status=overdue&sort=due`, rows: overdue.rows.map(row => invoiceRow(row, `Was due ${row.dueAt ? shortDate(row.dueAt) : ''}`)) },
     { key: 'due-soon', label: 'Due soon', count: dueSoon.total, href: `${finance}/invoices?status=due-soon&sort=due`, rows: dueSoon.rows.map(row => invoiceRow(row, row.dueAt && localDay(row.dueAt) === today ? 'Due today' : `Due ${row.dueAt ? shortDate(row.dueAt) : ''}`)) },
-    ...(may('invoice.issue') || has('report.read') ? [{ key: 'to-invoice', label: 'Ready to invoice', count: quotes.total, href: `${finance}/quotes?status=not-invoiced`, rows: quotes.rows.map(row => ({ id: row.workItemId, href: workHref(organizationId, row.workItemId), title: row.title, detail: `${row.customer?.name ?? 'No contact'} · ${row.lineCount} priced ${row.lineCount === 1 ? 'line' : 'lines'}`, value: row.quoted ? formatMoney(row.quoted.totalMinor, row.quoted.currency) : '—' })) }] : []),
+    ...(may('invoice.issue') || has('report.read') ? [{ key: 'to-invoice', label: 'Ready to invoice', count: (data.readyToInvoice ?? quotes).total, href: `${finance}/quotes?status=ready-to-invoice`, rows: (data.readyToInvoice ?? quotes).rows.map(row => ({ id: row.quoteId ?? row.workItemId!, href: quoteHref(organizationId, row), title: row.title, detail: `${row.customer?.name ?? 'No contact'} · ${row.lineCount} priced ${row.lineCount === 1 ? 'line' : 'lines'}`, value: row.quoted ? formatMoney(row.quoted.totalMinor, row.quoted.currency) : '—' })) }] : []),
     ...(data.cardCollection === 'not-connected' || data.cardCollection === 'unavailable' ? [{ key: 'card', label: 'Card payments', count: 1, href: gettingPaidHref, rows: [{ id: 'card', href: gettingPaidHref, title: data.cardCollection === 'unavailable' ? 'Card payments are on, but no payment processor is available' : 'Card payments are on, but no payment account is connected', detail: 'Manual payment recording still works.', value: '' }] }] : []),
   ].filter(category => category.count > 0);
 
@@ -72,12 +72,12 @@ export function FinanceHome({ organizationId, timezone, today, data, capabilitie
       {reports ? <MetricTile label="Payments received" icon={Banknote} value={<Amounts values={summary.received} empty={none('None this month')} />} detail={first ? undefined : `${monthLabel} · net of corrections`} href={`${finance}/payments?from=${period.from}&to=${period.to}`} /> : null}
       <MetricTile label="Outstanding" icon={FileText} value={reports ? <Amounts values={summary.outstanding} empty={none('Nothing outstanding')} /> : open.total} detail={first ? undefined : `${open.total} unpaid ${open.total === 1 ? 'invoice' : 'invoices'}`} href={`${finance}/invoices?status=outstanding`} />
       <MetricTile label="Overdue" icon={AlertTriangle} value={reports ? <Amounts values={data.overdueAmounts ?? []} empty={none('Nothing overdue')} /> : overdue.total} detail={first ? undefined : `${overdue.total} past ${overdue.total === 1 ? 'its' : 'their'} due date`} href={`${finance}/invoices?status=overdue`} emphasis={overdue.total > 0 ? 'danger' : undefined} />
-      <MetricTile label="Quoted, not invoiced" icon={ClipboardList} value={reports ? <Amounts values={summary.quoted} empty={none('Nothing waiting')} /> : quotes.total} detail={first ? undefined : `${quotes.total} priced Work ${quotes.total === 1 ? 'item' : 'items'}`} href={`${finance}/quotes?status=not-invoiced`} />
+      <MetricTile label="Quoted, not invoiced" icon={ClipboardList} value={reports ? <Amounts values={summary.quoted} empty={none('Nothing waiting')} /> : quotes.total} detail={first ? undefined : `${quotes.total} ${quotes.total === 1 ? 'quote' : 'quotes'}`} href={`${finance}/quotes?status=not-invoiced`} />
     </div>
     {first ? <p className="mt-2 text-xs text-muted">No invoices, quotes or payments are recorded yet.</p> : null}
     {!reports ? <p className="mt-2 text-xs text-muted">Amounts are shown to people with reporting access.</p> : null}
   </div>;
-  const attention = !data.started ? <GettingStarted organizationId={organizationId} priced={data.priceBookCount > 0} mayManageCatalog={mayManageCatalog} mayQuote={may('work_item.price')} mayCreateWork={has('work_item.create')} />
+  const attention = !data.started ? <GettingStarted organizationId={organizationId} priced={data.priceBookCount > 0} mayManageCatalog={mayManageCatalog} mayQuote={may('work_item.price') || mayManageCatalog} mayCreateWork={has('work_item.create')} />
     : categories.length ? <OperationalPanel className="h-full min-w-0" title="Needs attention"><AttentionCategories categories={categories} /></OperationalPanel>
     : <p role="status" className="flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm"><CircleCheck aria-hidden className="size-4 shrink-0 text-muted" /><span><span className="font-medium">Needs attention:</span> nothing overdue or due in the next {DUE_SOON_DAYS} days, and no priced Work waiting for an invoice.</span></p>;
   const reportsLink = <p className="mt-2 text-right text-xs"><Link className="text-accent-text underline-offset-4 hover:underline" href={`${finance}/reports`}>Open financial reports</Link></p>;
@@ -96,7 +96,7 @@ export function FinanceHome({ organizationId, timezone, today, data, capabilitie
   };
   return <DashboardEditingProvider available>
     <WorkspaceHome title="Finance" actions={<FinanceHeaderActions organizationId={organizationId} today={today} period={periodControl} firstRun={!data.started}
-      mayQuote={may('work_item.price')} mayRecord={may('payment.record') && data.started} mayInvoice={may('invoice.issue') && data.started} mayCreateWork={has('work_item.create')} mayManageCatalog={mayManageCatalog} />}>
+      mayQuote={may('work_item.price') || mayManageCatalog} mayRecord={may('payment.record') && data.started} mayInvoice={may('invoice.issue') && data.started} mayCreateWork={has('work_item.create')} mayManageCatalog={mayManageCatalog} />}>
       <DashboardLayoutGrid label="Finance dashboard" registry={FINANCE_WIDGETS} saved={layout} readable={[...readable]} widgets={widgets}
         onSave={saveFinanceDashboardLayout.bind(null, organizationId)} onReset={resetFinanceDashboardLayout.bind(null, organizationId)} />
     </WorkspaceHome>
@@ -108,13 +108,14 @@ export function FinanceHome({ organizationId, timezone, today, data, capabilitie
  * not a fixed checklist. Pricing is set up in the price book; quoting starts from a Work item and
  * snapshots its prices; neither creates the other.
  */
-function GettingStarted({ organizationId, priced, mayManageCatalog, mayQuote, mayCreateWork }: { organizationId: string; priced: boolean; mayManageCatalog: boolean; mayQuote: boolean; mayCreateWork: boolean }) {
+export function GettingStarted({ organizationId, priced, mayManageCatalog, mayQuote, mayCreateWork }: { organizationId: string; priced: boolean; mayManageCatalog: boolean; mayQuote: boolean; mayCreateWork: boolean }) {
   const finance = `/organizations/${organizationId}/finance`;
   const [text, action] = !priced
-    ? [mayManageCatalog ? 'Nothing is priced yet. Add price items for what this business charges, then quote Work from them.' : 'Nothing is priced yet. Someone who manages pricing adds price items before Work can be quoted.',
+    ? [mayManageCatalog ? 'Nothing is priced yet. Add price items for what this business charges, then create a customer quote.' : 'Nothing is priced yet. Someone who manages pricing adds price items before a quote can be created.',
       mayManageCatalog ? <ButtonLink size="small" tone="primary" href={`${finance}/catalog`}><Tag aria-hidden className="size-4" />Set up pricing</ButtonLink> : null]
-    : ['Prices are ready. Choose a Work item and add priced lines to create its quote; invoices and payments follow from there.',
-      mayQuote ? <QuoteDialog organizationId={organizationId} label="Price Work" size="small" tone="primary" mayCreateWork={mayCreateWork} mayManageCatalog={mayManageCatalog} /> : <ButtonLink size="small" tone="secondary" href={`${finance}/catalog`}>View price book</ButtonLink>];
+    // ui-copy-allow: Pricing readiness determines whether the next action is catalog setup or quoting.
+    : ['Pricing configured. Create a customer quote or price existing Work.',
+      mayQuote ? <QuoteDialog organizationId={organizationId} label="New quote" size="small" tone="primary" mayCreateWork={mayCreateWork} mayManageCatalog={mayManageCatalog} /> : <ButtonLink size="small" tone="secondary" href={`${finance}/catalog`}>View price book</ButtonLink>];
   return <OperationalPanel className="h-full min-w-0" title="Getting started" density="compact">
     <div className="flex flex-col items-start gap-3 text-sm"><p>{text}</p>{action}</div>
   </OperationalPanel>;
