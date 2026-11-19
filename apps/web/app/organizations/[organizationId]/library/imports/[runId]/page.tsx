@@ -9,6 +9,7 @@ import { ImportSteps } from '@/features/integrations/imports/import-steps';
 import { ErrorText } from '@/components/controls/inputs';
 import { listContactCurrentValues } from '@/lib/domain/contacts/contacts';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
+import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,20 +30,22 @@ export default async function ImportRunPage({
   const rows = status ? allRows.filter((row) => row.status === status) : allRows;
   const readyCount = allRows.filter((row) => row.status === 'ready').length;
   const finished = run.status === 'completed' || run.status === 'completed_with_errors';
-  // Choosing between existing contacts is viewing them, so only `customer.read` reviews rows; the
-  // database refuses a decision without it, and withholds the contacts below.
-  const mayReview = organization.capabilities.includes('customer.read');
-  // The existing contacts named by the rows shown, with the values an update would change.
-  const [contacts, definitions] = await Promise.all([
-    mayReview ? listContactCurrentValues(db, { organizationId, ids: rows.flatMap((row) => [...row.candidateIds, ...(row.matchedCustomerId ? [row.matchedCustomerId] : [])]) }) : new Map(),
-    listFieldDefinitions(db, { organizationId, entityType: 'customer' }),
+  const prices = run.targetEntity === 'price_book_item';
+  // Choosing between existing contacts is viewing them, so only `customer.read` reviews contact rows;
+  // a price book row is decided under `price.manage`. The database refuses a decision without it.
+  const mayReview = organization.capabilities.includes(prices ? 'price.manage' : 'customer.read');
+  // The existing contacts named by the rows shown, with the values an update would change; for a price book import, its items.
+  const [contacts, definitions, priceItems] = await Promise.all([
+    !prices && mayReview ? listContactCurrentValues(db, { organizationId, ids: rows.flatMap((row) => [...row.candidateIds, ...(row.matchedCustomerId ? [row.matchedCustomerId] : [])]) }) : new Map(),
+    prices ? Promise.resolve([]) : listFieldDefinitions(db, { organizationId, entityType: 'customer' }),
+    prices ? listPriceBookItems(db, { organizationId }) : Promise.resolve([]),
   ]);
 
   return (
     <>
-      <PageHeader title="Import into Contacts" crumbs={[{ label: 'Imports', href: libraryHref(organizationId, 'sources') }]} />
+      <PageHeader title={prices ? 'Import into the price book' : 'Import into Contacts'} crumbs={[{ label: 'Imports', href: libraryHref(organizationId, 'sources') }]} />
       <LibraryNav organizationId={organizationId} active="sources" />
-      <ImportSteps organizationId={organizationId} current={finished ? 4 : 2} resourceId={finished ? null : run.resourceId} />
+      <ImportSteps organizationId={organizationId} current={finished ? 4 : 2} resourceId={finished ? null : run.resourceId} into={prices ? 'price_book' : 'contacts'} />
       {typeof stageError === 'string' ? <ErrorText role="alert" className="mb-4">{stageError}</ErrorText> : null}
       <ImportRunDetail
         organizationId={organizationId}
@@ -55,6 +58,7 @@ export default async function ImportRunPage({
         contacts={contacts}
         fieldLabels={Object.fromEntries(definitions.map((definition) => [definition.key, definition.label]))}
         mayReview={mayReview}
+        priceItems={new Map(priceItems.map((item) => [item.id, item]))}
       />
     </>
   );

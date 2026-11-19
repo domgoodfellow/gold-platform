@@ -14,9 +14,9 @@ vi.mock('@/app/organizations/[organizationId]/library/imports/[runId]/actions', 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh }) }));
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
-const run: ImportRun = { id: 'run', resourceId: 'file', mappingId: 'map', connectorKey: 'file_upload', status: 'pending', rowsSeen: 4, rowsCreated: 0, rowsUpdated: 0, rowsSkipped: 0, rowsFailed: 0, startedAt: '2026-11-13T10:00:00Z', finishedAt: null };
+const run: ImportRun = { id: 'run', resourceId: 'file', mappingId: 'map', connectorKey: 'file_upload', targetEntity: 'customer', status: 'pending', rowsSeen: 4, rowsCreated: 0, rowsUpdated: 0, rowsSkipped: 0, rowsFailed: 0, startedAt: '2026-11-13T10:00:00Z', finishedAt: null };
 const row = (id: string, name: string, patch: Partial<StagingRow>): StagingRow => ({
-  id, sourceRecordKey: `key:${id}`, raw: {}, normalized: { name }, validationErrors: [], proposedAction: 'create', matchedCustomerId: null,
+  id, sourceRecordKey: `key:${id}`, raw: {}, normalized: { name }, validationErrors: [], proposedAction: 'create', matchedCustomerId: null, matchedItemId: null,
   status: 'ready', matchReason: null, candidateIds: [], decided: false, ...patch,
 });
 const contacts = new Map<string, ContactSummary>([

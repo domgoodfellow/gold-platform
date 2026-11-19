@@ -12,6 +12,7 @@ import {
   createMapping,
   prepareImportFields,
   translationMappingFields,
+  priceBookMappingFields,
   type MappingField,
   type MappingFieldTransform,
   type MappingTarget,
@@ -22,8 +23,9 @@ import { INTERPRETATION_IDS, type InterpretationDecision, type InterpretationId 
 import { CONCEPTS, type Concept, type ConceptMapping } from '@/lib/domain/integrations/translation/discovery';
 import { inspectImportSource } from '@/lib/domain/integrations/translation/inspect';
 import { validatePlan, type TranslationPlan } from '@/lib/domain/integrations/translation/plan';
+import { PRICE_CONCEPTS, inspectPriceBookSource, validatePriceBookPlan, type PriceBookPlan, type PriceMapping } from '@/lib/domain/integrations/translation/price-book';
 import { requireOrganization } from '@/lib/route/organization';
-import { libraryImportHref, libraryNewImportHref } from '@/lib/route/library';
+import { importDestination, libraryImportHref, libraryNewImportHref } from '@/lib/route/library';
 import { loadConfigurationContext } from '@/lib/route/workspace-configuration';
 import { loadContactImportSources, type ContactImportSources } from '@/lib/application/crm/contact-import';
 import { getConnection } from '@/lib/domain/integrations/connections';
@@ -85,18 +87,20 @@ export async function uploadSourceAction(
     return { error: 'Choose a file first.' };
   }
 
+  const into = importDestination(formData.get('into'));
   let resourceId: string;
   try {
     await requireImportPipeline(db);
     const uploaded = await uploadImportFile(db, { files: supabaseFileStore(db, BUCKET), organizationId, file });
     resourceId = uploaded.resourceId;
-    await prepareImportFields(db, organizationId, uploaded.parsed.headers);
+    // Contact fields are named by a contact source's headers; a price book source names none.
+    if (into === 'contacts') await prepareImportFields(db, organizationId, uploaded.parsed.headers);
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message };
     throw error;
   }
 
-  redirect(libraryNewImportHref(organizationId, resourceId));
+  redirect(libraryNewImportHref(organizationId, resourceId, into));
 }
 
 function parseTarget(value: string): MappingTarget {
@@ -216,10 +220,17 @@ export async function createTranslationAndStageAction(formData: FormData): Promi
 export async function selectLibraryFileAction(formData: FormData): Promise<void> {
   const organizationId = String(formData.get('organizationId') ?? '');
   const { db } = await requireOrganization(organizationId);
+  const into = importDestination(formData.get('into'));
   let resourceId: string;
   try { resourceId = await attachLibraryFileForImport(db, organizationId, String(formData.get('documentId') ?? '')); }
-  catch (error) { if (error instanceof DomainError) redirect(`${libraryNewImportHref(organizationId)}?error=${encodeURIComponent(error.message)}`); throw error; }
-  redirect(libraryNewImportHref(organizationId, resourceId));
+  catch (error) {
+    if (error instanceof DomainError) {
+      const back = libraryNewImportHref(organizationId, undefined, into);
+      redirect(`${back}${back.includes('?') ? '&' : '?'}error=${encodeURIComponent(error.message)}`);
+    }
+    throw error;
+  }
+  redirect(libraryNewImportHref(organizationId, resourceId, into));
 }
 
 /** Reuses the saved mapping and the same review/apply command as an initial import. */
@@ -251,4 +262,42 @@ export async function disableCrmSyncAction(formData: FormData): Promise<void> {
   const result = await db.rpc('configure_crm_import_sync', { p_organization_id: organizationId, p_mapping_id: String(formData.get('mappingId') ?? ''), p_enabled: false });
   if (result.error) throw fromDatabaseError(result.error, 'integrations.sync_configuration_failed');
   redirect(`/organizations/${organizationId}/library/sources/${String(formData.get('resourceId') ?? '')}`);
+}
+
+/**
+ * Saves a price book plan as the import's mapping and stages the source under it. The plan is
+ * read back from the form and validated against the source's own columns; nothing is written to
+ * the price book here. The next step reviews which items are new, which change and which are left out.
+ */
+export async function createPriceBookImportAction(formData: FormData): Promise<void> {
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const resourceId = String(formData.get('resourceId') ?? '');
+  const { db, organization } = await requireOrganization(organizationId);
+  const backTo = libraryNewImportHref(organizationId, resourceId, 'price_book');
+  if (!organization.capabilities.includes('integration.manage') || !organization.capabilities.includes('price.manage')) {
+    redirect(`${backTo}&error=${encodeURIComponent('Your role cannot import into the price book.')}`);
+  }
+  const mapping: PriceMapping = {};
+  for (const concept of PRICE_CONCEPTS) {
+    const column = String(formData.get(`concept_${concept}`) ?? '');
+    if (column) mapping[concept] = column;
+  }
+  const draft: PriceBookPlan = { version: 1, mapping, defaultUnit: String(formData.get('defaultUnit') ?? '') || null };
+
+  let runId: string | undefined;
+  try {
+    await requireImportPipeline(db);
+    const inspection = await inspectPriceBookSource(db, { organizationId, resourceId });
+    const plan = validatePriceBookPlan({ ...draft, signature: inspection.plan.signature }, inspection.columns.map((column) => column.name));
+    const mappingId = await createMapping(db, { organizationId, resourceId, fields: priceBookMappingFields(plan) });
+    runId = await beginImportRun(db, { organizationId, mappingId });
+    await resumeImportStaging(db, { organizationId, runId });
+  } catch (error) {
+    if (error instanceof DomainError) {
+      if (runId) redirect(libraryImportHref(organizationId, runId, `?stageError=${encodeURIComponent(error.message)}`));
+      redirect(`${backTo}&error=${encodeURIComponent(error.message)}`);
+    }
+    throw error;
+  }
+  redirect(libraryImportHref(organizationId, runId));
 }

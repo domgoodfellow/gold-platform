@@ -11,6 +11,7 @@ import {
   type FieldDefinition,
 } from '@/lib/domain/fields/field-definitions';
 import type { TranslationPlan } from '@/lib/domain/integrations/translation/plan';
+import type { PriceBookPlan } from '@/lib/domain/integrations/translation/price-book';
 
 /**
  * Optional company facts use the existing tenant field registry, not new Customer columns. A
@@ -38,7 +39,8 @@ export async function prepareImportFields(db: Db, organizationId: string, header
  * What a source column becomes. `ignore` and `custom` cover an open-ended source; `core` is the
  * closed set of columns `customers` itself has (the custom-field registry rule — nothing else is a real column to target).
  * `translation` is the one field of a translated import: the whole source read as businesses,
- * people, links, addresses and telephones under a saved plan (`translation/plan.ts`).
+ * people, links, addresses and telephones under a saved plan (`translation/plan.ts`). `price_book`
+ * is the one field of a price book import: the whole source read as items (`translation/price-book.ts`).
  */
 export type MappingTarget =
   | { kind: 'ignore' }
@@ -47,12 +49,24 @@ export type MappingTarget =
   | { kind: 'core'; field: 'default_lifecycle' }
   | { kind: 'location'; field: 'address' | 'city' | 'province' }
   | { kind: 'custom'; key: string }
-  | { kind: 'translation'; plan: TranslationPlan };
+  | { kind: 'translation'; plan: TranslationPlan }
+  | { kind: 'price_book'; plan: PriceBookPlan };
 
 /** The whole-source field of a translated import, when a mapping is one. */
 export function translationPlanOf(fields: readonly MappingField[]): TranslationPlan | null {
   const field = fields.find((candidate) => candidate.target.kind === 'translation');
   return field && field.target.kind === 'translation' ? field.target.plan : null;
+}
+
+/** The whole-source field of a price book import, when a mapping is one. */
+export function priceBookPlanOf(fields: readonly MappingField[]): PriceBookPlan | null {
+  const field = fields.find((candidate) => candidate.target.kind === 'price_book');
+  return field && field.target.kind === 'price_book' ? field.target.plan : null;
+}
+
+/** The one mapping field a price book import saves. */
+export function priceBookMappingFields(plan: PriceBookPlan): MappingField[] {
+  return [{ sourceColumn: '*', target: { kind: 'price_book', plan }, transform: 'none' }];
 }
 
 /** The one mapping field a translated import saves. */
@@ -77,7 +91,7 @@ export type MappingField = {
 export type IntegrationMapping = {
   id: string;
   resourceId: string;
-  targetEntity: 'customer';
+  targetEntity: 'customer' | 'price_book_item';
   syncMode?: 'import' | 'sync';
   fields: MappingField[];
   dedupeKey: string | null;
@@ -103,21 +117,21 @@ export async function listMappings(
 }
 
 /**
- * The newest translation this business saved for a source with the same columns, from any earlier
- * import (a new upload is a new source, so the lookup is by columns, not by source). Row-level
- * security limits it to the caller's own business.
+ * The newest plan of one kind this business saved for a source with the same columns, from any
+ * earlier import (a new upload is a new source, so the lookup is by columns, not by source).
+ * Row-level security limits it to the caller's own business.
  */
-export async function findSavedTranslation(
+export async function findSavedPlan<Plan>(
   db: Db,
-  input: { organizationId: string; signature: string },
-): Promise<TranslationPlan | null> {
+  input: { organizationId: string; signature: string; kind: 'translation' | 'price_book' },
+): Promise<Plan | null> {
   if (!input.signature) return null;
   const { data, error } = await db
     .from('integration_mappings')
     .select('mapping')
     .eq('organization_id', input.organizationId)
     // As JSON text: a list value would be sent as a Postgres array, not as jsonb.
-    .contains('mapping', JSON.stringify([{ target: { kind: 'translation', plan: { signature: input.signature } } }]))
+    .contains('mapping', JSON.stringify([{ target: { kind: input.kind, plan: { signature: input.signature } } }]))
     .order('created_at', { ascending: false })
     .limit(1);
 
@@ -126,7 +140,13 @@ export async function findSavedTranslation(
   }
 
   const fields = data?.[0]?.mapping;
-  return Array.isArray(fields) ? translationPlanOf(fields as MappingField[]) : null;
+  const field = Array.isArray(fields) ? (fields as MappingField[]).find((candidate) => candidate.target.kind === input.kind) : undefined;
+  return field && 'plan' in field.target ? (field.target.plan as Plan) : null;
+}
+
+/** The newest contact translation this business saved for a source with the same columns. */
+export function findSavedTranslation(db: Db, input: { organizationId: string; signature: string }): Promise<TranslationPlan | null> {
+  return findSavedPlan<TranslationPlan>(db, { ...input, kind: 'translation' });
 }
 
 export async function getMapping(
@@ -158,7 +178,7 @@ function toMapping(row: {
   return {
     id: row.id,
     resourceId: row.resource_id,
-    targetEntity: 'customer',
+    targetEntity: row.target_entity === 'price_book_item' ? 'price_book_item' : 'customer',
     syncMode: row.sync_mode === 'sync' ? 'sync' : 'import',
     fields: Array.isArray(row.mapping) ? (row.mapping as MappingField[]) : [],
     dedupeKey: row.dedupe_key,
@@ -180,7 +200,11 @@ export async function createMapping(
   if (input.fields.length === 0) {
     throw new DomainError('Map at least one column before continuing.', 'integrations.mapping_empty');
   }
-  const translated = translationPlanOf(input.fields) !== null;
+  const priceBook = priceBookPlanOf(input.fields) !== null;
+  if (priceBook && input.fields.length !== 1) {
+    throw new DomainError('A price book import reads the whole source under its plan and maps no separate columns.', 'integrations.mapping_invalid');
+  }
+  const translated = priceBook || translationPlanOf(input.fields) !== null;
   if (translated && input.fields.length !== 1) {
     throw new DomainError('A translated import reads the whole source under its plan and maps no separate columns.', 'integrations.mapping_invalid');
   }
@@ -191,7 +215,7 @@ export async function createMapping(
   const { data, error } = await db.rpc('record_integration_mapping', {
     p_organization_id: input.organizationId,
     p_resource_id: input.resourceId,
-    p_target_entity: 'customer',
+    p_target_entity: priceBook ? 'price_book_item' : 'customer',
     p_mapping: input.fields,
     p_dedupe_key: (input.dedupeKey ?? null) as string,
   });
@@ -355,7 +379,7 @@ export function normalizeImportRow(
   const location: NormalizedCustomerRow['location'] = { address: null, city: null, province: null };
 
   for (const field of fields) {
-    if (field.target.kind === 'ignore' || field.target.kind === 'translation') continue;
+    if (field.target.kind === 'ignore' || field.target.kind === 'translation' || field.target.kind === 'price_book') continue;
 
     const { value, warning } = applyTransform(field.transform, field.fixedValue ?? raw[field.sourceColumn] ?? '', field.sourceColumn);
     if (warning) errors.push(warning);

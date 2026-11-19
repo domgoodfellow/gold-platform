@@ -4828,6 +4828,7 @@ export type Database = {
           id: string
           match_reason: string | null
           matched_customer_id: string | null
+          matched_price_item_id: string | null
           normalized: Json
           organization_id: string
           proposed_action: string
@@ -4845,6 +4846,7 @@ export type Database = {
           id?: string
           match_reason?: string | null
           matched_customer_id?: string | null
+          matched_price_item_id?: string | null
           normalized?: Json
           organization_id: string
           proposed_action?: string
@@ -4862,6 +4864,7 @@ export type Database = {
           id?: string
           match_reason?: string | null
           matched_customer_id?: string | null
+          matched_price_item_id?: string | null
           normalized?: Json
           organization_id?: string
           proposed_action?: string
@@ -4872,6 +4875,13 @@ export type Database = {
           validation_errors?: Json
         }
         Relationships: [
+          {
+            foreignKeyName: "import_staging_rows_matched_price_item_fkey"
+            columns: ["organization_id", "matched_price_item_id"]
+            isOneToOne: false
+            referencedRelation: "price_book_items"
+            referencedColumns: ["organization_id", "id"]
+          },
           {
             foreignKeyName: "import_staging_rows_organization_id_fkey"
             columns: ["organization_id"]
@@ -15728,6 +15738,10 @@ export type Database = {
           window_starts_at: string
         }[]
       }
+      apply_contact_import_run: {
+        Args: { p_organization_id: string; p_run_id: string }
+        Returns: undefined
+      }
       apply_import_run: {
         Args: { p_organization_id: string; p_run_id: string }
         Returns: undefined
@@ -15751,6 +15765,10 @@ export type Database = {
           p_subscription_reference: string
         }
         Returns: string
+      }
+      apply_price_book_import_run: {
+        Args: { p_organization_id: string; p_run_id: string }
+        Returns: undefined
       }
       archive_contact: {
         Args: { p_contact_id: string; p_organization_id: string }
@@ -16627,6 +16645,16 @@ export type Database = {
           time_zone: string
         }[]
       }
+      decide_contact_import_row: {
+        Args: {
+          p_customer_id?: string
+          p_decision: string
+          p_organization_id: string
+          p_row_id: string
+          p_run_id: string
+        }
+        Returns: undefined
+      }
       decide_import_row: {
         Args: {
           p_customer_id?: string
@@ -16640,6 +16668,15 @@ export type Database = {
       decide_integration_execution: {
         Args: { p_approve: boolean; p_execution_id: string }
         Returns: Json
+      }
+      decide_price_book_import_row: {
+        Args: {
+          p_decision: string
+          p_organization_id: string
+          p_row_id: string
+          p_run_id: string
+        }
+        Returns: undefined
       }
       decline_commercial_proposal: {
         Args: { p_proposal_id: string }
@@ -19248,7 +19285,15 @@ export type Database = {
         Args: { p_organization_id: string; p_run_id: string }
         Returns: number
       }
+      stage_contact_import_rows: {
+        Args: { p_organization_id: string; p_rows: Json; p_run_id: string }
+        Returns: number
+      }
       stage_import_rows: {
+        Args: { p_organization_id: string; p_rows: Json; p_run_id: string }
+        Returns: number
+      }
+      stage_price_book_import_rows: {
         Args: { p_organization_id: string; p_rows: Json; p_run_id: string }
         Returns: number
       }

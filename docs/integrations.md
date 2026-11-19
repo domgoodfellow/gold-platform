@@ -102,7 +102,7 @@ called and nothing leaves the process.
 - **Staging** saves the plan as the mapping's one `translation` field, so runs snapshot it and
   resume from it. Each Business group and each Person is one staging row with a stable key
   (`<file namespace>:id:business:<hash>` / `:id:person:<source id>`), businesses staged before
-  people. Matching, review, decisions and apply are the existing pipeline (pipeline version 3).
+  people. Matching, review, decisions and apply are the existing pipeline (pipeline version 4).
   Applying a person resolves `company_source_key` to the business row applied in the same run and
   calls `save_contact_affiliation`; a skipped business links nobody and records
   `contact.import_affiliation_skipped`.
@@ -126,6 +126,36 @@ called and nothing leaves the process.
 Not supported yet: XLSX, JSON files and database dumps as sources (CSV and connected worksheets
 only); the relational `semantic_*.csv` package (its `contacts_flat.csv` carries the same
 entities); matching a business by name alone; an agent tool registered in the AI catalogue.
+
+### Price book imports
+
+Library imports can write the price book as well as Contacts (`into=price_book` on the import
+pages; Catalog & Pricing links there for a member with `price.manage` and `integration.manage`).
+The engine is `lib/domain/integrations/translation/price-book.ts`, deterministic like the
+contact translation.
+
+- **Columns** are suggested by name, ignoring case and punctuation: item name (`Product/Service
+  Name`, Item, Product, Service, Name…), price (`Sales Price / Rate`, Price, Rate…), unit, currency
+  and source ID (SKU, Item ID, ID…). The person confirms them, and enters the unit for rows that
+  name none, in the business's own word; there is no platform default unit. Update preview reads
+  the source again with the chosen columns.
+- **Prices** become minor units of the business's own currency: symbols, a trailing currency code
+  and thousands separators are dropped. A comma that could be a decimal separator, a negative
+  price, a price with more decimals than the currency has, and a row priced in another currency
+  are left out with the reason, never guessed or converted.
+- **Saved plans** are kept and reused per column set as for contact translations (`findSavedPlan`
+  with kind `price_book`).
+- **Staging** (`stage_price_book_import_rows`) matches each row to an item by the source's ID
+  (an `external_record_links` row of type `price_book_item`), else by name, which is unique in a
+  business. A match is an update, an unchanged match is skipped, a later row with the same name is
+  a duplicate, and a row the price book's own rules refuse is invalid. A person may skip any row
+  or create one that matches nothing; a matched row is never created twice.
+- **Applying** writes through `create_price_book_item` and `update_price_book_item`, so the
+  currency is the business's and the events are a person's edit's. Contacts are never touched.
+
+Not supported yet: QuickBooks or another accounting connection as a source (a CSV export works);
+exporting or synchronizing the price book back to a source; descriptions, categories, tax and
+cost columns, which the price book does not hold.
 
 ### Imported application library
 

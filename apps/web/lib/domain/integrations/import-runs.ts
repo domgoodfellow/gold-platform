@@ -3,7 +3,8 @@ import { createHash } from 'node:crypto';
 import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
-import { importValue, normalizeImportRow, translationPlanOf, type MappingField, type NormalizedCustomerRow } from '@/lib/domain/integrations/mappings';
+import { importValue, normalizeImportRow, priceBookPlanOf, translationPlanOf, type MappingField, type NormalizedCustomerRow } from '@/lib/domain/integrations/mappings';
+import { businessCurrency, priceRowsForPlan, type PriceRow } from '@/lib/domain/integrations/translation/price-book';
 import { prepareTranslatedImport, type RowTranslation } from '@/lib/domain/integrations/translation/adapter';
 import { expandRows } from '@/lib/domain/integrations/translation/inspect';
 
@@ -12,7 +13,7 @@ import { downloadImportFile } from './resources';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 
 /** The database contract this code was written against; `import_pipeline_version` says which one is applied. */
-export const IMPORT_PIPELINE_VERSION = 3;
+export const IMPORT_PIPELINE_VERSION = 4;
 
 export async function requireImportPipeline(db: Db): Promise<void> {
   const result = await db.rpc('import_pipeline_version');
@@ -45,6 +46,11 @@ export async function resumeImportStaging(db: Db, input: { organizationId: strin
   if (!Array.isArray(snapshot.mapping)) throw new DomainError('The saved mapping is unavailable.', 'integrations.mapping_missing');
   const sourceName = resource.data.resource_type === 'file_upload' ? resource.data.display_name : run.resource_id;
   const fieldDefinitions = await listFieldDefinitions(db, { organizationId: input.organizationId, entityType: 'customer' });
+  const priceBook = priceBookPlanOf(snapshot.mapping);
+  if (priceBook) {
+    const currency = await businessCurrency(db, input.organizationId);
+    return stagePreparedRows(db, { ...input, rows: priceRowsForPlan(expandRows(parsed.rows), { sourceName, plan: priceBook, currency }) });
+  }
   const plan = translationPlanOf(snapshot.mapping);
   if (plan) {
     // A translated import stages every business before any person, in separate batches, so that
@@ -66,6 +72,8 @@ export type ImportRun = {
   resourceId: string | null;
   mappingId: string | null;
   connectorKey: string;
+  /** What the run imports into, from its snapshotted mapping. */
+  targetEntity: 'customer' | 'price_book_item';
   status: ImportRunStatus;
   rowsSeen: number;
   rowsCreated: number;
@@ -85,7 +93,7 @@ export type StagingRowStatus = 'ready' | 'review' | 'duplicate' | 'invalid' | 'i
  * `phone`: contacts with this phone number and no email to tell them apart. `phone_in_file`,
  * `email_in_file`, `contact_in_file`: an earlier row of the same file.
  */
-export type ImportMatchReason = 'source' | 'source_other_file' | 'source_deleted' | 'email' | 'email_shared' | 'email_unconfirmed' | 'phone' | 'phone_in_file' | 'email_in_file' | 'contact_in_file' | 'quality';
+export type ImportMatchReason = 'name' | 'name_in_file' | 'source' | 'source_other_file' | 'source_deleted' | 'email' | 'email_shared' | 'email_unconfirmed' | 'phone' | 'phone_in_file' | 'email_in_file' | 'contact_in_file' | 'quality';
 export type ImportRowDecision = 'create' | 'update' | 'skip';
 
 /** What a translated import remembers about a staged row; null for a row staged by a column mapping. */
@@ -102,6 +110,8 @@ export type StagingRow = {
   validationErrors: string[];
   proposedAction: 'create' | 'update' | 'skip' | 'review';
   matchedCustomerId: string | null;
+  /** The price book item a price book row matches or became. */
+  matchedItemId: string | null;
   status: StagingRowStatus;
   matchReason: ImportMatchReason | null;
   /** Existing contacts this row might be; a person chooses, nothing acts on them alone. */
@@ -115,6 +125,7 @@ function toRun(row: {
   resource_id: string | null;
   mapping_id: string | null;
   connector_key: string;
+  target: unknown;
   status: string;
   rows_seen: number;
   rows_created: number;
@@ -129,6 +140,7 @@ function toRun(row: {
     resourceId: row.resource_id,
     mappingId: row.mapping_id,
     connectorKey: row.connector_key,
+    targetEntity: row.target === 'price_book_item' ? 'price_book_item' : 'customer',
     status: row.status as ImportRunStatus,
     rowsSeen: row.rows_seen,
     rowsCreated: row.rows_created,
@@ -141,7 +153,7 @@ function toRun(row: {
 }
 
 const RUN_COLUMNS =
-  'id, resource_id, mapping_id, connector_key, status, rows_seen, rows_created, rows_updated, rows_skipped, rows_failed, started_at, finished_at';
+  'id, resource_id, mapping_id, connector_key, target:mapping_snapshot->>target_entity, status, rows_seen, rows_created, rows_updated, rows_skipped, rows_failed, started_at, finished_at';
 
 export async function listImportRuns(db: Db, input: { organizationId: string }): Promise<ImportRun[]> {
   const { data, error } = await db
@@ -179,7 +191,7 @@ export async function listStagingRows(
 ): Promise<StagingRow[]> {
   let query = db
     .from('import_staging_rows')
-    .select('id, source_record_key, raw, normalized, validation_errors, proposed_action, matched_customer_id, status, match_reason, candidate_customer_ids, decided_by')
+    .select('id, source_record_key, raw, normalized, validation_errors, proposed_action, matched_customer_id, matched_price_item_id, status, match_reason, candidate_customer_ids, decided_by')
     .eq('organization_id', input.organizationId)
     .eq('run_id', input.runId)
     .order('created_at', { ascending: true });
@@ -204,6 +216,7 @@ export async function listStagingRows(
     validationErrors: Array.isArray(row.validation_errors) ? (row.validation_errors as string[]) : [],
     proposedAction: row.proposed_action as StagingRow['proposedAction'],
     matchedCustomerId: row.matched_customer_id,
+    matchedItemId: row.matched_price_item_id,
     status: row.status as StagingRowStatus,
     matchReason: row.match_reason as ImportMatchReason | null,
     candidateIds: row.candidate_customer_ids ?? [],
@@ -270,7 +283,7 @@ export async function stagePreparedRows(
   input: {
     organizationId: string;
     runId: string;
-    rows: { key: string; raw: Record<string, string>; normalized: NormalizedCustomerRow; validation_errors: string[]; hold: boolean }[];
+    rows: { key: string; raw: Record<string, string>; normalized: NormalizedCustomerRow | PriceRow['normalized']; validation_errors: string[]; hold: boolean }[];
   },
 ): Promise<number> {
   await requireActor(db);

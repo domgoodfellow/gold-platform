@@ -4,6 +4,7 @@ import { useActionState } from 'react';
 import { acceptFor } from '@/lib/domain/files/formats';
 import { Button } from '@/components/controls/button';
 import { ErrorText } from '@/components/controls/inputs';
+import type { ImportDestination } from '@/lib/route/library';
 import {
   uploadSourceAction,
   type UploadState,
@@ -11,12 +12,13 @@ import {
 
 const UPLOAD_INITIAL: UploadState = { error: null };
 
-export function UploadSourceForm({ organizationId }: { organizationId: string }) {
+export function UploadSourceForm({ organizationId, into = 'contacts' }: { organizationId: string; into?: ImportDestination }) {
   const [state, formAction, pending] = useActionState(uploadSourceAction, UPLOAD_INITIAL);
 
   return (
     <form action={formAction} className="mt-4 flex flex-col gap-3">
       <input type="hidden" name="organizationId" value={organizationId} />
+      <input type="hidden" name="into" value={into} />
       <input
         name="file"
         type="file"

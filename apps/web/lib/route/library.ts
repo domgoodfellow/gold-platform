@@ -54,8 +54,20 @@ export function libraryImportHref(organizationId: string, runId: string, search 
   return `${importsBase(organizationId)}/${runId}${search}`;
 }
 
-export function libraryNewImportHref(organizationId: string, resourceId?: string): string {
-  return `${importsBase(organizationId)}/new${resourceId ? `?resourceId=${resourceId}` : ''}`;
+/** What a Library import writes into. */
+export type ImportDestination = 'contacts' | 'price_book';
+
+/** The destination an `into` search or form value names; Contacts unless it names the price book. */
+export function importDestination(value: unknown): ImportDestination {
+  return value === 'price_book' ? 'price_book' : 'contacts';
+}
+
+export function libraryNewImportHref(organizationId: string, resourceId?: string, into: ImportDestination = 'contacts'): string {
+  const query = new URLSearchParams();
+  if (resourceId) query.set('resourceId', resourceId);
+  if (into === 'price_book') query.set('into', into);
+  const search = query.toString();
+  return `${importsBase(organizationId)}/new${search ? `?${search}` : ''}`;
 }
 
 /** The Library section a pathname belongs to, Imports included (they are Sources' history). */

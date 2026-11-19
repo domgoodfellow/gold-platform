@@ -8,6 +8,8 @@ import { WidgetGrid, Widget } from '@/components/display/widget';
 import { rowTranslation, type ImportRun, type StagingRow, type StagingRowStatus } from '@/lib/domain/integrations/import-runs';
 import { ISSUES, issueLabel } from '@/lib/domain/integrations/translation/translate';
 import type { ContactCurrentValues, ContactSummary } from '@/lib/domain/contacts/contacts';
+import type { PriceBookItem } from '@/lib/domain/pricing/price-book';
+import { formatMoney } from '@/lib/domain/work-items/consumption';
 import { classificationLabel } from '@/lib/domain/customers/classification';
 import { ApplyImportForm } from './apply-import-form';
 import { ImportRowDecisionField, SkipUndecidedRows, type DecisionChoice } from './import-row-decision';
@@ -117,6 +119,32 @@ export function importChanges(row: StagingRow, current: ContactCurrentValues | u
   return changes;
 }
 
+/** Why staging matched a price book row, naming the item. */
+export function priceMatchDescription(row: StagingRow, items: ReadonlyMap<string, PriceBookItem>): string {
+  const item = row.matchedItemId ? items.get(row.matchedItemId)?.name ?? 'an item' : '';
+  switch (row.matchReason) {
+    case 'source': return `Imported before as ${item}`;
+    case 'name': return `Same name as ${item}`;
+    case 'name_in_file': return 'An earlier row has the same name';
+    default: return row.status === 'invalid' ? '—' : 'New item';
+  }
+}
+
+/** A price book row's price as the business shows it. */
+function rowPrice(row: StagingRow): string {
+  const { unit_amount_minor: minor, currency } = row.normalized as { unit_amount_minor?: number | null; currency?: string };
+  return typeof minor === 'number' && currency ? formatMoney(minor, currency) : '—';
+}
+
+/** What a person may decide for a price book row still waiting: a matched item is updated or skipped, never created twice. */
+export function priceDecisionChoices(row: StagingRow, items: ReadonlyMap<string, PriceBookItem>): DecisionChoice[] | null {
+  if (row.status !== 'ready' && row.status !== 'review' && row.status !== 'ignored') return null;
+  return [
+    ...(row.matchedItemId ? [{ value: `update:${row.matchedItemId}`, label: `Update ${items.get(row.matchedItemId)?.name ?? 'item'}` }] : [{ value: 'create', label: 'Create new item' }]),
+    { value: 'skip', label: 'Skip' },
+  ];
+}
+
 /** What a person may decide for a row still waiting to be imported; none once it is applied, rejected or a repeat. */
 export function decisionChoices(row: StagingRow, contacts: ReadonlyMap<string, ContactSummary>): DecisionChoice[] | null {
   if (row.status !== 'ready' && row.status !== 'review' && row.status !== 'ignored') return null;
@@ -133,7 +161,8 @@ export function decisionChoices(row: StagingRow, contacts: ReadonlyMap<string, C
 function decisionValue(row: StagingRow): string {
   if (row.status === 'review') return '';
   if (row.status === 'ignored') return 'skip';
-  return row.proposedAction === 'update' && row.matchedCustomerId ? `update:${row.matchedCustomerId}` : 'create';
+  const matched = row.matchedItemId ?? row.matchedCustomerId;
+  return row.proposedAction === 'update' && matched ? `update:${matched}` : 'create';
 }
 
 /**
@@ -153,6 +182,7 @@ export function ImportRunDetail({
   contacts,
   fieldLabels = {},
   mayReview = true,
+  priceItems = new Map(),
 }: {
   organizationId: string;
   runId: string;
@@ -165,10 +195,14 @@ export function ImportRunDetail({
   contacts: ReadonlyMap<string, ContactSummary | ContactCurrentValues>;
   /** Custom field labels by key, for the Changes column. */
   fieldLabels?: Readonly<Record<string, string>>;
-  /** Whether this member may decide rows: choosing between contacts needs `customer.read`. */
+  /** Whether this member may decide rows: choosing between contacts needs `customer.read`, a price book row `price.manage`. */
   mayReview?: boolean;
+  /** For a price book import: the business's items by id, which rows were matched to. */
+  priceItems?: ReadonlyMap<string, PriceBookItem>;
 }) {
   const finished = run.status === 'completed' || run.status === 'completed_with_errors';
+  const prices = run.targetEntity === 'price_book_item';
+  const record = prices ? 'item' : 'contact';
   const translated = rows.some(row => rowTranslation(row) !== null);
   return (
     <>
@@ -181,9 +215,9 @@ export function ImportRunDetail({
             <Widget title="Skipped" value={run.rowsSkipped} />
             <Widget title="Failed" value={run.rowsFailed} />
           </WidgetGrid>
-          {run.rowsFailed ? <Hint className="mt-3 block">Failed rows include any where a contact was edited in GildOps after this source last changed it; those contacts were kept as they are.</Hint> : null}
+          {run.rowsFailed && !prices ? <Hint className="mt-3 block">Failed rows include any where a contact was edited in GildOps after this source last changed it; those contacts were kept as they are.</Hint> : null}
           <div className="mt-4 flex flex-wrap gap-2">
-            <ButtonLink href={`/organizations/${organizationId}/crm/contacts`} tone="primary">View contacts</ButtonLink>
+            <ButtonLink href={prices ? `/organizations/${organizationId}/finance/catalog` : `/organizations/${organizationId}/crm/contacts`} tone="primary">{prices ? 'View price book' : 'View contacts'}</ButtonLink>
             {run.rowsFailed ? <ButtonLink href={libraryImportHref(organizationId, runId, `?status=failed`)} tone="secondary">Review problems</ButtonLink> : null}
             {run.resourceId ? <ButtonLink href={librarySourceHref(organizationId, run.resourceId)} tone="text">Open saved source</ButtonLink> : null}
           </div>
@@ -192,13 +226,13 @@ export function ImportRunDetail({
         <Card as="section" aria-labelledby="import-review" className="shrink-0">
           <h2 id="import-review" className="text-sm font-semibold">Review changes</h2>
           <dl className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-5" aria-label="Staged changes">
-            {[['New contacts', summary.created], ['Updates to existing contacts', summary.updated], ['Needs review', summary.review], ['Possible duplicates (not applied)', summary.duplicates], ['Skipped or rejected', summary.skipped]].map(([label, value]) =>
+            {[[`New ${record}s`, summary.created], [`Updates to existing ${record}s`, summary.updated], ['Needs review', summary.review], ['Possible duplicates (not applied)', summary.duplicates], ['Skipped or rejected', summary.skipped]].map(([label, value]) =>
               <div key={label} className="rounded-md bg-secondary px-3 py-2"><dt className="text-xs text-muted">{label}</dt><dd className="text-xl font-semibold tabular-nums">{value}</dd></div>)}
           </dl>
-          {summary.unclassified ? <p role="status" className="mt-3 text-sm">{summary.unclassified} new contact{summary.unclassified === 1 ? '' : 's'} will be saved as Unspecified / Needs classification because no contact type was mapped.</p> : null}
+          {summary.unclassified && !prices ? <p role="status" className="mt-3 text-sm">{summary.unclassified} new contact{summary.unclassified === 1 ? '' : 's'} will be saved as Unspecified / Needs classification because no contact type was mapped.</p> : null}
           <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
             <p className="text-sm font-medium">Apply</p>
-            <Hint>Nothing has been written to Contacts yet.</Hint>
+            <Hint>Nothing has been written to {prices ? 'the price book' : 'Contacts'} yet.</Hint>
             {summary.review ? <>
               <p role="status" className="text-sm">Decide the {summary.review} row{summary.review === 1 ? '' : 's'} marked Needs review before importing.</p>
               <div className="flex flex-wrap gap-2">
@@ -272,6 +306,10 @@ export function ImportRunDetail({
                   },
                 },
               ] : []),
+              ...(prices ? [
+                { key: 'unit', header: 'Unit', cell: (row: StagingRow) => String((row.normalized as { unit?: string }).unit || '—') },
+                { key: 'price', header: 'Price', cell: (row: StagingRow) => <span className="tabular-nums">{rowPrice(row)}</span> },
+              ] : []),
               {
                 key: 'status',
                 header: 'Status',
@@ -281,13 +319,13 @@ export function ImportRunDetail({
                   </Badge>
                 ),
               },
-              { key: 'match', header: 'Match', cell: (row) => matchDescription(row, contacts) },
+              { key: 'match', header: 'Match', cell: (row) => prices ? priceMatchDescription(row, priceItems) : matchDescription(row, contacts) },
               {
                 key: 'decision',
                 header: 'Action',
                 cell: (row) => {
-                  const choices = finished || !mayReview ? null : decisionChoices(row, contacts);
-                  if (!choices) return row.proposedAction === 'create' ? 'New contact' : row.proposedAction === 'update' ? 'Update existing contact' : 'Skip';
+                  const choices = finished || !mayReview ? null : prices ? priceDecisionChoices(row, priceItems) : decisionChoices(row, contacts);
+                  if (!choices) return row.proposedAction === 'create' ? `New ${record}` : row.proposedAction === 'update' ? `Update existing ${record}` : 'Skip';
                   const name = String((row.normalized as { name?: string }).name ?? 'row');
                   return <ImportRowDecisionField organizationId={organizationId} runId={runId} rowId={row.id} rowName={name} value={decisionValue(row)} choices={choices} />;
                 },
@@ -296,6 +334,21 @@ export function ImportRunDetail({
                 key: 'changes',
                 header: 'Changes',
                 cell: (row) => {
+                  if (prices) {
+                    // Before applying: the item's current unit and price, and what this row brings.
+                    const item = row.matchedItemId ? priceItems.get(row.matchedItemId) : undefined;
+                    if (finished || row.status !== 'ready' || row.proposedAction !== 'update' || !item) return '—';
+                    const incoming = row.normalized as { unit?: string; unit_amount_minor?: number };
+                    const changes = [
+                      ...(item.unit !== incoming.unit ? [{ field: 'unit', label: 'Unit', current: item.unit, incoming: String(incoming.unit) }] : []),
+                      ...(item.unitAmountMinor !== incoming.unit_amount_minor ? [{ field: 'price', label: 'Price', current: formatMoney(item.unitAmountMinor, item.currency), incoming: rowPrice(row) }] : []),
+                    ];
+                    if (!changes.length) return <span className="text-muted">No changes</span>;
+                    return <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-0.5 text-xs">{changes.map(change => <div key={change.field} className="contents">
+                      <dt className="text-muted">{change.label}</dt>
+                      <dd className="min-w-0 break-words"><span className="sr-only">from </span><span className="text-muted line-through decoration-muted">{change.current}</span> <span aria-hidden>→</span><span className="sr-only"> to</span> <span className="font-medium">{change.incoming}</span></dd>
+                    </div>)}</dl>;
+                  }
                   // Before applying: what an Update would change on the chosen contact.
                   if (finished || row.status !== 'ready' || row.proposedAction !== 'update' || !row.matchedCustomerId) return '—';
                   const current = contacts.get(row.matchedCustomerId);
