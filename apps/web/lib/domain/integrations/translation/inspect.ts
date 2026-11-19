@@ -2,9 +2,10 @@ import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { downloadImportFile } from '@/lib/domain/integrations/resources';
+import { findSavedTranslation } from '@/lib/domain/integrations/mappings';
 import { discoverSource, expandRecord, type SourceDiscovery } from './discovery';
-import { proposeInterpretations, type Interpretation } from './interpretations';
-import { defaultPlan, validatePlan, type TranslationPlan } from './plan';
+import { INTERPRETATION_IDS, proposeInterpretations, type Interpretation } from './interpretations';
+import { defaultPlan, sourceSignature, validatePlan, type TranslationPlan } from './plan';
 import { issueLabel, translateSource, type TranslatedRecord, type TranslationSummary } from './translate';
 
 /**
@@ -15,11 +16,20 @@ import { issueLabel, translateSource, type TranslatedRecord, type TranslationSum
  * `applyImportRun`, each under `integration.manage`.
  */
 
+/**
+ * Where the plan an inspection starts from came from. `rules`: the built-in reading of the
+ * columns. `saved`: the plan a person approved for an earlier source with the same columns.
+ * `chosen`: the plan the caller passed in. A model's proposal will be one more origin, labelled
+ * as a suggestion and approved by a person like the others.
+ */
+export type PlanOrigin = 'rules' | 'saved' | 'chosen';
+
 export type SourceInspection = {
   discovery: SourceDiscovery;
   interpretations: Interpretation[];
-  /** The plan the interpretation page starts from: every suggestion, every interpretation approved. */
+  /** The plan the interpretation page starts from, carrying the source's signature. */
   plan: TranslationPlan;
+  origin: PlanOrigin;
   summary: TranslationSummary;
   /** The first translated rows, for a preview. */
   preview: TranslatedRecord[];
@@ -32,15 +42,34 @@ export function expandRows(rows: Record<string, string>[]): Record<string, strin
   return rows.map((row) => expandRecord(row));
 }
 
-/** Inspects parsed rows: discovery, proposed interpretations, the default plan and what it would produce. */
-export function inspectRows(parsed: { headers: string[]; rows: Record<string, string>[] }, plan?: TranslationPlan): SourceInspection {
+/**
+ * Inspects parsed rows: discovery, proposed interpretations, the starting plan and what it would
+ * produce. The plan is the caller's, else a saved plan that still fits these columns, else the
+ * built-in reading.
+ */
+export function inspectRows(parsed: { headers: string[]; rows: Record<string, string>[] }, plan?: TranslationPlan, saved?: TranslationPlan | null): SourceInspection {
   const rows = expandRows(parsed.rows);
   const discovery = discoverSource(rows, parsed.headers);
   const interpretations = proposeInterpretations(discovery, rows);
   const columns = discovery.columns.map((column) => column.name);
-  const chosen = plan ? validatePlan(plan, columns) : defaultPlan(discovery, interpretations);
+  const signature = sourceSignature(parsed.headers);
+  let origin: PlanOrigin = 'rules';
+  let chosen: TranslationPlan;
+  if (plan) { chosen = validatePlan(plan, columns); origin = 'chosen'; }
+  else {
+    chosen = defaultPlan(discovery, interpretations);
+    if (saved) {
+      // A saved decision carries only for an interpretation offered then and proposed now.
+      const offered = new Set(saved.offered ?? INTERPRETATION_IDS);
+      const decisions = { ...chosen.decisions };
+      for (const proposal of interpretations) if (offered.has(proposal.id) && saved.decisions?.[proposal.id]) decisions[proposal.id] = saved.decisions[proposal.id];
+      try { chosen = validatePlan({ ...saved, decisions }, columns); origin = 'saved'; }
+      catch (error) { if (!(error instanceof DomainError)) throw error; }
+    }
+  }
+  chosen = { ...chosen, signature, offered: interpretations.map((proposal) => proposal.id) };
   const result = translateSource(rows, chosen);
-  return { discovery, interpretations, plan: chosen, summary: result.summary, preview: result.records.slice(0, PREVIEW_ROWS) };
+  return { discovery, interpretations, plan: chosen, origin, summary: result.summary, preview: result.records.slice(0, PREVIEW_ROWS) };
 }
 
 /** Quality issues as sentences with counts, for a summary a person or an agent can read. */
@@ -51,12 +80,14 @@ export function describeQuality(summary: TranslationSummary): string[] {
 }
 
 /**
- * Inspects a saved import source of one business. The caller's own session reads the source, so
- * row-level security decides whether it is theirs; nothing is staged, decided or applied.
+ * Inspects a saved import source of one business, starting from the plan the business saved for
+ * the same columns when there is one. The caller's own session reads the source and the saved
+ * plan, so row-level security decides whether they are theirs; nothing is staged, decided or applied.
  */
 export async function inspectImportSource(db: Db, input: { organizationId: string; resourceId: string; plan?: TranslationPlan }): Promise<SourceInspection> {
   await requireActor(db);
   const parsed = await downloadImportFile(db, { organizationId: input.organizationId, resourceId: input.resourceId });
   if (!parsed) throw new DomainError('That source has no rows to read.', 'integrations.file_missing');
-  return inspectRows(parsed, input.plan);
+  const saved = input.plan ? null : await findSavedTranslation(db, { organizationId: input.organizationId, signature: sourceSignature(parsed.headers) });
+  return inspectRows(parsed, input.plan, saved);
 }

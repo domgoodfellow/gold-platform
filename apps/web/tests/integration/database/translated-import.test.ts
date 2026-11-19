@@ -153,6 +153,22 @@ describe('translated contact import under real PostgreSQL', () => {
     expect(await affiliationsOf(jamie.id)).toEqual([{ company_id: existing.data, title: 'Owner', active: true }]);
   });
 
+  it('starts a later source with the same columns from the plan saved with the first, never from another business’s', async () => {
+    const headers = `${HEADERS},territory`;
+    const csv = (n: number) => [headers, `r${n},Saved Plan ${tag} ${n},Robin Example ${tag},${phone(20 + n)},,,,NEW,,East`].join('\n');
+    const first = await stage(csv(1), { patch: (plan) => ({ ...plan, defaultLifecycle: 'customer', suppression: 'omit' }) });
+    expect(first.inspection.origin).toBe('rules');
+
+    const upload = (db: typeof owner.db, org: string, n: number) => uploadImportFile(db, { files: supabaseFileStore(db, BUCKET), organizationId: org, file: new File([csv(n)], `again-${tag}-${n}.csv`, { type: 'text/csv' }) });
+    const again = await inspectImportSource(owner.db, { organizationId, resourceId: (await upload(owner.db, organizationId, 2)).resourceId });
+    expect(again.origin).toBe('saved');
+    expect(again.plan).toMatchObject({ defaultLifecycle: 'customer', suppression: 'omit', signature: first.inspection.plan.signature });
+
+    const theirs = await inspectImportSource(outsider.db, { organizationId: otherOrg, resourceId: (await upload(outsider.db, otherOrg, 3)).resourceId });
+    expect(theirs.origin).toBe('rules');
+    expect(theirs.plan).toMatchObject({ defaultLifecycle: null, suppression: 'reference' });
+  });
+
   it('refuses a translated import without integration.manage and never reads another business’s source', async () => {
     const csv = [HEADERS, `x1,Outside ${tag},Someone ${tag},${phone(7)},,,,NEW,`].join('\n');
     await expect(stage(csv, { db: viewer.db })).rejects.toThrow();

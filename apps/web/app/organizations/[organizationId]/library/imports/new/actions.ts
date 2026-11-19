@@ -196,7 +196,7 @@ export async function createTranslationAndStageAction(formData: FormData): Promi
   try {
     await requireImportPipeline(db);
     const inspection = await inspectImportSource(db, { organizationId, resourceId });
-    const plan = validatePlan(draft, inspection.discovery.columns.map((column) => column.name));
+    const plan = validatePlan({ ...draft, signature: inspection.plan.signature, offered: inspection.plan.offered }, inspection.discovery.columns.map((column) => column.name));
     // The business's own fields need `field.manage`; without it the values stay with the source row and review says so.
     try { await prepareImportFields(db, organizationId, [], BUSINESS_FIELDS.map(([key]) => key)); }
     catch (error) { if (!(error instanceof DomainError)) throw error; }

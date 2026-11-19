@@ -1,5 +1,6 @@
 import { CONTACT_LIFECYCLES } from '@/lib/domain/customers/classification';
 import { DomainError } from '@/lib/domain/errors';
+import { keyNorm } from './normalize';
 import { CONCEPTS, isSensitiveColumn, type Concept, type ConceptMapping, type SourceDiscovery } from './discovery';
 import { INTERPRETATION_IDS, interpretationConflicts, type Interpretation, type InterpretationDecision, type InterpretationId } from './interpretations';
 
@@ -19,7 +20,16 @@ export type TranslationPlan = {
   suppression: 'reference' | 'omit';
   /** Unrecognized source columns to keep as the business's own fields: source column → custom field key. */
   extraFields: Record<string, string>;
+  /** The source's column names (see `sourceSignature`), so a later source with the same columns starts from this plan. */
+  signature?: string;
+  /** The interpretations offered when this plan was approved. Only their decisions carry to a later source; one offered for the first time starts approved, like any proposal. */
+  offered?: InterpretationId[];
 };
+
+/** A source's column names, compared without case, spacing or order: two exports of the same sheet share one. */
+export function sourceSignature(headers: readonly string[]): string {
+  return [...new Set(headers.map(keyNorm).filter(Boolean))].sort().join('|');
+}
 
 /** The default plan: every suggested column, every proposed interpretation approved, nothing extra. */
 export function defaultPlan(discovery: SourceDiscovery, proposals: Interpretation[]): TranslationPlan {
@@ -65,7 +75,9 @@ export function validatePlan(plan: TranslationPlan, columns: readonly string[]):
     if (used.has(column)) throw new DomainError(`“${column}” is already read as a known value.`, 'integrations.plan_invalid');
     extraFields[column] = key;
   }
-  return { version: 1, mapping, decisions, defaultLifecycle, suppression: plan.suppression, extraFields };
+  const signature = typeof plan.signature === 'string' && plan.signature ? plan.signature : undefined;
+  const offered = Array.isArray(plan.offered) ? INTERPRETATION_IDS.filter((id) => plan.offered!.includes(id)) : undefined;
+  return { version: 1, mapping, decisions, defaultLifecycle, suppression: plan.suppression, extraFields, ...(signature ? { signature } : {}), ...(offered ? { offered } : {}) };
 }
 
 /** Whether a plan reads a concept from a column lifted out of nested JSON, which the `extract_nested` interpretation governs. */

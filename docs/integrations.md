@@ -78,8 +78,9 @@ through a local web server connected to hosted Supabase still writes hosted data
 
 ### Translated imports
 
-A source with a business column, or a GuildOps Import Workbench `contacts_flat.csv`, opens on
-Interpret your source instead of column mapping (ADR-054); `&mode=columns` keeps column mapping.
+A source with a business column, a GuildOps Import Workbench `contacts_flat.csv`, or columns the
+business has translated before opens on Interpret your source instead of column mapping
+(ADR-054); `&mode=columns` keeps column mapping.
 The engine in `lib/domain/integrations/translation/` is deterministic TypeScript: no model is
 called and nothing leaves the process.
 
@@ -108,11 +109,18 @@ called and nothing leaves the process.
 - **Fields**: business facts use the tenant field registry (industry, SIC code, website, estimated
   revenue and employees, postal code, Do not call, source lead status), created when the member
   has `field.manage`. Unrecognized columns are kept only into a field the person chooses.
+- **Saved translations**: the plan records the source's column names (`sourceSignature`: case,
+  spacing and order ignored) and the interpretations it offered. A later source of the same
+  business with the same columns, such as the next export of the same sheet, starts from the
+  newest saved plan (`findSavedTranslation`, under the caller's own session). Only decisions on
+  interpretations offered then carry over; one proposed for the first time starts approved. A
+  saved plan that no longer fits the columns is ignored and the built-in reading is used.
 - **Evidence**: every staged row keeps the source column, original and translated value of each
   value it carries, shown in review under Source evidence.
 - **Inspection contract** (`inspect.ts`): `inspectImportSource` and `inspectRows` return
-  discovery, interpretations, the default plan, a quality summary and a preview, reading under
-  the caller's own session and writing nothing. An agent may use them to propose; applying stays
+  discovery, interpretations, the starting plan with its origin (`rules`, `saved` or a caller's
+  `chosen` plan), a quality summary and a preview, reading under the caller's own session and
+  writing nothing. An agent may use them to propose; applying stays
   with the run commands under `integration.manage`, and nothing auto-approves a run.
 
 Not supported yet: XLSX, JSON files and database dumps as sources (CSV and connected worksheets

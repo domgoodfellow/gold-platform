@@ -32,6 +32,10 @@ Entries describe the product or operational change, not every file touched.
 
 ---
 
+## 2026-11-19
+
+- A translated import remembers its choices. The next source with the same columns, such as a fresh export of the same sheet, opens on Interpret your source with the earlier column choices, decisions, lifecycle, do-not-call handling and kept columns filled in. A decision carries over only for a reading that was offered before; a new one is proposed as usual. Another business never sees these choices.
+
 ## 2026-11-17
 
 - Automations is now Dashboard, Workflows, Runs and Message templates. Opening a workflow shows it as a canvas on a wide screen or as a list of steps on a phone, both drawn from the stored rule; selecting a step opens its settings, and edits save through the existing rule commands and survive a reload. The chosen view and step stay in the address. The trigger is shown as fixed, conditions as "all must match" and actions in order; there are no branches or free connections. Checks show problems and the workflow's recent runs. Workflows also lists the automated work GildOps already does for the business (message sending, timed checks, connected tool calls, source synchronization, service update emails), each with where its settings and records live and marked as not editable; a business with no workflows still sees it. Platform → Failures lists the schedulers and callbacks behind that work for platform staff. The old Rules, Activity and rule addresses redirect. No database change.

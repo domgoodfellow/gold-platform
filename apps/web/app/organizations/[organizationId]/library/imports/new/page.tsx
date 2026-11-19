@@ -6,7 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from '@gold/ui/components/alert';
 import { PageHeader } from '@/components/headers/page-header';
 import { ErrorText, Hint } from '@/components/controls/inputs';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
-import { suggestMapping } from '@/lib/domain/integrations/mappings';
+import { findSavedTranslation, suggestMapping } from '@/lib/domain/integrations/mappings';
 import { downloadImportFile } from '@/lib/domain/integrations/resources';
 import { libraryHref } from '@/lib/route/library';
 import { LibraryNav } from '@/features/library/library-nav';
@@ -18,6 +18,7 @@ import { listLibraryFiles } from '@/lib/domain/documents/library-files';
 import { MappingEditor } from '@/features/integrations/imports/mapping-editor';
 import { InterpretationEditor } from '@/features/integrations/imports/interpretation-editor';
 import { inspectRows } from '@/lib/domain/integrations/translation/inspect';
+import { sourceSignature } from '@/lib/domain/integrations/translation/plan';
 import { libraryNewImportHref } from '@/lib/route/library';
 import {DomainError} from '@/lib/domain/errors';
 
@@ -73,10 +74,11 @@ export default async function NewImportPage({
   }
 
   const definitions = await listFieldDefinitions(db, { organizationId, entityType: 'customer' });
-  // A source with a business column (or a Workbench export) is read as businesses and people
+  // A source with a business column, a Workbench export or a translation saved for the same columns is read as businesses and people
   // unless the person asks for column-by-column mapping; anything else maps columns as before.
-  const inspection = inspectRows(source);
-  const translate = mode === 'translate' || (mode !== 'columns' && (inspection.discovery.workbenchPackage || Boolean(inspection.discovery.mapping.business_name)));
+  const saved = mode === 'columns' ? null : await findSavedTranslation(db, { organizationId, signature: sourceSignature(source.headers) });
+  const inspection = inspectRows(source, undefined, saved);
+  const translate = mode === 'translate' || (mode !== 'columns' && (inspection.origin === 'saved' || inspection.discovery.workbenchPackage || Boolean(inspection.discovery.mapping.business_name)));
   if (translate) {
     return (
       <>

@@ -102,6 +102,33 @@ export async function listMappings(
   return (data ?? []).map(toMapping);
 }
 
+/**
+ * The newest translation this business saved for a source with the same columns, from any earlier
+ * import (a new upload is a new source, so the lookup is by columns, not by source). Row-level
+ * security limits it to the caller's own business.
+ */
+export async function findSavedTranslation(
+  db: Db,
+  input: { organizationId: string; signature: string },
+): Promise<TranslationPlan | null> {
+  if (!input.signature) return null;
+  const { data, error } = await db
+    .from('integration_mappings')
+    .select('mapping')
+    .eq('organization_id', input.organizationId)
+    // As JSON text: a list value would be sent as a Postgres array, not as jsonb.
+    .contains('mapping', JSON.stringify([{ target: { kind: 'translation', plan: { signature: input.signature } } }]))
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  if (error) {
+    throw fromDatabaseError(error, 'integrations.mappings_list_failed');
+  }
+
+  const fields = data?.[0]?.mapping;
+  return Array.isArray(fields) ? translationPlanOf(fields as MappingField[]) : null;
+}
+
 export async function getMapping(
   db: Db,
   input: { organizationId: string; mappingId: string },

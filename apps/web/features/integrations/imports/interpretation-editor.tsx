@@ -34,7 +34,7 @@ export function InterpretationEditor({ organizationId, resourceId, inspection, d
     <form action={createTranslationAndStageAction} className="flex flex-col gap-4">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="resourceId" value={resourceId} />
-      <p className="max-w-3xl text-sm text-muted">{count(discovery.rowCount, 'row')} read. Nothing is written yet.</p>
+      <p className="max-w-3xl text-sm text-muted">{count(discovery.rowCount, 'row')} read.{inspection.origin === 'saved' ? ' Choices from your last import of these columns are filled in.' : ''} Nothing is written yet.</p>
       {error ? <ErrorText role="alert">{error}</ErrorText> : null}
 
       <Card as="section" aria-labelledby="interpretation-found">
@@ -81,8 +81,8 @@ export function InterpretationEditor({ organizationId, resourceId, inspection, d
       <Card as="section" aria-labelledby="interpretation-defaults">
         <h2 id="interpretation-defaults" className="text-sm font-semibold">New contacts</h2>
         <div data-slot="field-group" className="mt-3 grid gap-3 md:grid-cols-2">
-          <FormField id="interpretation-lifecycle" label="Lifecycle for new contacts" hint="Existing contacts keep theirs.">{field => <SelectField {...field} name="defaultLifecycle" defaultValue="" options={[{ value: '', label: 'Unclassified' }, ...CONTACT_LIFECYCLES.map((value) => ({ value, label: classificationLabel(value) }))]} />}</FormField>
-          <FormField id="interpretation-suppression" label="Historical do-not-call values">{field => <SelectField {...field} name="suppression" defaultValue="reference" options={[{ value: 'reference', label: 'Keep on the business as Do not call' }, { value: 'omit', label: 'Do not write; still hold the row' }]} />}</FormField>
+          <FormField id="interpretation-lifecycle" label="Lifecycle for new contacts" hint="Existing contacts keep theirs.">{field => <SelectField {...field} name="defaultLifecycle" defaultValue={plan.defaultLifecycle ?? ''} options={[{ value: '', label: 'Unclassified' }, ...CONTACT_LIFECYCLES.map((value) => ({ value, label: classificationLabel(value) }))]} />}</FormField>
+          <FormField id="interpretation-suppression" label="Historical do-not-call values">{field => <SelectField {...field} name="suppression" defaultValue={plan.suppression} options={[{ value: 'reference', label: 'Keep on the business as Do not call' }, { value: 'omit', label: 'Do not write; still hold the row' }]} />}</FormField>
         </div>
       </Card>
 
@@ -115,7 +115,7 @@ export function InterpretationEditor({ organizationId, resourceId, inspection, d
                     <th scope="row" className="px-3 py-2 text-left align-top font-medium">{column.name}<input type="hidden" name="extra_column" value={column.name} /></th>
                     <td className="max-w-48 truncate px-3 py-2 align-top text-muted">{column.examples[0] ?? ''}</td>
                     <td className="px-3 py-2 align-top">
-                      <SelectField aria-label={`Keep ${column.name} as`} name={`extra_${column.name}`} size="small" defaultValue="" options={[{ value: '', label: 'Do not keep' }, ...definitions.map((definition) => ({ value: definition.key, label: definition.label }))]} />
+                      <SelectField aria-label={`Keep ${column.name} as`} name={`extra_${column.name}`} size="small" defaultValue={plan.extraFields[column.name] ?? ''} options={[{ value: '', label: 'Do not keep' }, ...definitions.map((definition) => ({ value: definition.key, label: definition.label }))]} />
                     </td>
                   </tr>
                 ))}

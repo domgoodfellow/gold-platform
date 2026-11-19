@@ -6,7 +6,7 @@ import { createMapping, normalizeImportRow, translationMappingFields, translatio
 import {
   BUSINESS_FIELDS, defaultPlan, describeQuality, discoverSource, expandRecord, expandRows, inspectRows, interpretationConflicts,
   isWorkbenchFlatPackage, looksLikeLocation, looksLikePersonalName, normalizePhone, normalizeWebsite, phoneDisplay, prepareTranslatedImport,
-  proposeInterpretations, splitLocation, stagingRowsForTranslation, translateSource, validatePlan, type TranslationPlan,
+  proposeInterpretations, sourceSignature, splitLocation, stagingRowsForTranslation, translateSource, validatePlan, type TranslationPlan,
 } from '@/lib/domain/integrations/translation';
 
 /**
@@ -292,5 +292,40 @@ describe('the saved plan', () => {
     const db = { rpc: async () => ({ data: 'id', error: null }), auth: { getUser: async () => ({ data: { user: { id: 'u' } }, error: null }) } } as never;
     await expect(createMapping(db, { organizationId: 'o', resourceId: 'r', fields: [...fields, ...fields] })).rejects.toThrow(/whole source/);
     await expect(createMapping(db, { organizationId: 'o', resourceId: 'r', fields: [{ sourceColumn: 'x', target: { kind: 'ignore' }, transform: 'none' }] })).rejects.toThrow(/Name/);
+  });
+});
+
+describe('a translation saved for the same columns', () => {
+  it('is found by column names regardless of case, spacing and order', () => {
+    expect(sourceSignature(['Business Name', 'phone_e164', 'Full-Name'])).toBe(sourceSignature(['full_name', 'PHONE E164', 'business_name']));
+    expect(sourceSignature(['business_name', 'full_name'])).not.toBe(sourceSignature(['business_name', 'owner_name']));
+  });
+
+  it('is the starting plan when it still fits the columns, and the built-in reading otherwise', () => {
+    const parsed = parseCsv(csv([ROWS.ackerman, ROWS.noPerson]));
+    const fresh = inspectRows(parsed);
+    expect(fresh.origin).toBe('rules');
+    expect(fresh.plan.signature).toBe(sourceSignature(parsed.headers));
+
+    const saved: TranslationPlan = { ...fresh.plan, mapping: { ...fresh.plan.mapping, person_name: 'owner_name' }, defaultLifecycle: 'customer', suppression: 'omit', extraFields: { colour: 'colour' } };
+    const reused = inspectRows(parsed, undefined, saved);
+    expect(reused.origin).toBe('saved');
+    expect(reused.plan).toMatchObject({ mapping: { person_name: 'owner_name' }, defaultLifecycle: 'customer', suppression: 'omit', extraFields: { colour: 'colour' } });
+
+    const stale = inspectRows(parsed, undefined, { ...saved, mapping: { business_name: 'company_that_is_gone' } });
+    expect(stale.origin).toBe('rules');
+    expect(stale.plan.mapping).toEqual(fresh.plan.mapping);
+
+    expect(inspectRows(parsed, saved, saved).origin).toBe('chosen');
+  });
+
+  it('carries a decision only for an interpretation that was offered when the plan was approved', () => {
+    const parsed = parseCsv(csv([ROWS.ackerman, ROWS.noPerson]));
+    const fresh = inspectRows(parsed);
+    expect(fresh.plan.offered).toEqual(expect.arrayContaining(['format_phone', 'link_person_business']));
+    const saved: TranslationPlan = { ...fresh.plan, offered: ['format_phone'], decisions: { ...fresh.plan.decisions, format_phone: 'rejected', link_person_business: 'rejected' } };
+    const reused = inspectRows(parsed, undefined, saved);
+    expect(reused.origin).toBe('saved');
+    expect(reused.plan.decisions).toMatchObject({ format_phone: 'rejected', link_person_business: 'approved' });
   });
 });
