@@ -164,7 +164,15 @@ describe('Pricing, Automations, Custom fields and Team are canonical, not Settin
 
     const workflows = readFileSync(`${ROUTES}/automations/workflows/page.tsx`, 'utf8');
     expect(workflows).toContain('RulesTable');
-    expect(workflows).toContain('NewAutomationSheet');
+    // Creating a workflow is its own page, not a drawer over the list; the old ?create=1 lands there.
+    expect(workflows).not.toContain('NewAutomationSheet');
+    expect(workflows).toContain('paths.newWorkflow');
+    expect(workflows).toContain("if (first('create') === '1') redirect(paths.newWorkflow)");
+    expect(existsSync(`${WEB_FEATURES}/automations/rules/new-automation-sheet.tsx`)).toBe(false);
+    const creating = readFileSync(`${ROUTES}/automations/workflows/new/page.tsx`, 'utf8');
+    expect(creating).toContain('requireOrganization(organizationId)');
+    expect(creating).toContain("capabilities.includes('automation.manage')) notFound()");
+    expect(creating).toContain('<NewWorkflow');
     expect(workflows).toContain('ManagedAutomations');
     expect(readFileSync(`${ROUTES}/automations/messages/page.tsx`, 'utf8')).toContain('MessagesView');
     expect(readFileSync(`${ROUTES}/automations/runs/page.tsx`, 'utf8')).toContain('ActivityView');

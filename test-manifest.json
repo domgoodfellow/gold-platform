@@ -288,6 +288,21 @@
       "concerns": ["automations", "responsive", "permissions", "accessibility"],
       "note": "Phone workbench shows steps with full-screen step settings, a fixed trigger, Checks with recent runs, no edits for read-only roles; managed automations are inspectable and not editable."
     },
+    "apps/web/tests/unit/workflow-draft.test.ts": {
+      "category": "unit",
+      "concerns": ["automations", "validation"],
+      "note": "A new workflow draft checks only its chosen trigger, counts time before a job in whole minutes up to fourteen days, sends only the chosen trigger's values and previews as the same graph a saved workflow draws."
+    },
+    "apps/web/tests/component/new-workflow.test.tsx": {
+      "category": "component",
+      "concerns": ["automations", "forms", "responsive", "accessibility"],
+      "note": "New workflow is a page with only executable triggers; switching triggers keeps each trigger's values; errors keep typed input; a refused save keeps the draft; one submission at a time; leaving a changed draft asks; a phone moves through three steps with Back."
+    },
+    "apps/web/tests/component/unsaved-changes.test.tsx": {
+      "category": "component",
+      "concerns": ["forms", "navigation"],
+      "note": "A changed editor asks before browser Back or Forward leaves the page where the browser lets it cancel, never questions moves within the same page, and keeps asking before links without the Navigation API."
+    },
     "apps/web/tests/component/automation-tool-action.test.tsx": {
       "category": "component",
       "concerns": [

@@ -116,6 +116,7 @@ const LOCATION_METADATA: readonly LocationNode[] = [
   { id: 'view:finance-search', scope: 'organization', kind: 'view', pattern: 'finance/search', parent: 'workspace:finance', label: 'Search', open: 'U-12' },
   { id: 'view:finance-reports', scope: 'organization', kind: 'view', pattern: 'finance/reports', parent: 'workspace:finance', label: 'Financial performance', open: 'U-12' },
   // Automations, AI, Studio
+  { id: 'create:workflow', scope: 'organization', kind: 'create', pattern: 'automations/workflows/new', parent: 'area:automation-rules', label: 'New workflow' },
   { id: 'record:rule', scope: 'organization', kind: 'record', pattern: 'automations/workflows/[ruleId]', parent: 'area:automation-rules', record: 'ruleId' },
   { id: 'record:agent', scope: 'organization', kind: 'record', pattern: 'ai/agents/[agentId]', parent: 'target:ai-agents', record: 'agentId' },
   { id: 'record:form', scope: 'organization', kind: 'record', pattern: 'studio/forms/[formId]', parent: 'area:studio-forms', record: 'formId' },

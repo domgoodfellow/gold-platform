@@ -41,6 +41,8 @@ describe('route recognition', () => {
     expect(at(`${ORG}/comms/inbox/c1`, { records: { conversationId: { state: 'ready', label: 'Ana' } } }).id).toBe('record:conversation');
     expect(at(`${ORG}/automations/workflows`).id).toBe('area:automation-rules');
     expect(at(`${ORG}/automations/workflows/r1`, { records: { ruleId: { state: 'ready', label: 'Rain delay' } } }).id).toBe('record:rule');
+    // A static segment beats the rule id: the creation page is never read as a rule called "new".
+    expect(at(`${ORG}/automations/workflows/new`).id).toBe('create:workflow');
     expect(at(`${ORG}/work/dispatch`).id).toBe('view:dispatch');
     expect(at(`${ORG}/work/configuration`).id).toBe('target:work-configuration');
     expect(at(`${ORG}/crm/contacts/stages`).id).toBe('area:pipeline');

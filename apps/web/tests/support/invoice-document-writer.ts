@@ -9,7 +9,9 @@ import type { AddressInfo } from 'node:net';
  */
 
 // Supabase's documented local default, as the rest of the local stack uses unless told otherwise.
-export const LOCAL_JWT_SECRET = process.env.SUPABASE_JWT_SECRET ?? 'super-secret-jwt-token-with-at-least-32-characters-long';
+// An empty value is not a secret (a runner that blanks provider secrets for browser tests leaves it
+// empty), so it falls back to the default as an unset one does.
+export const LOCAL_JWT_SECRET = process.env.SUPABASE_JWT_SECRET || 'super-secret-jwt-token-with-at-least-32-characters-long';
 export const WRITER_ID = '00000000-0000-4000-8000-0000000000c1';
 
 type Handler = (request: IncomingMessage, response: ServerResponse & { status: (code: number) => ServerResponse; json: (value: unknown) => void }) => Promise<void>;

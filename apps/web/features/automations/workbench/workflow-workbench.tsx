@@ -1,9 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { AlertTriangle, CircleCheck, History, ListOrdered, LockKeyhole, Network, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, CircleCheck, History, ListOrdered, LockKeyhole, Network, Plus, ShieldCheck } from 'lucide-react';
 import { Alert, AlertDescription } from '@gold/ui/components/alert';
 import { Item, ItemContent, ItemGroup, ItemMedia } from '@gold/ui/components/item';
 import { tabListStyles, tabTriggerStyles } from '@gold/ui/components/tab-styles';
@@ -18,7 +18,6 @@ import type { WorkflowGraph } from '@/lib/domain/automation/workflow-graph';
 import { paletteFor } from '@/lib/domain/automation/workflow-nodes';
 import type { StatusChoice } from '../rules/rule-detail-types';
 import { RuleHeading } from '../rules/rule-heading';
-import { NewAutomationSheet } from '../rules/new-automation-sheet';
 import { RemoveRuleNode } from '../rules/remove-node';
 import { AddActionSheet } from '../rules/add-action-sheet';
 import { AddConditionSheet } from '../rules/add-condition-sheet';
@@ -26,6 +25,8 @@ import { AutomationState, automationDiagnostic, automationTime } from '../worksp
 import { automationPaths } from '../paths';
 import { WorkflowList } from './workflow-list';
 import { nodeHeading, type WorkflowView } from './renderer';
+import { TRIGGER_NOTES } from './trigger-notes';
+import { useDesktop } from './use-desktop';
 
 // The canvas is loaded only where it is drawn, so a phone never downloads it.
 const WorkflowCanvas = dynamic(() => import('./workflow-canvas'), {
@@ -33,24 +34,10 @@ const WorkflowCanvas = dynamic(() => import('./workflow-canvas'), {
   loading: () => <div className="h-144 w-full" />,
 });
 
-const DESKTOP = '(min-width: 1024px)';
-
 const VIEWS = [
   { value: 'canvas', label: 'Canvas', Icon: Network },
   { value: 'list', label: 'Steps', Icon: ListOrdered },
 ] as const;
-
-function useDesktop(): boolean {
-  const [desktop, setDesktop] = useState(false);
-  useEffect(() => {
-    const query = window.matchMedia(DESKTOP);
-    const update = () => setDesktop(query.matches);
-    update();
-    query.addEventListener('change', update);
-    return () => query.removeEventListener('change', update);
-  }, []);
-  return desktop;
-}
 
 /**
  * One workflow, drawn and edited.
@@ -245,16 +232,12 @@ export function WorkflowWorkbench({
                   <LockKeyhole aria-hidden className="mt-0.5 size-3.5 shrink-0" />
                   Fixed after creation, so past runs keep their meaning. Use a new workflow for a different trigger.
                 </p>
-                {rule.triggerKind === 'external_reading' || rule.triggerKind === 'counter_threshold' || rule.triggerKind === 'schedule' ? (
-                  <p className="text-xs text-subtle">
-                    {rule.triggerKind === 'external_reading'
-                      ? 'Needs incoming readings in exactly this unit.'
-                      : rule.triggerKind === 'schedule'
-                        ? 'Runs once per scheduled job, counted from when the job starts.'
-                        : 'Needs machine readings in this unit. The only action for a machine is Raise a job.'}
-                  </p>
+                {TRIGGER_NOTES[rule.triggerKind] ? <p className="text-xs text-subtle">{TRIGGER_NOTES[rule.triggerKind]}</p> : null}
+                {mayManage ? (
+                  <ButtonLink tone="primary" size={size} href={paths.newWorkflow} className="w-fit">
+                    <Plus aria-hidden className="size-4" /> New workflow
+                  </ButtonLink>
                 ) : null}
-                {mayManage ? <NewAutomationSheet organizationId={organizationId} /> : null}
               </>
             ) : null}
 

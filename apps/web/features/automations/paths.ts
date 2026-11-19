@@ -4,6 +4,8 @@ export function automationPaths(organizationId: string) {
   return {
     base,
     workflows: `${base}/workflows`,
+    /** Creating a workflow is its own page; nothing is stored until it is created. */
+    newWorkflow: `${base}/workflows/new`,
     workflow: (ruleId: string) => `${base}/workflows/${ruleId}`,
     runs: `${base}/runs`,
     messages: `${base}/messages`,

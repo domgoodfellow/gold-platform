@@ -30,6 +30,7 @@ import {
   updateMessageTemplate,
 } from '../lib/domain/automation/templates';
 import { chooseOption } from './select-field';
+import { readyEmailSender } from '../tests/support/email-sender';
 
 config({ path: '../../.env.test' });
 test.use({ storageState: OWNER_STORAGE_STATE });
@@ -129,15 +130,15 @@ test('authors, executes and monitors rules with responsive operating surfaces', 
     page.getByRole('heading', { name: 'Needs attention', exact: true }),
   ).toBeVisible();
   await capture('01-empty-home-desktop');
-  await page
-    .getByRole('button', { name: 'New workflow', exact: true })
-    .click();
-  await page
-    .getByRole('textbox', { name: 'What this workflow is for' })
-    .fill('Confirm controlled maintenance');
-  await chooseOption(page.getByLabel('What sets it off'), 'event');
-  await chooseOption(page.getByLabel('Which moment'), 'work_item.created');
-  await page.getByRole('button', { name: 'Add workflow', exact: true }).click();
+  // Creating a workflow is its own page: nothing is stored until Create.
+  await page.getByRole('link', { name: 'New workflow', exact: true }).click();
+  await expect(page).toHaveURL(/\/automations\/workflows\/new$/);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  const creating = page.getByRole('form', { name: 'New workflow' });
+  await creating.getByRole('button', { name: /^Something happens/ }).click();
+  await chooseOption(creating.getByLabel('Which moment'), 'work_item.created');
+  await creating.getByLabel('Name', { exact: true }).fill('Confirm controlled maintenance');
+  await creating.getByRole('button', { name: 'Create workflow', exact: true }).click();
   await expect(
     page.getByRole('region', { name: 'Workflow canvas' }),
   ).toBeVisible();
@@ -270,6 +271,22 @@ test('authors, executes and monitors rules with responsive operating surfaces', 
         shiftMinutes: 1440,
       });
   }
+  const pg = new Client(
+    process.env.SUPABASE_DB_URL ??
+      'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
+  );
+  if (
+    !['localhost', '127.0.0.1'].includes(
+      new URL(
+        process.env.SUPABASE_DB_URL ??
+          'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
+      ).hostname,
+    )
+  )
+    throw new Error('Local sender simulation only');
+  await pg.connect();
+  // A business sends from its own verified address; this new one has none until it is set up.
+  await readyEmailSender(pg, db, organizationId);
   const notify = await createAutomationRule(db, {
     organizationId,
     name: 'Notify maintenance Customer',
@@ -309,20 +326,12 @@ test('authors, executes and monitors rules with responsive operating surfaces', 
       customerId,
     });
   const deliveries = await listMessageDeliveries(db, { organizationId });
-  const pg = new Client(
-    process.env.SUPABASE_DB_URL ??
-      'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
+  // An answer is recorded only for a delivery the sending runtime has claimed; claim these two as it
+  // would, without claiming any other business's queued messages on the stack.
+  await pg.query(
+    "update public.message_deliveries set state = 'sending', claimed_at = now(), attempts = attempts + 1, first_attempt_at = coalesce(first_attempt_at, now()) where id = any($1)",
+    [[deliveries[0].id, deliveries[1].id]],
   );
-  if (
-    !['localhost', '127.0.0.1'].includes(
-      new URL(
-        process.env.SUPABASE_DB_URL ??
-          'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
-      ).hostname,
-    )
-  )
-    throw new Error('Local sender simulation only');
-  await pg.connect();
   await pg.query('select public.record_message_delivery($1,false,$2)', [
     deliveries[0].id,
     'Controlled local sender rejection; no provider called',

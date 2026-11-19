@@ -486,6 +486,71 @@ describe('who may ring which number', () => {
     const { rows } = await pg.query(`select count(*)::int as calls from public.calls where organization_id = $1 and direction = 'outbound'`, [otherOrg]);
     expect(rows[0].calls).toBe(0);
   });
+
+  describe('the destination rule asked directly', () => {
+    // `app.outbound_destination_allowed` runs with the definer's rights and `authenticated` may
+    // execute it (invoker-rights `open_call` calls it), so it must answer for the caller itself:
+    // nothing about a business's contacts, call list or received calls to anyone who may not place
+    // that business's calls.
+    const received = '+14165553344', receivedElsewhere = '+14165553355', nobody = '+14165558899';
+
+    /** The rule's answer, asked in SQL as this person (or anonymously), as a signed-in session would. */
+    async function ask(person: Person | null, organization: string, toNumber: string): Promise<boolean> {
+      const sub = person ? (await person.db.auth.getUser()).data.user!.id : null;
+      await pg.query('begin');
+      try {
+        await pg.query(`set local role ${person ? 'authenticated' : 'anon'}`);
+        await pg.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify(person ? { sub, role: 'authenticated' } : { role: 'anon' })]);
+        const { rows } = await pg.query('select app.outbound_destination_allowed($1, $2) as allowed', [organization, toNumber]);
+        return rows[0].allowed as boolean;
+      } finally {
+        await pg.query('rollback');
+      }
+    }
+
+    beforeAll(async () => {
+      const [{ data: us }, { data: them }] = await Promise.all([owner.db.auth.getUser(), outsider.db.auth.getUser()]);
+      await pg.query(
+        `insert into public.calls (organization_id, direction, status, from_number, to_number, created_by)
+         values ($1, 'inbound', 'no_answer', $2, '+14165550000', $3), ($4, 'inbound', 'no_answer', $5, '+14165550000', $6)`,
+        [organizationId, received, us.user!.id, otherOrg, receivedElsewhere, them.user!.id],
+      );
+    });
+
+    it('is not executable anonymously, and grants nothing to anyone but signed-in sessions', async () => {
+      await expect(ask(null, organizationId, number(10, 0))).rejects.toMatchObject({ code: '42501' });
+      const { rows } = await pg.query(
+        `select has_function_privilege('public', p, 'execute') as public, has_function_privilege('anon', p, 'execute') as anon,
+                has_function_privilege('authenticated', p, 'execute') as authenticated
+           from (select 'app.outbound_destination_allowed(uuid, text)'::regprocedure as p) f`,
+      );
+      expect(rows[0]).toEqual({ public: false, anon: false, authenticated: true });
+    });
+
+    it('answers yes for a member who places calls: a listed contact, a call the business received, and any number with manual dialing', async () => {
+      expect(await ask(caller, organizationId, number(10, 0))).toBe(true);
+      expect(await ask(caller, organizationId, received)).toBe(true);
+      expect(await ask(caller, organizationId, nobody)).toBe(false);
+      expect(await ask(dialer, organizationId, nobody)).toBe(true);
+    });
+
+    it('tells someone outside the business nothing about its contacts, call list or received calls', async () => {
+      // The other business's founding administrator holds manual dialing there, not here.
+      for (const toNumber of [number(10, 0), received, nobody]) expect(await ask(outsider, organizationId, toNumber)).toBe(false);
+      expect(await ask(outsider, otherOrg, nobody)).toBe(true);
+    });
+
+    it('tells a member who may not place calls nothing, even one who may view contacts', async () => {
+      for (const person of [viewer, bystander])
+        for (const toNumber of [number(10, 0), number(10, 1), received]) expect(await ask(person, organizationId, toNumber)).toBe(false);
+    });
+
+    it('answers for the business named only to someone who may place calls there, not for their own business’s callers', async () => {
+      // A caller here, with manual dialing here, naming the other business and a call it received.
+      for (const person of [caller, dialer, owner])
+        for (const toNumber of [receivedElsewhere, nobody]) expect(await ask(person, otherOrg, toNumber)).toBe(false);
+    });
+  });
 });
 
 describe('the call list never crosses businesses or roles', () => {

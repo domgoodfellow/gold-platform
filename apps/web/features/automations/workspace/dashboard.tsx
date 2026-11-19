@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Play,
   Mail,
+  Plus,
   Zap,
 } from 'lucide-react';
 import { Button, ButtonLink } from '@/components/controls/button';
@@ -15,7 +16,6 @@ import { PageHeader } from '@/components/headers/page-header';
 import { MetricTile, OperationalPanel, PanelState } from '@/components/operational/primitives';
 import { DataTable } from '@/components/display/table';
 import type { AutomationDashboardData } from '@/lib/application/automations/dashboard';
-import { NewAutomationSheet } from '../rules/new-automation-sheet';
 import { RulesTable } from '../rules/rules-table';
 import {
   AutomationState,
@@ -23,6 +23,7 @@ import {
   automationTime,
 } from './operating-ui';
 import { PeriodSelect } from '@/components/controls/period-select';
+import { automationPaths } from '../paths';
 
 export function AutomationDashboard({
   organizationId,
@@ -149,7 +150,11 @@ export function AutomationDashboard({
         meta={<span className="text-xs">Execution period {data.period.dates[0]} – {data.period.dates.at(-1)} · {timezone}. Rule counts are as of now.</span>}
         actions={<>
           <PeriodSelect label="Date range" value={data.period.when} options={[{ value: 'today', label: 'Today' }, { value: 'week', label: 'Last 7 days' }, { value: 'month', label: 'Last 30 days' }].map((period) => ({ ...period, href: `?when=${period.value}` }))} />
-          {mayManage && <NewAutomationSheet organizationId={organizationId} />}
+          {mayManage && (
+            <ButtonLink tone="primary" href={automationPaths(organizationId).newWorkflow}>
+              <Plus aria-hidden className="size-4" /> New workflow
+            </ButtonLink>
+          )}
           <ButtonLink href={activity} tone="secondary">View runs</ButtonLink>
           {configure}
         </>}

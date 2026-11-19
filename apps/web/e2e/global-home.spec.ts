@@ -58,6 +58,12 @@ test('Global Home operational queues, owning actions, Agent and responsive surfa
   const org = `/organizations/${organizationId}`, home = `${org}/home`;
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
+  // Search is the sidebar's Search row (no keyboard shortcut); a phone opens the sidebar sheet first.
+  const openSearch = async () => {
+    const search = () => page.getByRole('button', { name: 'Search', exact: true }).filter({ visible: true });
+    if (!(await search().count())) await page.getByRole('button', { name: /^(Toggle Sidebar|Menu)$/ }).click();
+    await search().click();
+  };
   const visit = async (query = '') => { await page.goto(`${home}${query}`); await expect(page.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ })).toBeVisible(); await expect(page.getByRole('heading', { name: 'Needs attention', exact: true })).toBeVisible(); };
   try {
     await page.setViewportSize({ width: 1440, height: 1050 });
@@ -98,12 +104,12 @@ test('Global Home operational queues, owning actions, Agent and responsive surfa
       await visit();
       if (width < 768) await page.getByRole('button', { name: /^(Toggle Sidebar|Menu)$/ }).click();
       for (const name of ['CRM', 'Communications', 'Marketing', 'Support', 'Work', 'Finance', 'Automations', 'AI', 'Studio']) await expect(businessNav().getByRole('link', { name, exact: true })).toBeVisible();
-      for (const name of ['Customers', 'Invoices', 'Payments', 'Dialer']) await expect(businessNav().getByRole('link', { name, exact: true })).toHaveCount(0);
+      for (const name of ['Contacts', 'Invoices', 'Payments', 'Dialer']) await expect(businessNav().getByRole('link', { name, exact: true })).toHaveCount(0);
       await page.screenshot({ path: path.join(shots, `restored-workspaces-${width}.png`), animations: 'disabled' });
       await businessNav().getByRole('link', { name: 'CRM', exact: true }).click();
       await expect(page).toHaveURL(`${org}/crm`);
       if (width < 768) await page.getByRole('button', { name: /^(Toggle Sidebar|Menu)$/ }).click();
-      await expect(businessNav().getByRole('link', { name: 'Customers', exact: true })).toBeVisible();
+      await expect(businessNav().getByRole('link', { name: 'Contacts', exact: true })).toBeVisible();
       await expect(businessNav().getByRole('link', { name: 'Invoices', exact: true })).toHaveCount(0);
       await expect(businessNav().getByRole('link', { name: 'Home', exact: true })).toBeVisible();
       await page.screenshot({ path: path.join(shots, `restored-crm-${width}.png`), animations: 'disabled' });
@@ -112,13 +118,26 @@ test('Global Home operational queues, owning actions, Agent and responsive surfa
     await page.setViewportSize({ width: 1440, height: 1050 });
     await visit();
 
-    const attentionLink = page.getByRole('region', { name: 'Needs attention', exact: true }).getByRole('link', { name: /^Open Home overdue follow-up/ }).first();
-    const rowBounds = await attentionLink.boundingBox();
-    expect(rowBounds!.width).toBeGreaterThan(500);
-    await attentionLink.click({ position: { x: rowBounds!.width - 5, y: 10 } });
-    await expect(page).toHaveURL(/\/crm\/tasks\?selected=/);
+    // An attention item opens from its title link; the row around it is read, not clicked, and
+    // holds no other control that could compete with that link.
+    const attention = page.getByRole('region', { name: 'Needs attention', exact: true });
+    const attentionLink = attention.getByRole('link', { name: /^Open Home overdue follow-up/ }).first();
+    const destination = await attentionLink.getAttribute('href');
+    expect(destination).toMatch(new RegExp(`^${org}/crm/tasks\\?selected=[0-9a-f-]{36}$`));
+    const linkName = (await attentionLink.getAttribute('aria-label'))!;
+    const attentionRow = attention.getByRole('row').filter({ has: page.getByRole('link', { name: linkName, exact: true }) });
+    await expect(attentionRow).toContainText('Overdue');
+    await expect(attentionRow).toContainText(/Due /);
+    await expect(attentionRow.locator('a, button, [role=button], [tabindex]:not([tabindex="-1"])')).toHaveCount(1);
+    await attentionLink.click();
+    await expect(page).toHaveURL(destination!);
     await visit();
-    await page.getByRole('button', { name: 'Expand previews' }).click();
+    await attentionLink.focus();
+    await expect(attentionLink).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(destination!);
+    await visit();
+    await page.getByRole('button', { name: 'Show all', exact: true }).click();
     await capture(page, '06-attention-expanded', 'Needs attention');
     await page.getByRole('link', { name: 'Mine', exact: true }).click();
     await expect(page).toHaveURL(/scope=mine/);
@@ -126,10 +145,14 @@ test('Global Home operational queues, owning actions, Agent and responsive surfa
     await capture(page, '07-mine');
     await page.getByRole('link', { name: 'All', exact: true }).click();
     await expect(page).toHaveURL(/scope=organization/); await capture(page, '08-organization');
-    await capture(page, '09-today', 'Schedule');
-    await page.getByRole('tab', { name: 'Next 7 days', exact: true }).click();
-    await expect(page.getByRole('tab', { name: 'Next 7 days', exact: true })).toHaveAttribute('aria-selected', 'true');
-    await page.getByRole('tab', { name: 'Today', exact: true }).click();
+    await capture(page, '09-today', 'Today and upcoming');
+    // Today and Upcoming are views kept in the address (`schedule`), not tabs.
+    const obligations = page.getByRole('region', { name: 'Today and upcoming', exact: true });
+    await obligations.getByRole('link', { name: 'Upcoming', exact: true }).click();
+    await expect(page).toHaveURL(/schedule=upcoming/);
+    await expect(obligations.getByRole('link', { name: 'Upcoming', exact: true })).toHaveAttribute('aria-current', 'page');
+    await obligations.getByRole('link', { name: 'Today', exact: true }).click();
+    await expect(page).toHaveURL(/schedule=today/);
     await expect(page.getByRole('heading', { name: 'Workspace health', exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Notifications', exact: true })).toHaveCount(0);
     await visit();
@@ -143,7 +166,7 @@ test('Global Home operational queues, owning actions, Agent and responsive surfa
     await expect(page.getByRole('menu')).toBeVisible(); await capture(page, '12-quick-actions');
     const createHrefs = await page.getByRole('menuitem').evaluateAll(items => items.map(item => item.getAttribute('href')).sort());
     await page.keyboard.press('Escape');
-    await page.keyboard.press('Control+k');
+    await openSearch();
     const palette = page.getByRole('dialog', { name: 'Search and commands' });
     await expect(palette).toBeVisible();
     const paletteHrefs = await palette.getByRole('link', { name: /^Create |^Compose / }).evaluateAll(items => items.map(item => item.getAttribute('href')).sort());
@@ -152,14 +175,21 @@ test('Global Home operational queues, owning actions, Agent and responsive surfa
     await expect(palette.getByRole('link', { name: /^Create / }).first()).toBeFocused();
     await page.keyboard.press('Escape');
     await page.getByRole('button', { name: 'Quick actions', exact: true }).click();
-    await page.getByRole('menuitem', { name: 'New customer' }).click();
-    await expect(page.getByRole('dialog').getByRole('heading', { name: 'New customer' })).toBeVisible();
-    await page.getByLabel('Name', { exact: true }).fill('Home browser-created Customer');
-    await page.getByRole('button', { name: 'Add customer', exact: true }).click();
-    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await page.getByRole('menuitem', { name: 'New contact' }).click();
+    const intake = page.getByRole('dialog');
+    await expect(intake.getByRole('heading', { name: 'Add a contact' })).toBeVisible();
+    await intake.getByRole('radio', { name: /Person/ }).check({ force: true });
+    await intake.getByLabel('Name', { exact: true }).fill('Home browser-created Contact');
+    await intake.getByRole('button', { name: 'Save contact', exact: true }).click();
+    await expect(page.getByRole('dialog', { name: 'Contact added' })).toBeVisible();
     await visit();
     // Each launcher opens the owning workspace's existing form, never a Home mutation path.
-    for (const [label, heading] of [['New case', 'New Case'], ['New campaign', 'New campaign'], ['New workflow', 'New workflow'], ['New form', 'New blank form']] as const) {
+    // New workflow opens its own page rather than a dialog.
+    await page.getByRole('button', { name: 'Quick actions', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'New workflow', exact: false }).click();
+    await expect(page.getByRole('form', { name: 'New workflow' })).toBeVisible();
+    await visit();
+    for (const [label, heading] of [['New case', 'New Case'], ['New campaign', 'New campaign'], ['New form', 'New blank form']] as const) {
       await page.getByRole('button', { name: 'Quick actions', exact: true }).click();
       await page.getByRole('menuitem', { name: label, exact: false }).click();
       await expect(page.getByRole('dialog').getByRole('heading', { name: heading, exact: true })).toBeVisible();
@@ -169,7 +199,7 @@ test('Global Home operational queues, owning actions, Agent and responsive surfa
     await page.getByRole('menuitem', { name: 'New invoice', exact: true }).click();
     await expect(page.getByRole('dialog').getByRole('heading', { name: 'New invoice', exact: true })).toBeVisible();
     await visit();
-    await page.keyboard.press('Control+k');
+    await openSearch();
     await expect(page.getByRole('dialog', { name: 'Search and commands' })).toBeVisible();
     await page.getByRole('button', { name: 'Which Work is at risk?', exact: true }).click();
     await expect(page.getByRole('complementary', { name: 'Agent', exact: true })).toBeVisible();
@@ -191,7 +221,7 @@ test('Global Home operational queues, owning actions, Agent and responsive surfa
     await page.getByRole('button', { name: 'Customize', exact: true }).click(); await page.getByRole('checkbox', { name: 'Recent activity', exact: true }).check(); await page.keyboard.press('Escape');
     for (const [width, name] of [[1440, '14-desktop'], [768, '14-tablet'], [390, '15-mobile']] as const) {
       await page.setViewportSize({ width, height: 1050 }); await visit(); await capture(page, name);
-      await page.keyboard.press('Control+k');
+      await openSearch();
       await expect(page.getByRole('dialog', { name: 'Search and commands' })).toBeVisible();
       await page.getByRole('textbox', { name: 'Search commands' }).fill('invoice');
       await expect(page.getByRole('dialog').getByRole('link', { name: /Create invoice/ })).toBeVisible();

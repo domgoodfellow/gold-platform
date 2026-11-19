@@ -87,6 +87,11 @@ describe('SECURITY DEFINER functions in app', () => {
         // purse are two separate questions, and this is the one that answers both at once with
         // enough provenance to tell a caller which refused it.
         'spend_decision',
+        // `open_call`'s destination rule (who may ring which number), which reads contacts, the
+        // call list and received calls the caller may not read directly. It answers true only to a
+        // member of the named business who holds `call.place` (20261119171617), so asking it
+        // directly discloses nothing about a business the caller may not call for.
+        'outbound_destination_allowed',
       ].sort(),
     );
   });

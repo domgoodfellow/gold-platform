@@ -13,6 +13,8 @@ const eslintConfig = defineConfig([
     "build/**",
     ".pytest_cache/**",
     "next-env.d.ts",
+    // Generated, git-ignored build output (separate Next build directories such as kintsugi-next).
+    ".artifacts/**",
   ]),
 ]);
 

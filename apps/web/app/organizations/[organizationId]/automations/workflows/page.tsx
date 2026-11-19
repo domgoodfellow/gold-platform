@@ -7,9 +7,11 @@ import {
 import { getAutomationSummary } from '@/lib/domain/automation/monitoring';
 import { workspaceAncestry } from '@/lib/navigation';
 import { RulesTable } from '@/features/automations/rules/rules-table';
-import { NewAutomationSheet } from '@/features/automations/rules/new-automation-sheet';
+import { redirect } from 'next/navigation';
+import { Plus } from 'lucide-react';
+import { automationPaths } from '@/features/automations/paths';
 import { TextInput } from '@/components/controls/inputs';
-import { Button } from '@/components/controls/button';
+import { Button, ButtonLink } from '@/components/controls/button';
 import { SelectField } from '@/components/controls/select-field';
 import { EmptyState } from '@/components/surfaces/section';
 import { listUsableModules } from '@/lib/domain/tenancy/modules';
@@ -29,6 +31,14 @@ export default async function AutomationWorkflowsPage({
   };
   const { db, organization } = await requireOrganization(organizationId);
   const mayManage = organization.capabilities.includes('automation.manage');
+  const paths = automationPaths(organizationId);
+  // The former `?create=1` address opened a drawer here; creating a workflow is now its own page.
+  if (first('create') === '1') redirect(paths.newWorkflow);
+  const create = mayManage ? (
+    <ButtonLink tone="primary" size="small" href={paths.newWorkflow}>
+      <Plus aria-hidden className="size-4" /> New workflow
+    </ButtonLink>
+  ) : null;
   const period = automationPeriod(organization.timezone);
   const [{ rules, warnings }, summary, modules] = await Promise.all([
     automationReviewContext(db, organizationId),
@@ -65,14 +75,10 @@ export default async function AutomationWorkflowsPage({
       <CollectionHeader
         title="Workflows"
         crumbs={workspaceAncestry(organizationId, 'automation-rules')}
-        actions={
-          mayManage ? (
-            <NewAutomationSheet organizationId={organizationId} defaultOpen={first('create') === '1'} />
-          ) : null
-        }
+        actions={create}
       />
       {rules.length === 0 ? (
-        <EmptyState className="my-6" title="No workflows yet" />
+        <EmptyState className="my-6" title="No workflows yet" action={create} />
       ) : (<>
       <form className="my-3 flex flex-wrap items-center gap-2">
         <TextInput
