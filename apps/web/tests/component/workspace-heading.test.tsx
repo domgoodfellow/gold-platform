@@ -64,4 +64,15 @@ describe('explicit Dashboard navigation', () => {
     expect(screen.getByRole('menuitem', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page');
     expect(screen.queryByRole('menuitem', { name: 'Support home' })).toBeNull();
   });
+  // ADR-056: in the unified layout the group heading is the Dashboard link, so Dashboard is never a child too.
+  it.each(['crm', 'communications', 'marketing', 'support', 'field', 'finance'] as const)('links the unified %s heading to its Dashboard exactly once', (key) => {
+    const workspace = WORKSPACES.find(candidate => candidate.key === key)!;
+    route.pathname = areaHref(org, workspace.home);
+    render(<TooltipProvider><SidebarProvider><OrgNav sections={sections()} organizationId={org} layout="unified" /></SidebarProvider></TooltipProvider>);
+    const links = nav().getAllByRole('link').filter(link => link.getAttribute('href') === areaHref(org, workspace.home));
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveAccessibleName(workspace.label);
+    expect(links[0]).toHaveAttribute('aria-current', 'page');
+    expect(nav().queryByRole('link', { name: 'Dashboard' })).toBeNull();
+  });
 });

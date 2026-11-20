@@ -199,6 +199,7 @@ It is not a duplicate specification.
 | ADR-053 | Organization Activity is an independently authorized global history utility, separate from page support and notifications | [`ADR-053-organization-activity-utility.md`](ADR-053-organization-activity-utility.md) |
 | ADR-054 | Imports translate sources into Businesses and People inside the existing pipeline | [`ADR-054-translated-imports.md`](ADR-054-translated-imports.md) |
 | ADR-055 | The workflow workbench draws stored rules; GildOps' own automated work is listed apart | [`ADR-055-workflow-workbench-projection.md`](ADR-055-workflow-workbench-projection.md) |
+| ADR-056 | Operations share one sidebar, Studio gathers creation, Administration stays apart; delivered first as a staff preview | [`ADR-056-unified-operations-navigation.md`](ADR-056-unified-operations-navigation.md) |
 
 ## Adding a new decision
 

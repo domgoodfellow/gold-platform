@@ -84,7 +84,13 @@ Finance → Catalog & Pricing owns price items and optional delivery Work types.
 
 The organization header's Activity control opens recent authorized organization history from any workspace. Global Activity and the page's own Activity retain independent state; closing the global panel reveals an existing page panel without discarding its draft. Canonical history links open owning records, and the organization/service and source/record authorization checks run again on each read. Platform has no global Activity entry.
 
+## Navigation preview (GildOps staff)
+
+Studio → Interface design → Navigation (`/organizations/{gold}/studio/interface/navigation`) is reachable only in GildOps' operating organization by staff holding the interface-design platform permission (today `platform.catalogue`); anyone else gets not-found. It draws the current and unified layouts (ADR-056) from the shell's authorized projection at desktop, rail and phone widths, at a chosen address; links in a preview move that address instead of leaving the page. Use unified navigation applies the layout to this browser (a 30-day cookie the shell honours only after re-checking that permission). The header's Unified navigation control or Return to current navigation restores the default in one action. Routes, records and permissions are unchanged either way.
+
 ## Gaps
+
+- No shared My Work destination. Obligations stay with their owners: CRM owns tasks (`CrmTask`, kinds call, email, meeting and task; `/crm/tasks`), and the Dialer's call list is a view of open Call tasks over that same table, so its All call tasks link opens CRM's task list. Support owns case assignment, Work owns resource assignment, and Communications owns conversation assignment and call wrap-up. Home's "Mine" scope already reads all of these from their owners for today and the next seven days. A My Work destination should present that projection, without paging or a new task table; until then Tasks stays a contextual CRM page, and in the unified layout opening it keeps CRM's group open without replacing the sidebar.
 
 - One open Call task per contact: a contact cannot have several independently scheduled calls on the Dialer list at once.
 - The Dialer applies no calling-hours, do-not-call or consent rule: contacts record no such status and numbers no location. The business remains responsible for them.

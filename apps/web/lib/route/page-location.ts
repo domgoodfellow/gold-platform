@@ -121,6 +121,9 @@ const LOCATION_METADATA: readonly LocationNode[] = [
   { id: 'record:agent', scope: 'organization', kind: 'record', pattern: 'ai/agents/[agentId]', parent: 'target:ai-agents', record: 'agentId' },
   { id: 'record:form', scope: 'organization', kind: 'record', pattern: 'studio/forms/[formId]', parent: 'area:studio-forms', record: 'formId' },
   { id: 'view:form-responses', scope: 'organization', kind: 'view', pattern: 'studio/forms/[formId]/submissions', parent: 'record:form', label: 'Responses' },
+  // GildOps' own interface-design tools (ADR-056): a plain-text grouping level, then the page. The page guards itself.
+  { id: 'group:interface-design', scope: 'organization', kind: 'group', pattern: null, parent: 'workspace:studio', label: 'Interface design' },
+  { id: 'view:interface-navigation', scope: 'organization', kind: 'view', pattern: 'studio/interface/navigation', parent: 'group:interface-design', label: 'Navigation' },
   // Library: imports are Sources' history.
   { id: 'record:library-source', scope: 'organization', kind: 'record', pattern: 'library/sources/[resourceId]', parent: 'library:sources', record: 'resourceId' },
   { id: 'redirect:library-imports', scope: 'organization', kind: 'group', pattern: 'library/imports', redirect: true, label: 'Imports' },

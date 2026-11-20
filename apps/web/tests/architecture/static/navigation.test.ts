@@ -917,8 +917,11 @@ describe('an area hidden from the sidebar', () => {
     // capability layer, the configuration targets, platform authority) is decided in `projectShell`.
     expect(projection, 'projectShell should filter on the sidebar flag').toContain('area.sidebar !== false');
     expect(shell, 'the desktop rendering should take the projection, not filter AREAS itself').toContain('sections: ShellSection[]');
-    expect(shell, 'the phone menu takes the same sidebar projection').toContain('<OrgNav sections={sections} organizationId={organizationId} />');
+    expect(shell, 'the phone menu takes the same sidebar projection').toContain('<OrgNav sections={sections} organizationId={organizationId} layout={navigationLayout} />');
     expect(shell, 'no renderer keeps its own eligibility filter').not.toMatch(/AREAS[.]filter|visibleAreas[(]|areasIn[(]/);
+    // The unified layout (ADR-056) arranges the projection; it never decides eligibility itself.
+    const unified = readFileSync(fileURLToPath(new URL('../../../lib/unified-navigation.ts', import.meta.url)), 'utf8');
+    expect(unified, 'the unified layout keeps no eligibility filter').not.toMatch(/AREAS|visibleAreas[(]|areasIn[(]|areaVisibleTo|areaEntitled|configTargetOffered/);
     expect(shell).toContain("from '@/lib/shell'");
   });
 });
@@ -1135,5 +1138,39 @@ describe('sibling views are navigation, not page actions', () => {
     expect(() => read(`${ROUTES}/settings/access/team-view-tabs.tsx`)).toThrow();
     const nav = read(`${WEB_ROOT}/lib/settings-nav.ts`);
     for (const label of ['Members', 'Invitations', 'Roles & permissions']) expect(nav).toContain(`label: '${label}'`);
+  });
+});
+
+describe('GildOps interface design stays behind platform authority (ADR-056)', () => {
+  const source = (path: string) => readFileSync(`${WEB_ROOT}/${path}`, 'utf8');
+
+  it('guards the Navigation experiment page with the Platform area guard, never a tenant capability', () => {
+    const page = source('app/organizations/[organizationId]/studio/interface/navigation/page.tsx');
+    expect(page).toContain('requirePlatformArea(organizationId, INTERFACE_DESIGN_CAPABILITY)');
+    expect(page).not.toMatch(/requireOrganization\(|organization\.manage|capabilities\.includes/);
+  });
+
+  it('requires the permission before storing the preview, and lets anybody leave it', () => {
+    const action = source('app/organizations/[organizationId]/studio/interface/navigation/actions.ts');
+    const call = action.indexOf('await requirePlatformCapability(INTERFACE_DESIGN_CAPABILITY)');
+    expect(call).toBeGreaterThan(-1);
+    expect(action.indexOf('await requireOrganization(organizationId)')).toBeLessThan(action.indexOf('store.delete(NAVIGATION_LAYOUT_COOKIE)'));
+    expect(action.indexOf('store.delete(NAVIGATION_LAYOUT_COOKIE)')).toBeLessThan(call);
+    expect(call).toBeLessThan(action.indexOf("store.set(NAVIGATION_LAYOUT_COOKIE, 'unified'"));
+    expect(action).toContain('operating !== organizationId');
+  });
+
+  it('honours the stored preview and adds the Studio entry only for staff authorized in this organization', () => {
+    const model = source('lib/application/shell/organization-shell.ts');
+    expect(model).toContain('platform?.permissions.has(INTERFACE_DESIGN_CAPABILITY) ? withInterfaceDesign(administered, organizationId) : administered');
+    expect(model).toContain('platformPermissions: platform?.permissions ?? null');
+    expect(source('features/shell/organization-shell.tsx')).toContain("locked ? 'contextual' : await readNavigationLayout(platformPermissions)");
+    expect(source('lib/route/navigation-layout.ts')).toContain('navigationLayoutFor(store.get(NAVIGATION_LAYOUT_COOKIE)?.value, permissions)');
+    expect(source('lib/interface-design.ts')).toMatch(/INTERFACE_DESIGN_CAPABILITY: PlatformCapability = 'platform\./);
+  });
+
+  it('registers no tenant area for it, so no role or plan can reach it', () => {
+    expect(AREAS.some((area) => (area.route ?? area.segment).startsWith('studio/interface'))).toBe(false);
+    expect(CONFIG_TARGETS.some((target) => target.path.startsWith('studio/interface'))).toBe(false);
   });
 });

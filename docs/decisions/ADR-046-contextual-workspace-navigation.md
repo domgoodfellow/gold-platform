@@ -5,7 +5,7 @@
 **Extended:** 2026-11-16 by ADR-052: Calendar joins the shared primary destinations in point 1. Entered-workspace behavior remains unchanged.
 
 **Supersedes:** ADR-006; ADR-045 Part B, only its flat-sidebar rendering
-**Superseded in part by:** ADR-047 (2026-10-19) — point 3 only: the workspace heading links to Home and no Overview child repeats it; ADR-048 (2026-10-20) — point 6 only: the page header no longer presents the destinations; ADR-052 (2026-11-16) — point 1 Calendar placement only
+**Superseded in part by:** ADR-047 (2026-10-19) — point 3 only: the workspace heading links to Home and no Overview child repeats it; ADR-048 (2026-10-20) — point 6 only: the page header no longer presents the destinations; ADR-052 (2026-11-16) — point 1 Calendar placement only; ADR-056 (2026-11-19) — point 2 for the unified layout: the six operating workspaces share one sidebar and Studio gathers creation. The contextual layout described here remains the default rendering until the owner makes the unified layout the default.
 
 ## Context
 

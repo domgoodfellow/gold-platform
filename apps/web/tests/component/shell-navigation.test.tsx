@@ -337,3 +337,103 @@ it('keeps distinct collection detail headings visible when a shorter location la
   render(<CollectionHeader title="Invoice #123" breadcrumbLabel="Invoice" />);
   expect(screen.getByRole('heading', { name: 'Invoice #123', level: 1 }).parentElement).not.toHaveClass('sr-only');
 });
+
+
+describe('unified operations navigation (ADR-056)', () => {
+  const org = '11111111-1111-4111-8111-111111111111';
+  const base = `/organizations/${org}`;
+  const sections = () => projectShell({ organizationId: org, enabledModules: new Set(['reception', 'billing', 'automations', 'assets']), featureAvailability: new Set(AREAS.flatMap((area) => area.featureKeys ?? [])), capabilities: new Set(ALL_CAPABILITIES), schedulableWork: true });
+  const view = (open = true) => <TooltipProvider><SidebarProvider defaultOpen={open}><OrgNav sections={sections()} organizationId={org} layout="unified" /></SidebarProvider></TooltipProvider>;
+  const nav = () => within(screen.getByRole('navigation', { name: 'This business' }));
+
+  it('opens Communications → Dialer from Contacts without replacing the sidebar', async () => {
+    const user = userEvent.setup();
+    route.pathname = `${base}/crm/contacts`;
+    const { rerender } = render(view());
+    expect(nav().getByRole('link', { name: 'Contacts' })).toHaveAttribute('aria-current', 'page');
+    expect(nav().getByRole('link', { name: 'CRM' })).toHaveAttribute('href', `${base}/crm`);
+    expect(nav().queryByRole('link', { name: 'Dashboard' })).toBeNull();
+    await user.click(nav().getByRole('button', { name: 'Expand Communications' }));
+    expect(nav().getByRole('link', { name: 'Dialer' })).toHaveAttribute('href', `${base}/calls`);
+    route.pathname = `${base}/calls`;
+    rerender(view());
+    expect(nav().getByRole('link', { name: 'Dialer' })).toHaveAttribute('aria-current', 'page');
+    // CRM is still drawn, and still open: navigating did not swap the sidebar for Communications'.
+    expect(nav().getByRole('link', { name: 'Contacts' })).not.toHaveAttribute('aria-current');
+    expect(nav().getByRole('link', { name: 'Studio' })).toHaveAttribute('href', `${base}/studio`);
+  });
+
+  it.each([['support/cases', 'Support', 'Cases'], ['schedule', 'Work', 'Schedule'], ['finance/invoices/123', 'Finance', 'Invoices']])('expands the owning group at %s and selects its page', (path, owner, page) => {
+    route.pathname = `${base}/${path}`;
+    render(view());
+    expect(nav().getByRole('button', { name: `Collapse ${owner}` })).toBeInTheDocument();
+    expect(nav().getByRole('link', { name: page })).toHaveAttribute('aria-current', 'page');
+    expect(nav().getByRole('button', { name: 'Expand CRM' })).toBeInTheDocument();
+  });
+
+  it('lets an inactive group collapse without changing the address', async () => {
+    const user = userEvent.setup();
+    route.pathname = `${base}/crm/contacts`;
+    const { rerender } = render(view());
+    route.pathname = `${base}/calls`;
+    rerender(view());
+    await user.click(nav().getByRole('button', { name: 'Collapse CRM' }));
+    expect(nav().queryByRole('link', { name: 'Contacts' })).toBeNull();
+    expect(nav().getByRole('link', { name: 'Dialer' })).toHaveAttribute('aria-current', 'page');
+    expect(route.pathname).toBe(`${base}/calls`);
+  });
+
+  it('marks the heading current only on the Dashboard itself', () => {
+    route.pathname = `${base}/crm`;
+    render(view());
+    expect(nav().getByRole('link', { name: 'CRM' })).toHaveAttribute('aria-current', 'page');
+    expect(nav().getAllByRole('link').filter((link) => link.getAttribute('href') === `${base}/crm`)).toHaveLength(1);
+  });
+
+  it('marks the owning group on the collapsed rail without calling it the current page', () => {
+    route.pathname = `${base}/support/cases`;
+    render(view(false));
+    const support = nav().getByRole('link', { name: 'Support' });
+    expect(support).toHaveAttribute('data-active', 'true');
+    expect(support).not.toHaveAttribute('aria-current');
+    expect(nav().getByRole('link', { name: 'CRM' })).not.toHaveAttribute('data-active', 'true');
+  });
+
+  it('keeps every group heading reachable on the collapsed rail', () => {
+    route.pathname = `${base}/home`;
+    render(view(false));
+    for (const label of ['CRM', 'Communications', 'Marketing', 'Support', 'Work', 'Finance', 'Studio', 'Settings']) expect(nav().getByRole('link', { name: label })).toBeInTheDocument();
+  });
+
+  it('enters Studio as a separate creation context and leaves through Home', async () => {
+    route.pathname = `${base}/ai/agents/123`;
+    render(view());
+    expect(nav().getByLabelText('Studio').closest('[data-workspace-heading]')).not.toBeNull();
+    expect(nav().getByRole('link', { name: 'Overview' })).toHaveAttribute('href', `${base}/studio`);
+    expect(nav().getByRole('link', { name: 'Agents' })).toHaveAttribute('aria-current', 'page');
+    await userEvent.click(nav().getByRole('button', { name: 'Expand Automations' }));
+    expect(nav().getByRole('link', { name: 'Workflows' })).toHaveAttribute('href', `${base}/automations/workflows`);
+    expect(nav().queryByRole('link', { name: 'Contacts' })).toBeNull();
+    expect(nav().getByRole('link', { name: 'Home' })).toHaveAttribute('href', `${base}/home`);
+  });
+
+  it('keeps the registered telephone runtime while moving between groups', async () => {
+    const mounted = vi.fn();
+    const unmounted = vi.fn();
+    function RuntimeProbe() {
+      const device = useTelephoneDevice();
+      useEffect(() => { mounted(); return unmounted; }, []);
+      return <button data-testid="runtime" onClick={() => void device.connectToRoom('test-room', { callId: 'call-1', contactLabel: 'Local SDK fixture' })}>{device.status} {device.activeCall?.callId}</button>;
+    }
+    const shell = () => <TelephoneDeviceProvider organizationId={org}><TooltipProvider><SidebarProvider><RuntimeProbe /><OrgNav sections={sections()} organizationId={org} layout="unified" /></SidebarProvider></TooltipProvider></TelephoneDeviceProvider>;
+    route.pathname = `${base}/calls`;
+    const { rerender } = render(shell());
+    const runtime = screen.getByTestId('runtime');
+    await userEvent.click(runtime);
+    await waitFor(() => expect(runtime).toHaveTextContent('call-1'));
+    for (const path of ['crm/contacts/123', 'support/cases', 'studio', 'schedule']) { route.pathname = `${base}/${path}`; rerender(shell()); expect(screen.getByTestId('runtime')).toBe(runtime); }
+    expect(runtime).toHaveTextContent('call-1');
+    expect(mounted).toHaveBeenCalledTimes(1);
+    expect(unmounted).not.toHaveBeenCalled();
+  });
+});

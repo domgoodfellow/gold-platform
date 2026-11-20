@@ -4,7 +4,14 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 /** An isolated viewport keeps public responsive styles independent of workspace width. */
-export function PreviewFrame({ title, children, src, width = 1120 }: { title: string; children?: ReactNode; src?: string; width?: number }) {
+export function PreviewFrame({ title, children, src, width = 1120, interactive = false }: {
+  title: string;
+  children?: ReactNode;
+  src?: string;
+  width?: number;
+  /** The previewed content can be operated (the Studio navigation preview); otherwise it is a picture. */
+  interactive?: boolean;
+}) {
   const host = useRef<HTMLDivElement>(null);
   const frame = useRef<HTMLIFrameElement>(null);
   const [target, setTarget] = useState<HTMLElement | null>(null);
@@ -43,6 +50,6 @@ export function PreviewFrame({ title, children, src, width = 1120 }: { title: st
         setTarget(doc.getElementById('preview'));
       }}
     />
-    {target ? createPortal(<div className="pointer-events-none bg-background p-6 text-foreground">{children}</div>, target) : null}
+    {target ? createPortal(<div className={interactive ? 'bg-background text-foreground' : 'pointer-events-none bg-background p-6 text-foreground'}>{children}</div>, target) : null}
   </div>;
 }

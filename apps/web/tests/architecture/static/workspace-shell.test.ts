@@ -724,7 +724,8 @@ describe('the sidebar draws the selected application context', () => {
 
   it('draws Administration as projected sections, never a pinned block of its own', () => {
     expect(orgShell).not.toContain('ADMINISTRATION_SECTIONS');
-    expect(orgShell).toContain('const navigation = context?.sections ?? topLevel');
+    // The unified layout (ADR-056) arranges the same projected sections; Administration stays one of them.
+    expect(orgShell).toContain('const navigation = unified?.sections ?? context?.sections ?? topLevel');
     expect(orgShell).toContain('{navigation.map(group)}');
     expect(orgShell).not.toMatch(/absolute|fixed bottom|top-\[/);
   });

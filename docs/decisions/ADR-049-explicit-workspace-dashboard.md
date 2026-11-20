@@ -3,7 +3,7 @@
 **Date:** 2026-10-22
 **Status:** Accepted (owner-approved GuildOps V1 work order)
 **Supersedes:** ADR-047 point 1 only
-**Superseded by:** None
+**Superseded in part by:** ADR-056 (2026-11-19) — in the unified layout an operating group's heading is its Dashboard link and Dashboard is not repeated as a child; Studio's landing is named Overview. This record still governs the default contextual layout.
 
 ## Context
 

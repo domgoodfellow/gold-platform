@@ -27,6 +27,7 @@ import {
   type PlatformDestination,
 } from '@/lib/platform-navigation';
 import type { PlatformCapability } from '@/lib/domain/platform/permissions';
+import { interfaceDesignHref } from '@/lib/interface-design';
 import type { SerializedLocationAccess } from '@/lib/route/page-location';
 import type { Capability } from '@/lib/domain/tenancy/capabilities';
 
@@ -35,7 +36,7 @@ import type { Capability } from '@/lib/domain/tenancy/capabilities';
  * never a tenant workspace. Visibility is courtesy: each destination continues enforcing its own
  * authority.
  */
-export type ShellSectionKey = 'home' | 'library' | 'workspaces' | 'administration' | 'settings-personal' | 'settings-organization' | 'settings-access' | 'settings-administration';
+export type ShellSectionKey = 'home' | 'library' | 'workspaces' | 'operations' | 'creation' | 'administration' | 'settings-personal' | 'settings-organization' | 'settings-access' | 'settings-administration';
 
 export type NavItem = {
   /** Unique within a rendered context; also the icon key. Dashboard is shared across workspace contexts. */
@@ -61,6 +62,8 @@ export type NavItem = {
   calendar?: NavItem;
   /** A staff-only link into Administration, drawn after this workspace's Configuration. */
   administration?: NavItem;
+  /** Studio only: GildOps' own interface-design tools, added by `withInterfaceDesign` for staff who hold its permission. */
+  design?: NavItem;
   /**
    * Drawn only once somebody is inside it: everything in it is already linked from their
    * workspaces, so a top-level row would offer nothing new.
@@ -112,6 +115,8 @@ const SECTION_LABELS: Record<ShellSectionKey, string | null> = {
   home: null,
   library: null,
   workspaces: 'Workspaces',
+  operations: null,
+  creation: null,
   administration: null,
   'settings-personal': 'Personal',
   'settings-organization': 'Organization',
@@ -196,6 +201,21 @@ export function withAdministration(sections: readonly ShellSection[], organizati
   const administration: NavItem = { key: 'administration', label: ADMINISTRATION_LABEL, href: entry[0].href, section: 'administration', destinations: entry };
   if (entry.every((item) => linked.has(item.key))) administration.contextOnly = true;
   return [...projected, { key: 'administration', label: SECTION_LABELS.administration, items: [administration] }];
+}
+
+/**
+ * Adds Studio → Interface design → Navigation for GildOps staff. Like `withAdministration`, the caller
+ * has already proved this is GildOps' operating organization and that the person holds the interface
+ * design permission (`INTERFACE_DESIGN_CAPABILITY`); the page and its action check both again. These
+ * are GildOps' own development tools, never a business's branding, so no tenant capability reaches them.
+ */
+export function withInterfaceDesign(sections: readonly ShellSection[], organizationId: string): ShellSection[] {
+  const href = interfaceDesignHref(organizationId);
+  const design: NavItem = {
+    key: 'studio-interface', label: 'Interface design', href, section: 'workspaces', group: true,
+    children: [{ key: 'studio-interface-navigation', label: 'Navigation', href, section: 'workspaces' }],
+  };
+  return sections.map((section) => ({ ...section, items: section.items.map((item) => (item.key === 'workspace-studio' ? { ...item, design } : item)) }));
 }
 
 /** The sections drawn before anybody has entered a context: entries drawn only from inside are left out. */
@@ -289,7 +309,7 @@ export function projectShell(input: ShellInput): ShellSection[] {
   return sections.filter((section) => section.items.length > 0);
 }
 
-type ContextNavigation = { workspace: NavItem; sections: ShellSection[]; backHref: string };
+export type ContextNavigation = { workspace: NavItem; sections: ShellSection[]; backHref: string };
 
 function workspaceContext(workspace: NavItem, organizationId: string): ContextNavigation {
   return {
@@ -300,6 +320,7 @@ function workspaceContext(workspace: NavItem, organizationId: string): ContextNa
       ...(workspace.destinations ?? []),
       ...(workspace.configuration ? [workspace.configuration] : []),
       ...(workspace.administration ? [workspace.administration] : []),
+      ...(workspace.design ? [workspace.design] : []),
     ] }],
   };
 }
@@ -363,6 +384,7 @@ export function reachableItems(sections: readonly ShellSection[]): NavItem[] {
     ...(item.destinations ?? []),
     ...(item.configuration ? [item.configuration] : []),
     ...(item.administration ? [item.administration] : []),
+    ...(item.design ? [item.design] : []),
   ].flatMap(walk)];
   return sections.flatMap((section) => section.items.flatMap(walk));
 }

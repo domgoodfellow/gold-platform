@@ -16,6 +16,7 @@ import { AccountAppearance } from '@/features/appearance/account-appearance';
 import { BusinessVocabulary } from '@/lib/context/business-vocabulary';
 import { serializeLocationAccess } from '@/lib/route/page-location';
 import { readShellLayout } from '@/lib/route/shell-layout';
+import { readNavigationLayout } from '@/lib/route/navigation-layout';
 import { ShellLayoutProvider } from '@/components/layout/shell-layout-context';
 
 /** The one frame for every organization, GildOps' own Administration included, with canonical
@@ -35,7 +36,7 @@ export async function OrganizationShell({
   const locked = !access.permitted;
   // A locked business runs none of the workspace reads below — no feature resolution and no
   // Agent transcript — because none of it is drawn.
-  const { brand, businessProfile, email, switchable, sections, utilities, configGate, headerConnections } = await loadOrganizationShellModel(db, {
+  const { brand, businessProfile, email, switchable, sections, utilities, configGate, headerConnections, platformPermissions } = await loadOrganizationShellModel(db, {
     organizationId,
     capabilities: organization.capabilities,
     locked,
@@ -100,6 +101,8 @@ export async function OrganizationShell({
   );
 
   const shellLayout = await readShellLayout();
+  // The unified sidebar is a staff preview (ADR-056): honoured only with interface-design authority here.
+  const navigationLayout = locked ? 'contextual' : await readNavigationLayout(platformPermissions);
 
   return (
     // `data-brand` sits here rather than on `<html>` — a brand belongs to one business, and this shell is the only thing that knows which.
@@ -116,6 +119,7 @@ export async function OrganizationShell({
         mark={mark}
         organizations={switchable}
         sections={sections}
+        navigationLayout={navigationLayout}
         locationAccess={locked ? undefined : serializeLocationAccess(configGate)}
         utilities={utilities}
         headerConnections={headerConnections}

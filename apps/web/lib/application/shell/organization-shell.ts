@@ -5,7 +5,8 @@ import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
 import type { Capability } from '@/lib/domain/tenancy/capabilities';
 import { activeModuleKeys, availableFeatureKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
 import { hasSchedulableWork } from '@/lib/domain/work-items/types';
-import { projectHeaderUtilities, withAdministration } from '@/lib/shell';
+import { projectHeaderUtilities, withAdministration, withInterfaceDesign } from '@/lib/shell';
+import { INTERFACE_DESIGN_CAPABILITY } from '@/lib/interface-design';
 import { getBusinessProfile } from '@/lib/domain/tenancy/business-profile';
 import { projectBusinessNavigation } from './business-navigation';
 import { loadHeaderConnections } from './connection-menu';
@@ -24,6 +25,8 @@ export async function loadOrganizationShellModel(db: Db, input: { organizationId
   const capabilities = new Set(input.capabilities);
   const businessProfile = locked ? null : await getBusinessProfile(db,organizationId);
   const business = projectBusinessNavigation({ organizationId, enabledModules, featureAvailability, capabilities, schedulableWork },businessProfile);
+  // GildOps staff tools, each behind its own platform permission; nothing is added without one.
+  const administered = platform ? withAdministration(business, organizationId, platform.permissions) : business;
   const configGate = { enabledModules, featureAvailability, capabilities, schedulableWork };
   const headerConnections = locked ? null : await loadHeaderConnections(db, { organizationId, gate: configGate });
   return {
@@ -34,7 +37,9 @@ export async function loadOrganizationShellModel(db: Db, input: { organizationId
       id: organization.id, name: organization.name, role: organization.role, operationalState: organization.operationalState,
       manages: organization.capabilities.includes('organization.manage'),
     })),
-    sections: platform ? withAdministration(business, organizationId, platform.permissions) : business,
+    sections: platform?.permissions.has(INTERFACE_DESIGN_CAPABILITY) ? withInterfaceDesign(administered, organizationId) : administered,
+    /** This person's platform permissions **in this organization**: null outside GildOps' operating organization. */
+    platformPermissions: platform?.permissions ?? null,
     configGate,
     headerConnections,
     utilities: locked ? [] : projectHeaderUtilities({ organizationId, enabledModules, featureAvailability, capabilities, schedulableWork }),

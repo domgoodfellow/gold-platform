@@ -78,6 +78,7 @@ import {
   MessageSquare,
   MessagesSquare,
   PanelTop,
+  PanelsTopLeft,
   Package,
   Phone,
   ShieldCheck,
@@ -105,6 +106,9 @@ import {
   type NavItem,
   type ShellSection,
 } from '@/lib/shell';
+import { unifiedNavigation } from '@/lib/unified-navigation';
+import type { NavigationLayout } from '@/lib/interface-design';
+import { NavigationPreviewControl } from '@/features/studio/interface/navigation-preview-control';
 
 /** Renderers share the selected projection and decide no destination eligibility. */
 
@@ -169,6 +173,9 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   ...AREA_ICONS,
   'workspace-dashboard': Gauge,
   'workspace-configuration': Settings,
+  // Studio's creation context in the unified layout (ADR-056).
+  'studio-experiences': LayoutTemplate,
+  'studio-interface': PanelsTopLeft,
   // Workspace destinations share their icons across sidebar, rail and phone Menu.
   'workspace-crm': Users,
   'workspace-communications': MessagesSquare,
@@ -210,8 +217,9 @@ function NavSubRow({ item, active }: { item: NavItem; active: string | null }) {
     if (inside) setOpen(true);
   }
 
+  const tall = item.section !== 'home' && item.section !== 'library' && 'h-auto min-h-11 md:min-h-7';
   const link = (
-    <SidebarMenuSubButton asChild isActive={current} className={cx(item.children && 'flex-1', (item.section === 'workspaces' || item.section === 'administration') && 'h-auto min-h-11 md:min-h-7')}>
+    <SidebarMenuSubButton asChild isActive={current} className={cx(item.children && 'flex-1', tall)}>
       <Link href={item.href} target={retainActivity && item.href.startsWith('/platform') ? '_blank' : undefined} rel={retainActivity && item.href.startsWith('/platform') ? 'noopener noreferrer' : undefined} aria-current={current ? 'page' : undefined}>
         <span>{item.label}</span>
       </Link>
@@ -219,6 +227,30 @@ function NavSubRow({ item, active }: { item: NavItem; active: string | null }) {
   );
 
   if (!item.children) return <SidebarMenuSubItem>{link}</SidebarMenuSubItem>;
+
+  // A grouping with no page of its own (a workspace's Settings with several doors): the whole row
+  // discloses its pages, and its redirect-only address is never drawn as a link.
+  if (item.group) {
+    return (
+      <SidebarMenuSubItem>
+        <Collapsible open={open} onOpenChange={setOpen}>
+          <SidebarMenuSubButton asChild className={cx('w-full', tall)}>
+            <CollapsibleTrigger>
+              <span>{item.label}</span>
+              <ChevronRight aria-hidden className="ml-auto transition-transform [[data-state=open]>&]:rotate-90" />
+            </CollapsibleTrigger>
+          </SidebarMenuSubButton>
+          <CollapsibleContent>
+            <SidebarMenuSub className="mx-2 mt-1">
+              {item.children.map((child) => (
+                <NavSubRow key={child.key} item={child} active={active} />
+              ))}
+            </SidebarMenuSub>
+          </CollapsibleContent>
+        </Collapsible>
+      </SidebarMenuSubItem>
+    );
+  }
 
   return (
     <SidebarMenuSubItem>
@@ -250,11 +282,16 @@ function NavSubRow({ item, active }: { item: NavItem; active: string | null }) {
 /**
  * A leaf is a link. A row with pages is a link and a disclosure, open while the person is inside it.
  */
-function NavRow({ item, active }: { item: NavItem; active: string | null }) {
+function NavRow({ item, active, owns = false }: { item: NavItem; active: string | null; owns?: boolean }) {
   const retainActivity = useContext(NavigationActivityContext);
   const Icon = NAV_ICONS[item.key];
   const current = item.key === active;
-  const inside = itemContains(item, active);
+  // `owns`: the address belongs to this group even where none of its rows is selected (a task, a record).
+  const inside = owns || itemContains(item, active);
+  // The collapsed rail cannot show a group's pages, so the group itself carries the selection there.
+  // Only `aria-current` names the page; this is the shared selected styling and nothing more.
+  const sidebar = useSidebar();
+  const railSelected = owns && !current && !sidebar.isMobile && sidebar.state === 'collapsed';
   const [open, setOpen] = useState(inside);
   // Opens on the render that moves the person inside, not in an effect after it: the branch is
   // never drawn closed for a frame first. Leaving does not close it â€” that is theirs to do.
@@ -267,7 +304,7 @@ function NavRow({ item, active }: { item: NavItem; active: string | null }) {
   if (item.group && item.children) return <NavGroupRow item={item} active={active} open={open} setOpen={setOpen} />;
 
   const link = (
-    <SidebarMenuButton asChild isActive={current} tooltip={item.label} className={item.children ? 'max-md:min-h-11' : undefined}>
+    <SidebarMenuButton asChild isActive={current || railSelected} tooltip={item.label} className={item.children ? 'max-md:min-h-11' : undefined}>
       <Link href={item.href} target={retainActivity && item.href.startsWith('/platform') ? '_blank' : undefined} rel={retainActivity && item.href.startsWith('/platform') ? 'noopener noreferrer' : undefined} aria-current={current ? 'page' : undefined}>
         {Icon ? <Icon aria-hidden /> : null}
         <span>{item.label}</span>
@@ -380,21 +417,32 @@ function WorkspaceHeading({ workspace, label }: { workspace: NavItem; label: str
  * workspace directory or, once somebody has entered a workspace or Administration, that context's own
  * destinations. Leaving a context is Home's job, so no separate "back" row is drawn.
  */
-export function OrgNav({ sections, organizationId }: { sections: ShellSection[]; organizationId: string }) {
-  const pathname = usePathname();
-  const context = workspaceNavigation(sections, pathname);
+export function OrgNav({ sections, organizationId, layout = 'contextual', pathname: shown, label = 'This business' }: {
+  sections: ShellSection[];
+  organizationId: string;
+  /** The arrangement to draw (ADR-056). Both draw the same authorized projection. */
+  layout?: NavigationLayout;
+  /** An address to draw the navigation for instead of the current one: the Studio navigation preview. */
+  pathname?: string;
+  /** The landmark's name; a preview names itself so it is never confused with the real navigation. */
+  label?: string;
+}) {
+  const routed = usePathname();
+  const pathname = shown ?? routed;
+  const unified = layout === 'unified' ? unifiedNavigation(sections, pathname) : null;
+  const context = unified ? unified.context : workspaceNavigation(sections, pathname);
   const topLevel = topLevelSections(sections);
   const home = shellHomeItem(sections);
   const calendar = topLevel.flatMap(section => section.items).find(item => item.key === 'calendar');
   const library = topLevel.flatMap((section) => section.items).find((item) => item.key === 'library');
-  const navigation = context?.sections ?? topLevel
+  const navigation = unified?.sections ?? context?.sections ?? topLevel
     .map((section) => ({ ...section, label: section.key === 'home' ? 'Workspaces' : section.label, items: section.items.filter((item) => !['home', 'calendar', 'library'].includes(item.key)) }))
     .filter((section) => section.items.length);
   const active = activeItemKey([...sections.filter((section) => section.key === 'home'), ...navigation], pathname);
   const { setOpenMobile } = useSidebar();
 
   const group = (section: ShellSection) => (
-    <SidebarGroup key={section.key} className={!context && section.key === 'administration' ? 'border-t border-sidebar-border' : undefined}>
+    <SidebarGroup key={section.key} className={!context && (section.key === 'administration' || section.key === 'creation') ? 'border-t border-sidebar-border' : undefined}>
       {section.label && context && section.key === 'workspaces' ? (
         <SidebarMenu data-workspace-heading className="mb-2 border-b border-sidebar-border pb-2">
           <WorkspaceHeading workspace={context.workspace} label={section.label} />
@@ -403,14 +451,14 @@ export function OrgNav({ sections, organizationId }: { sections: ShellSection[];
       <SidebarGroupContent>
         <SidebarMenu>
           {section.items.map((item) => (
-            <NavRow key={item.key} item={item} active={active} />
+            <NavRow key={item.key} item={item} active={active} owns={!context && unified?.owner === item.key} />
           ))}
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>
   );
   return (
-    <nav aria-label="This business" className="flex flex-1 flex-col" onClick={(event) => {
+    <nav aria-label={label} className="flex flex-1 flex-col" onClick={(event) => {
       if ((event.target as Element).closest('a[href]')) setOpenMobile(false);
     }}>
       <PrimaryNavigation organizationId={organizationId} home={home} calendar={calendar} library={library} active={active} />
@@ -458,9 +506,12 @@ export function OrgSidebar({
   setupPending,
   organizationId,
   onNewBusiness,
+  navigationLayout = 'contextual',
   ...props
 }: {
   organizationId: string;
+  /** The server-authorized sidebar arrangement (ADR-056). */
+  navigationLayout?: NavigationLayout;
   displayName?: string;
   /** True while the business is in SETUP: the switcher says so, quietly, beneath its name. */
   setupPending?: boolean;
@@ -486,7 +537,7 @@ export function OrgSidebar({
         {settings ? (
           <SettingsNav organizationId={settings.organizationId} organizationName={name} sections={settings.sections} search={settings.search} returnHrefs={sections.flatMap((section) => section.items.flatMap((item) => [item.href, ...(item.activeHrefs ?? []), ...(item.destinations ?? []).map((destination) => destination.href)]))} />
         ) : (
-          <OrgNav sections={sections} organizationId={organizationId} />
+          <OrgNav sections={sections} organizationId={organizationId} layout={navigationLayout} />
         )}
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border">
@@ -579,7 +630,10 @@ export function LockedOrgSidebar({
 export function OrganizationFrame({
   organizationId, name, role, mark, organizations, sections, utilities, settings, settingsSearch,
   locked, email, signOutAction, agent, children, displayName = '', setupPending = false, locationAccess, hostedData = false, headerConnections, organizationActivity,
+  navigationLayout = 'contextual',
 }: {
+  /** Resolved on the server from the stored preview and this person's interface-design permission. */
+  navigationLayout?: NavigationLayout;
   displayName?: string;
   /** A development server reading the hosted project (`developmentSupabaseTarget`). Never true in production. */
   hostedData?: boolean;
@@ -631,7 +685,7 @@ export function OrganizationFrame({
   return (
     <CommandCenterProvider key={organizationId} organizationId={organizationId} displayName={displayName}><WorkspaceShell
       locationNavigation={{ organizationId, sections: recovery ? [] : settingsContext ? settings : sections, configurationHrefs: recovery ? [] : settingsSearch.map((item) => item.href), ...(recovery || !locationAccess ? {} : { access: locationAccess }) }}
-      sidebar={recovery ? <LockedOrgSidebar organizationId={organizationId} role={role} administration={administration} {...shared} /> : <OrgSidebar {...shared} organizationId={organizationId} displayName={displayName} setupPending={setupPending} onNewBusiness={mayCreate ? () => setCreating(true) : undefined} current={current} sections={sections} settings={settingsContext ? { organizationId, sections: settings, search: settingsSearch } : null} />}
+      sidebar={recovery ? <LockedOrgSidebar organizationId={organizationId} role={role} administration={administration} {...shared} /> : <OrgSidebar {...shared} organizationId={organizationId} displayName={displayName} setupPending={setupPending} onNewBusiness={mayCreate ? () => setCreating(true) : undefined} current={current} sections={sections} navigationLayout={navigationLayout} settings={settingsContext ? { organizationId, sections: settings, search: settingsSearch } : null} />}
       header={
         <WorkspaceHeader
           navigationTrigger="always"
@@ -641,6 +695,7 @@ export function OrganizationFrame({
           utilityControls={headerConnections ? { connections: <HeaderConnectionsControl key={organizationId} organizationId={organizationId} initial={headerConnections} workspace={workspace && enteredWorkspace ? { key: workspace.key, label: enteredWorkspace.label } : undefined} /> } : undefined}
           beforeActions={<>
             {hostedData ? <Badge tone="danger" className="shrink-0 font-semibold">HOSTED DATA</Badge> : null}
+            {!recovery && navigationLayout === 'unified' ? <NavigationPreviewControl organizationId={organizationId} /> : null}
             {!recovery ? <CommandPalette /> : null}
           </>}
         />

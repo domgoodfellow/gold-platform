@@ -2861,6 +2861,10 @@
         "security"
       ]
     },
+    "apps/web/tests/unit/unified-navigation.test.ts": {
+      "category": "unit",
+      "concerns": ["navigation", "security"]
+    },
     "apps/web/tests/unit/contract-guard.test.ts": {
       "category": "unit",
       "concerns": [
@@ -3169,6 +3173,10 @@
     "apps/web/tests/component/shell-navigation.test.tsx": {
       "category": "component",
       "concerns": ["navigation", "security"]
+    },
+    "apps/web/tests/component/navigation-experiment.test.tsx": {
+      "category": "component",
+      "concerns": ["navigation", "ui"]
     },
     "apps/web/tests/integration/database/opportunities.test.ts": {
       "category": "database-integration",
