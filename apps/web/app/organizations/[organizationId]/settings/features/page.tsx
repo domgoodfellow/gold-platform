@@ -49,6 +49,8 @@ export default async function FeaturesSettingsPage({
       .flatMap((feature) => {
         const state = resolvedByFeatureId.get(feature.id);
         if (!state) return [];
+        // GildOps' own operations features are never sold, so a business without them is not shown them.
+        if (product.kind === 'operator' && !state.entitled) return [];
         const target = featureConfigurationTarget(feature.key);
         return [{
           id: feature.id, label: feature.label, description: feature.description, product: product.label, module: module.label, state,

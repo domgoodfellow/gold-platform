@@ -660,6 +660,23 @@ only to a member of that organization. When it is unset, Platform is unreachable
 designates it once and then refuses any other organization; the stored value cannot move to another
 organization in a single write, and the organization cannot be deleted while it is designated.
 
+### GildOps' own Finance
+
+GildOps sells and accounts through its operating organization's Finance (ADR-057). Platform records
+keyed by the buying business (plan assignments, agreements, the billing provider's subscription
+copy, usage costs) take the operating organization as their seller through three database helpers:
+`app.platform_seller_id()`, `app.platform_seller_member()` (the caller is a member of it) and
+`app.platform_seller_has(permission)` (the caller holds that permission in it). Platform staff
+status is an input to none of them, so platform authority opens no GildOps Finance record; when no
+operating organization is configured all three refuse.
+
+Three tenant permissions govern selling and its economics in any business's Finance:
+`subscription.manage` (start and change customers' subscriptions), `cost.read` (supplier costs,
+cost to serve and margins) and `cost.manage` (record supplier costs and economics assumptions).
+They were granted by forward backfill to unrestricted administrators only
+(`20261120000001`); other roles receive them explicitly from someone who holds them. `cost.read`
+and `cost.manage` are marked sensitive in the role editor.
+
 ---
 
 ### Platform staff permissions

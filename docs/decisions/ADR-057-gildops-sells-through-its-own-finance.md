@@ -25,7 +25,7 @@ The owner's finance consolidation work order (2026-11-19) ends that transition. 
 
 ## Consequences
 
-- Finance gains recurring items, Subscriptions, Costs and Economics. Subscriptions, Costs and Economics are offered through catalogue features granted to GildOps' own plan, not by checking which Organization is open.
+- Finance gains recurring items, Subscriptions, Costs and Economics, offered through catalogue features rather than by checking which Organization is open. Recurring items and Subscriptions belong to Gild Finance, so every plan that includes Finance reaches them. Costs and Economics belong to an unlisted `operator` catalogue Product that only GildOps' own plan includes, because they describe reselling metered platform services.
 - Plan & usage reads a buyer-only projection of its own package and prices.
 - Product Registry gains Plans, holding only switch lists.
 - The finance boundary test now refuses any Finance import of Platform Administration code and any financial destination in Platform, instead of protecting the transitional split.

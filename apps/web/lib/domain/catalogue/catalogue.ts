@@ -22,14 +22,16 @@ export const GILD_PRODUCT_KEYS = ['sales', 'service', 'comms', 'finance', 'agent
 export type GildProductKey = (typeof GILD_PRODUCT_KEYS)[number];
 
 /**
- * Every key a catalogue Product row may hold: the eight Products, and `workspace`, the shared
+ * Every key a catalogue Product row may hold: the eight Products; `workspace`, the shared
  * capability (reporting, dashboards, activity) that every Product reuses and no customer buys as a
- * Product. The database enforces the same list (`platform_catalog_products_key_check`).
+ * Product; and `operator`, what the business reselling metered platform services needs (supplier
+ * costs and economics), granted only to GildOps' own plan and never sold (ADR-057). The database
+ * enforces the same list (`platform_catalog_products_key_check`).
  */
-export type CatalogProductKey = GildProductKey | 'workspace';
+export type CatalogProductKey = GildProductKey | 'workspace' | 'operator';
 
-/** `product` for the eight; `workspace` for the shared capability beneath them. */
-export type CatalogProductKind = 'product' | 'workspace';
+/** `product` for the eight; `workspace` for the shared capability beneath them; `operator` for GildOps' own. */
+export type CatalogProductKind = 'product' | 'workspace' | 'operator';
 
 export type CatalogProduct = {
   id: string;

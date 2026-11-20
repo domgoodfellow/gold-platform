@@ -26,6 +26,8 @@ const MODULE_HOME: Record<string, string> = {
   invoicing: 'finance',
   payments: 'finance',
   job_economics: 'finance',
+  subscriptions: 'finance',
+  cost_economics: 'operator',
   intelligence: 'agents',
   tools: 'agents',
   workflows: 'automations',
@@ -186,6 +188,6 @@ describe('no Plan lost reach', () => {
          join public.platform_plans pl on pl.id = g.plan_id and pl.key = 'gold_internal'
          join public.platform_catalog_products p on p.id = g.product_id`,
     );
-    expect(rows.map((row) => row.key).sort()).toEqual([...GILD_PRODUCT_KEYS, 'workspace'].sort());
+    expect(rows.map((row) => row.key).sort()).toEqual([...GILD_PRODUCT_KEYS, 'workspace', 'operator'].sort());
   });
 });

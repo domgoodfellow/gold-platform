@@ -2036,6 +2036,20 @@
         "security"
       ]
     },
+    "apps/web/tests/integration/database/finance-commercial-permissions.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "billing",
+        "security"
+      ]
+    },
+    "apps/web/tests/integration/database/platform-customer-link.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "billing",
+        "customers"
+      ]
+    },
     "apps/web/tests/integration/database/identity.test.ts": {
       "category": "database-integration",
       "concerns": [

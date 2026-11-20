@@ -140,6 +140,11 @@ export default async function CatalogPage({ params }: PageProps<'/platform/catal
         {products.filter((product) => product.kind === 'workspace').map(renderProduct)}
       </div>
 
+      <h2 className="mt-10 text-lg font-semibold">GildOps operations</h2>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {products.filter((product) => product.kind === 'operator').map(renderProduct)}
+      </div>
+
       <h2 className="mt-10 text-lg font-semibold">Starting templates</h2>
       {templates.length === 0 ? <EmptyState className="mt-4">Save a business as a template from its page under Organizations.</EmptyState> : (
         <Card className="mt-4">

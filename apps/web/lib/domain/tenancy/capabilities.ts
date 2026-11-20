@@ -36,6 +36,9 @@ export const CAPABILITIES = [
   'work_item.update',
   'invoice.issue',
   'payment.record',
+  'subscription.manage',
+  'cost.read',
+  'cost.manage',
   'automation.manage',
   'configuration.propose',
   'assistant.ask',
@@ -59,7 +62,7 @@ export const ALL_CAPABILITIES: Capability[] = [...CAPABILITIES];
 /**
  * Permissions that reach beyond a person's own work: who may do what, removing contacts from the
  * business, the business's own settings and connections, money owed to GildOps, stored
- * credentials, and rules that act with nobody present. The role editor marks them; nothing is enforced differently because of this list.
+ * credentials, rules that act with nobody present, and supplier costs and margins. The role editor marks them; nothing is enforced differently because of this list.
  */
 export const SENSITIVE_CAPABILITIES: ReadonlySet<Capability> = new Set<Capability>([
   'customer.delete',
@@ -69,6 +72,8 @@ export const SENSITIVE_CAPABILITIES: ReadonlySet<Capability> = new Set<Capabilit
   'billing.manage',
   'secret.manage',
   'automation.manage',
+  'cost.read',
+  'cost.manage',
 ]);
 
 export function isCapability(value: string): value is Capability {
@@ -114,6 +119,12 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   /** Split from recording payment — deciding a job is finished is whoever runs the work; writing down that money arrived is whoever opens the post. */
   'invoice.issue': 'Issue invoices, from Work or directly to a customer',
   'payment.record': 'Record a payment against an invoice',
+  /** Its own authority, not part of `price.manage`: setting what an item costs and committing a customer to it every month are different decisions. For GildOps' own organization, a change also switches the customer business's features on (ADR-057). */
+  'subscription.manage': 'Start and change customers’ subscriptions',
+  /** Its own authority, not part of `report.read`: what suppliers charge and what each customer costs to serve are confidential even from people who see revenue totals. */
+  'cost.read': 'See supplier costs, cost to serve and margins',
+  /** Recording, not reading — a supplier rate or an economics assumption changes every margin computed from it. */
+  'cost.manage': 'Record supplier costs and economics assumptions',
   /** Its own authority — the one capability a role can hold that acts when nobody is present. */
   'automation.manage': 'Create and edit automation rules',
   /** Asking for a proposal, not applying one — applying is gated per-part by whatever capability that part needs. */
