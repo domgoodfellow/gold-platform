@@ -83,6 +83,8 @@ export async function listPriceBookItems(
     .from('price_book_items')
     .select('id, name, unit, unit_amount_minor, currency, created_at, delivery_type_id, delivery:work_item_types!price_book_delivery_type_same_org(archived_at)')
     .eq('organization_id', input.organizationId)
+    // One-off items only: a recurring item has a price history instead of one amount (ADR-057).
+    .eq('pricing_model', 'unit')
     .order('name', { ascending: true });
 
   if (error) {
@@ -93,8 +95,8 @@ export async function listPriceBookItems(
     id: row.id,
     name: row.name,
     unit: row.unit,
-    unitAmountMinor: row.unit_amount_minor,
-    currency: row.currency,
+    unitAmountMinor: row.unit_amount_minor ?? 0,
+    currency: row.currency ?? '',
     createdAt: row.created_at,
     deliveryTypeId: row.delivery_type_id,
     deliveryTypeArchived: Boolean(row.delivery?.archived_at),

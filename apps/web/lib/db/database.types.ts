@@ -9239,6 +9239,13 @@ export type Database = {
             referencedRelation: "platform_plan_prices"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "platform_billing_checkout_sessions_plan_price_id_fkey"
+            columns: ["plan_price_id"]
+            isOneToOne: false
+            referencedRelation: "price_book_item_prices"
+            referencedColumns: ["id"]
+          },
         ]
       }
       platform_billing_customers: {
@@ -9952,45 +9959,6 @@ export type Database = {
         }
         Relationships: []
       }
-      platform_plan_addons: {
-        Row: {
-          addon_plan_id: string
-          created_at: string
-          created_by: string | null
-          included_by_default: boolean
-          plan_id: string
-        }
-        Insert: {
-          addon_plan_id: string
-          created_at?: string
-          created_by?: string | null
-          included_by_default?: boolean
-          plan_id: string
-        }
-        Update: {
-          addon_plan_id?: string
-          created_at?: string
-          created_by?: string | null
-          included_by_default?: boolean
-          plan_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "platform_plan_addons_addon_plan_id_fkey"
-            columns: ["addon_plan_id"]
-            isOneToOne: false
-            referencedRelation: "platform_plans"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "platform_plan_addons_plan_id_fkey"
-            columns: ["plan_id"]
-            isOneToOne: false
-            referencedRelation: "platform_plans"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       platform_plan_cost_assumptions: {
         Row: {
           captured_at: string
@@ -10157,62 +10125,6 @@ export type Database = {
           },
         ]
       }
-      platform_plan_prices: {
-        Row: {
-          amount_minor: number
-          approval_state: string
-          billing_interval: string
-          captured_at: string
-          currency: string
-          effective_from: string
-          effective_to: string | null
-          id: string
-          note: string
-          plan_id: string
-          recorded_by: string | null
-          source: string
-          source_url: string | null
-        }
-        Insert: {
-          amount_minor: number
-          approval_state?: string
-          billing_interval: string
-          captured_at?: string
-          currency: string
-          effective_from?: string
-          effective_to?: string | null
-          id?: string
-          note?: string
-          plan_id: string
-          recorded_by?: string | null
-          source?: string
-          source_url?: string | null
-        }
-        Update: {
-          amount_minor?: number
-          approval_state?: string
-          billing_interval?: string
-          captured_at?: string
-          currency?: string
-          effective_from?: string
-          effective_to?: string | null
-          id?: string
-          note?: string
-          plan_id?: string
-          recorded_by?: string | null
-          source?: string
-          source_url?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "platform_plan_prices_plan_id_fkey"
-            columns: ["plan_id"]
-            isOneToOne: false
-            referencedRelation: "platform_plans"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       platform_plan_product_grants: {
         Row: {
           created_at: string
@@ -10245,47 +10157,6 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "platform_catalog_products"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      platform_plan_provider_prices: {
-        Row: {
-          environment: string
-          id: string
-          plan_price_id: string
-          price_reference: string
-          product_reference: string
-          provider: string
-          provisioned_at: string
-          provisioned_by: string
-        }
-        Insert: {
-          environment: string
-          id?: string
-          plan_price_id: string
-          price_reference: string
-          product_reference: string
-          provider?: string
-          provisioned_at?: string
-          provisioned_by: string
-        }
-        Update: {
-          environment?: string
-          id?: string
-          plan_price_id?: string
-          price_reference?: string
-          product_reference?: string
-          provider?: string
-          provisioned_at?: string
-          provisioned_by?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "platform_plan_provider_prices_plan_price_id_fkey"
-            columns: ["plan_price_id"]
-            isOneToOne: false
-            referencedRelation: "platform_plan_prices"
             referencedColumns: ["id"]
           },
         ]
@@ -10420,6 +10291,7 @@ export type Database = {
           key: string
           kind: string
           label: string
+          price_book_item_id: string | null
           sale_status: string
         }
         Insert: {
@@ -10432,6 +10304,7 @@ export type Database = {
           key: string
           kind: string
           label: string
+          price_book_item_id?: string | null
           sale_status?: string
         }
         Update: {
@@ -10444,9 +10317,18 @@ export type Database = {
           key?: string
           kind?: string
           label?: string
+          price_book_item_id?: string | null
           sale_status?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "platform_plans_price_book_item_id_fkey"
+            columns: ["price_book_item_id"]
+            isOneToOne: true
+            referencedRelation: "price_book_items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       platform_product_prices: {
         Row: {
@@ -11289,39 +11171,254 @@ export type Database = {
           },
         ]
       }
+      price_book_item_addons: {
+        Row: {
+          addon_item_id: string | null
+          addon_plan_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          included_by_default: boolean
+          item_id: string | null
+          organization_id: string | null
+          plan_id: string | null
+        }
+        Insert: {
+          addon_item_id?: string | null
+          addon_plan_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          included_by_default?: boolean
+          item_id?: string | null
+          organization_id?: string | null
+          plan_id?: string | null
+        }
+        Update: {
+          addon_item_id?: string | null
+          addon_plan_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          included_by_default?: boolean
+          item_id?: string | null
+          organization_id?: string | null
+          plan_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_plan_addons_addon_plan_id_fkey"
+            columns: ["addon_plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_plan_addons_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_book_item_addons_addon_fkey"
+            columns: ["organization_id", "addon_item_id"]
+            isOneToOne: false
+            referencedRelation: "price_book_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "price_book_item_addons_item_fkey"
+            columns: ["organization_id", "item_id"]
+            isOneToOne: false
+            referencedRelation: "price_book_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      price_book_item_prices: {
+        Row: {
+          amount_minor: number
+          approval_state: string
+          billing_interval: string
+          captured_at: string
+          currency: string
+          effective_from: string
+          effective_to: string | null
+          id: string
+          item_id: string | null
+          note: string
+          organization_id: string | null
+          plan_id: string | null
+          recorded_by: string | null
+          source: string
+          source_url: string | null
+        }
+        Insert: {
+          amount_minor: number
+          approval_state?: string
+          billing_interval: string
+          captured_at?: string
+          currency: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          item_id?: string | null
+          note?: string
+          organization_id?: string | null
+          plan_id?: string | null
+          recorded_by?: string | null
+          source?: string
+          source_url?: string | null
+        }
+        Update: {
+          amount_minor?: number
+          approval_state?: string
+          billing_interval?: string
+          captured_at?: string
+          currency?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          item_id?: string | null
+          note?: string
+          organization_id?: string | null
+          plan_id?: string | null
+          recorded_by?: string | null
+          source?: string
+          source_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_plan_prices_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_book_item_prices_item_fkey"
+            columns: ["organization_id", "item_id"]
+            isOneToOne: false
+            referencedRelation: "price_book_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      price_book_item_provider_prices: {
+        Row: {
+          environment: string
+          id: string
+          organization_id: string | null
+          plan_price_id: string
+          price_reference: string
+          product_reference: string
+          provider: string
+          provisioned_at: string
+          provisioned_by: string
+        }
+        Insert: {
+          environment: string
+          id?: string
+          organization_id?: string | null
+          plan_price_id: string
+          price_reference: string
+          product_reference: string
+          provider?: string
+          provisioned_at?: string
+          provisioned_by: string
+        }
+        Update: {
+          environment?: string
+          id?: string
+          organization_id?: string | null
+          plan_price_id?: string
+          price_reference?: string
+          product_reference?: string
+          provider?: string
+          provisioned_at?: string
+          provisioned_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_plan_provider_prices_plan_price_id_fkey"
+            columns: ["plan_price_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plan_prices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_plan_provider_prices_plan_price_id_fkey"
+            columns: ["plan_price_id"]
+            isOneToOne: false
+            referencedRelation: "price_book_item_prices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_book_item_provider_prices_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_book_item_provider_prices_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_book_item_provider_prices_price_fkey"
+            columns: ["organization_id", "plan_price_id"]
+            isOneToOne: false
+            referencedRelation: "price_book_item_prices"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       price_book_items: {
         Row: {
           created_at: string
           created_by: string
-          currency: string
+          currency: string | null
           delivery_type_id: string | null
+          description: string
           id: string
           name: string
           organization_id: string
+          pricing_model: string
+          sale_status: string
           unit: string
-          unit_amount_minor: number
+          unit_amount_minor: number | null
         }
         Insert: {
           created_at?: string
           created_by: string
-          currency: string
+          currency?: string | null
           delivery_type_id?: string | null
+          description?: string
           id?: string
           name: string
           organization_id: string
+          pricing_model?: string
+          sale_status?: string
           unit: string
-          unit_amount_minor: number
+          unit_amount_minor?: number | null
         }
         Update: {
           created_at?: string
           created_by?: string
-          currency?: string
+          currency?: string | null
           delivery_type_id?: string | null
+          description?: string
           id?: string
           name?: string
           organization_id?: string
+          pricing_model?: string
+          sale_status?: string
           unit?: string
-          unit_amount_minor?: number
+          unit_amount_minor?: number | null
         }
         Relationships: [
           {
@@ -15349,6 +15446,149 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_plan_addons: {
+        Row: {
+          addon_plan_id: string | null
+          created_at: string | null
+          created_by: string | null
+          included_by_default: boolean | null
+          plan_id: string | null
+        }
+        Insert: {
+          addon_plan_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          included_by_default?: boolean | null
+          plan_id?: string | null
+        }
+        Update: {
+          addon_plan_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          included_by_default?: boolean | null
+          plan_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_plan_addons_addon_plan_id_fkey"
+            columns: ["addon_plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_plan_addons_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_plan_prices: {
+        Row: {
+          amount_minor: number | null
+          approval_state: string | null
+          billing_interval: string | null
+          captured_at: string | null
+          currency: string | null
+          effective_from: string | null
+          effective_to: string | null
+          id: string | null
+          note: string | null
+          plan_id: string | null
+          recorded_by: string | null
+          source: string | null
+          source_url: string | null
+        }
+        Insert: {
+          amount_minor?: number | null
+          approval_state?: string | null
+          billing_interval?: string | null
+          captured_at?: string | null
+          currency?: string | null
+          effective_from?: string | null
+          effective_to?: string | null
+          id?: string | null
+          note?: string | null
+          plan_id?: string | null
+          recorded_by?: string | null
+          source?: string | null
+          source_url?: string | null
+        }
+        Update: {
+          amount_minor?: number | null
+          approval_state?: string | null
+          billing_interval?: string | null
+          captured_at?: string | null
+          currency?: string | null
+          effective_from?: string | null
+          effective_to?: string | null
+          id?: string | null
+          note?: string | null
+          plan_id?: string | null
+          recorded_by?: string | null
+          source?: string | null
+          source_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_plan_prices_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_plan_provider_prices: {
+        Row: {
+          environment: string | null
+          id: string | null
+          plan_price_id: string | null
+          price_reference: string | null
+          product_reference: string | null
+          provider: string | null
+          provisioned_at: string | null
+          provisioned_by: string | null
+        }
+        Insert: {
+          environment?: string | null
+          id?: string | null
+          plan_price_id?: string | null
+          price_reference?: string | null
+          product_reference?: string | null
+          provider?: string | null
+          provisioned_at?: string | null
+          provisioned_by?: string | null
+        }
+        Update: {
+          environment?: string | null
+          id?: string | null
+          plan_price_id?: string | null
+          price_reference?: string | null
+          product_reference?: string | null
+          provider?: string | null
+          provisioned_at?: string | null
+          provisioned_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_plan_provider_prices_plan_price_id_fkey"
+            columns: ["plan_price_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plan_prices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_plan_provider_prices_plan_price_id_fkey"
+            columns: ["plan_price_id"]
+            isOneToOne: false
+            referencedRelation: "price_book_item_prices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_tenants: {
         Row: {
           created_at: string | null
@@ -16374,6 +16614,15 @@ export type Database = {
       }
       create_public_site_draft: {
         Args: { p_from_revision_id?: string; p_organization_id: string }
+        Returns: string
+      }
+      create_recurring_price_book_item: {
+        Args: {
+          p_description?: string
+          p_name: string
+          p_organization_id: string
+          p_unit: string
+        }
         Returns: string
       }
       create_resource: {

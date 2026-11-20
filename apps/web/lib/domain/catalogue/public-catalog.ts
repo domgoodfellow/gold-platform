@@ -7,7 +7,7 @@ import { fromDatabaseError } from '@/lib/domain/errors';
  * which never selects a cost, margin or provider column, so there is nothing here to withhold at
  * this layer -- the database already did that. Every future public-facing consumer (Pricing,
  * signup package selection, Studio's eventual commercial handoff) should read through this
- * function rather than querying `platform_plans`/`platform_plan_prices` directly, so there is
+ * function rather than querying `platform_plans`/`price_book_item_prices` directly, so there is
  * exactly one definition of "what could I buy" outside this organization's own settings.
  *
  * Distinct from `organization-plans.ts`'s `organizationPlanPrice`/`organizationEffectiveQuotas`,

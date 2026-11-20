@@ -28,7 +28,7 @@ export async function listProvisionedPlanPrices(
 ): Promise<ProvisionedPlanPriceRow[]> {
   if (input.planPriceIds.length === 0) return [];
   const { data, error } = await db
-    .from('platform_plan_provider_prices')
+    .from('price_book_item_provider_prices')
     .select('plan_price_id, product_reference, price_reference')
     .in('plan_price_id', input.planPriceIds)
     .eq('environment', input.environment);
@@ -45,7 +45,7 @@ export async function getProvisionedPlanPrice(
   input: { planPriceId: string; environment: 'sandbox' | 'live' },
 ): Promise<ProvisionedPlanPrice | null> {
   const { data, error } = await db
-    .from('platform_plan_provider_prices')
+    .from('price_book_item_provider_prices')
     .select('product_reference, price_reference')
     .eq('plan_price_id', input.planPriceId)
     .eq('environment', input.environment)

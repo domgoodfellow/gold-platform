@@ -2050,6 +2050,13 @@
         "customers"
       ]
     },
+    "apps/web/tests/integration/database/recurring-price-book.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "billing",
+        "pricing"
+      ]
+    },
     "apps/web/tests/integration/database/identity.test.ts": {
       "category": "database-integration",
       "concerns": [

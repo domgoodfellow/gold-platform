@@ -28,7 +28,7 @@ export type PurchaseQuoteLine = {
   quantity: number;
   amountMinor: number;
   billingInterval: 'month' | 'year' | 'one_time';
-  /** The exact record the price came from: `platform_plan_prices.id` for a standard price,
+  /** The exact record the price came from: `price_book_item_prices.id` for a standard price,
    * `organization_plan_agreements.id` for a negotiated one. Never organization + Plan + interval,
    * which a later agreement would also match. */
   priceSourceDomain: PriceSourceDomain;

@@ -464,9 +464,9 @@ async function loadContext(db: Db, source: SimulationSource): Promise<Calculatio
     if (current) { currency = current.currency; basePriceMinor = current.amountMinor; }
     candidatePricesMinor = [basePriceMinor];
     quotas = (await listPlanQuotas(db, planId)).map((quota) => ({ ...quota, provenance: 'Plan default' }));
-    const { data, error } = await db.from('platform_plan_addons').select('addon_plan_id').eq('plan_id', planId).eq('included_by_default', true);
+    const { data, error } = await db.from('price_book_item_addons').select('addon_plan_id').eq('plan_id', planId).eq('included_by_default', true).not('addon_plan_id', 'is', null);
     if (error) throw fromDatabaseError(error, 'package_economics.addons_failed');
-    addonIds = (data ?? []).map((row) => row.addon_plan_id);
+    addonIds = (data ?? []).flatMap((row) => (row.addon_plan_id ? [row.addon_plan_id] : []));
   }
 
   const plan = await getPlanById(db, planId);

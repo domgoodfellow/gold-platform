@@ -37,7 +37,7 @@ export type ComponentPrice = {
   planKey: string;
   label: string;
   kind: 'plan' | 'addon';
-  /** The Plan's own catalogue price, ignoring any agreement — from `platform_plan_prices` alone. */
+  /** The Plan's own catalogue price, ignoring any agreement — from `price_book_item_prices` alone. */
   standard: { amountMinor: number; currency: string } | null;
   /** The currently-effective negotiated price, if this organization has one. */
   agreement: { amountMinor: number; currency: string; effectiveFrom: string; effectiveTo: string | null } | null;

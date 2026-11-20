@@ -386,12 +386,12 @@ function toPrice(row: {
 
 export async function listPlanPrices(db: Db, planId: string): Promise<PlanPrice[]> {
   const { data, error } = await db
-    .from('platform_plan_prices')
+    .from('price_book_item_prices')
     .select('id, plan_id, currency, amount_minor, billing_interval, effective_from, effective_to, approval_state, source, note')
     .eq('plan_id', planId)
     .order('effective_from', { ascending: false });
   if (error) throw fromDatabaseError(error, 'plans.prices_failed');
-  return (data ?? []).map(toPrice);
+  return (data ?? []).map((row) => toPrice({ ...row, plan_id: planId }));
 }
 
 /**
@@ -493,9 +493,9 @@ export async function recordPlanUtilizationAssumption(db: Db, input: { planId: s
 }
 
 export async function listPlanAddonIds(db: Db, planId: string): Promise<string[]> {
-  const { data, error } = await db.from('platform_plan_addons').select('addon_plan_id').eq('plan_id', planId);
+  const { data, error } = await db.from('price_book_item_addons').select('addon_plan_id').eq('plan_id', planId).not('addon_plan_id', 'is', null);
   if (error) throw fromDatabaseError(error, 'plans.addons_failed');
-  return (data ?? []).map((row) => row.addon_plan_id);
+  return (data ?? []).flatMap((row) => (row.addon_plan_id ? [row.addon_plan_id] : []));
 }
 
 export async function setPlanAddon(db: Db, input: { planId: string; addonPlanId: string; attached: boolean }): Promise<void> {

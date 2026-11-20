@@ -78,8 +78,10 @@ describe('feature entitlement, activation and readiness', () => {
       mappingKind: 'module_key',
       mappingValue: 'billing',
     });
-    if (billingFeatures.length === 0) throw new Error('no catalog feature maps to module_key billing');
-    billingFeatureId = billingFeatures[0].id;
+    // An implemented one: planned features also count toward Billing and are never activatable.
+    const implemented = billingFeatures.filter((feature) => feature.implementationState === 'available');
+    if (implemented.length === 0) throw new Error('no implemented catalog feature maps to module_key billing');
+    billingFeatureId = implemented[0].id;
   });
 
   it('is entitled and active by default — opt-out, not opt-in', async () => {

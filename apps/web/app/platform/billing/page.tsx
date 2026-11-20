@@ -31,7 +31,7 @@ export const dynamic = 'force-dynamic';
  * The minimum coherent slice for staff to see GOLD's own subscription book: which organizations
  * are subscribed, which need attention, and the most recent webhook deliveries this deployment
  * acted on. Managing what's sellable stays at Catalog → Plans (`platform_plans`,
- * `platform_plan_prices`) — this page is state, not configuration.
+ * `price_book_item_prices`) — this page is state, not configuration.
  */
 export default async function PlatformBillingPage({ params }: PageProps<'/platform/billing'>) {
   const { organizationId: goldId } = await platformParams(params);

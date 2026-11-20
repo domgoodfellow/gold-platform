@@ -52,7 +52,7 @@ export type PlanQuotaOverride = {
 
 export type EffectiveEntitlement = { featureId: string; planId: string; planKey: string };
 
-/** `sourceId` is the deciding row's own id: `organization_plan_agreements.id` for `'agreement'`, `platform_plan_prices.id` for `'standard'`. */
+/** `sourceId` is the deciding row's own id: `organization_plan_agreements.id` for `'agreement'`, `price_book_item_prices.id` for `'standard'`. */
 export type EffectivePrice = { amountMinor: number; currency: string; source: 'agreement' | 'standard'; sourceId: string };
 
 export type EffectiveQuota = {
