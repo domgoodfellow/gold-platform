@@ -159,7 +159,7 @@ It is not a duplicate specification.
 | ADR-011 | Resource and Asset are role-based concepts | [`ADR-011-resource-asset.md`](ADR-011-resource-asset.md) |
 | ADR-012 | Settings has five independent scopes | [`ADR-012-settings-scopes.md`](ADR-012-settings-scopes.md) |
 | ADR-013 | Entitlement and authorization are independent | [`ADR-013-entitlement-authorization.md`](ADR-013-entitlement-authorization.md) |
-| ADR-014 | Tenant Finance and Platform commercial control are separate. **Partly superseded by ADR-051** (GildOps' own selling records) | [`ADR-014-finance-planes.md`](ADR-014-finance-planes.md) |
+| ADR-014 | Tenant Finance and Platform commercial control are separate. **Superseded by ADR-051** (GildOps' own selling records) **and ADR-057** (Platform commercial ownership) | [`ADR-014-finance-planes.md`](ADR-014-finance-planes.md) |
 | ADR-015 | Providers sit behind capability adapters | [`ADR-015-provider-adapters.md`](ADR-015-provider-adapters.md) |
 | ADR-016 | Platform Provider infrastructure and tenant Connections are different axes | [`ADR-016-provider-vs-connections.md`](ADR-016-provider-vs-connections.md) |
 | ADR-017 | Files are artifacts and import sources, not Connections | [`ADR-017-files-not-connections.md`](ADR-017-files-not-connections.md) |
@@ -194,12 +194,13 @@ It is not a duplicate specification.
 | ADR-048 | The sidebar owns workspace navigation; the header owns page identity and actions. **Point 4 (header Calendar shortcut) superseded by ADR-050** | [`ADR-048-sidebar-owns-workspace-navigation.md`](ADR-048-sidebar-owns-workspace-navigation.md) |
 | ADR-049 | Explicit workspace Dashboard; supersedes ADR-047 point 1 | [`ADR-049-explicit-workspace-dashboard.md`](ADR-049-explicit-workspace-dashboard.md) |
 | ADR-050 | The organization header carries no workspace Calendar shortcut; supersedes ADR-048 point 4 | [`ADR-050-no-calendar-in-organization-header.md`](ADR-050-no-calendar-in-organization-header.md) |
-| ADR-051 | Organization Finance owns reusable commercial capabilities; GildOps sells through its own Finance; supersedes ADR-014 in part | [`ADR-051-reusable-commercial-capabilities.md`](ADR-051-reusable-commercial-capabilities.md) |
+| ADR-051 | Organization Finance owns reusable commercial capabilities; GildOps sells through its own Finance; supersedes ADR-014 in part. **Points 6 and 7 superseded by ADR-057** | [`ADR-051-reusable-commercial-capabilities.md`](ADR-051-reusable-commercial-capabilities.md) |
 | ADR-052 | Calendar is a shared organization destination; retains contextual previews and Work scheduling ownership | [`ADR-052-shared-organization-calendar.md`](ADR-052-shared-organization-calendar.md) |
 | ADR-053 | Organization Activity is an independently authorized global history utility, separate from page support and notifications | [`ADR-053-organization-activity-utility.md`](ADR-053-organization-activity-utility.md) |
 | ADR-054 | Imports translate sources into Businesses and People inside the existing pipeline | [`ADR-054-translated-imports.md`](ADR-054-translated-imports.md) |
 | ADR-055 | The workflow workbench draws stored rules; GildOps' own automated work is listed apart | [`ADR-055-workflow-workbench-projection.md`](ADR-055-workflow-workbench-projection.md) |
 | ADR-056 | Operations share one sidebar, Studio gathers creation, Administration stays apart; delivered first as a staff preview | [`ADR-056-unified-operations-navigation.md`](ADR-056-unified-operations-navigation.md) |
+| ADR-057 | GildOps' commercial administration is its operating Organization's Finance; supersedes ADR-051 points 6–7 and the rest of ADR-014 | [`ADR-057-gildops-sells-through-its-own-finance.md`](ADR-057-gildops-sells-through-its-own-finance.md) |
 
 ## Adding a new decision
 

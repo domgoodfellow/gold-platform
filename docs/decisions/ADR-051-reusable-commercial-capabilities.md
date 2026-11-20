@@ -1,9 +1,9 @@
 # ADR-051 — Organization Finance owns reusable commercial capabilities; GildOps sells through its own Finance
 
 **Date:** 2026-10-25
-**Status:** Accepted
+**Status:** Accepted; points 6 and 7 superseded by ADR-057
 **Supersedes:** ADR-014 (in part: who owns GildOps' own selling records)
-**Superseded by:** None
+**Superseded by:** ADR-057 (in part: points 6 and 7)
 
 ## Context
 

@@ -1,8 +1,8 @@
 # ADR-014 — Tenant Finance and Platform commercial control are separate
 
 **Recorded:** 2026-10-07
-**Status:** Accepted
-**Superseded in part by:** ADR-051 (who owns GildOps' own selling records; the separation of money directions and private provider economics stands)
+**Status:** Superseded
+**Superseded by:** ADR-051 (who owns GildOps' own selling records) and ADR-057 (Platform ownership of plans, subscriptions, retail rates, provider costs and margin). The separation of money directions stands in ADR-051.
 **Origin:** Formalizes architecture already present before the documentation reset; exact implementation history remains in Git.
 
 ## Context
