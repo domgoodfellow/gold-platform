@@ -1,8 +1,6 @@
-import { workspaceConfigCrumbs } from '@/lib/settings-nav';
 import { Hint } from '@/components/controls/inputs';
-import { PageHeader } from '@/components/headers/page-header';
 import { ProfileForm } from '@/features/public-profile/profile-form';
-import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
+import { SettingsPageFrame, SettingsPageHeader } from '@/features/settings/settings-page-frame';
 import { publicProfile } from '@/lib/domain/tenancy/profile';
 import { requireOrganization } from '@/lib/route/organization';
 import { updateProfileAction } from '../actions';
@@ -19,12 +17,7 @@ export default async function PublicProfileSettingsPage({
 
   return (
     <SettingsPageFrame>
-      <PageHeader
-        title="Public profile"
-        crumbs={[
-          ...workspaceConfigCrumbs(organizationId, 'public-profile'),
-        ]}
-      />
+      <SettingsPageHeader title="Public profile" />
       {mayManage ? (
         <div className="max-w-xl">
           <ProfileForm organizationId={organizationId} profile={profile} action={updateProfileAction} />

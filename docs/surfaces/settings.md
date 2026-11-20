@@ -96,3 +96,12 @@ elevation reach them. Resolved links use
 text labels, hover, selected and focus roles without a repeated generic icon. Page loading uses the
 existing organization boundary; missing or unauthorized concerns resolve to not-found before data
 reads. No empty configuration root is offered. `WorkspaceConfigure` remains a shortcut to each root.
+
+## Email sending
+
+Email sending follows the order setup must happen in: a domain registered, its DNS records published and verified, a sender address at a verified domain, that address made the default, and a test email. The first card names only the next step (`emailSetupStep`). Sender addresses appear once a domain is verified or an address already exists; Where replies go and Send a test email appear once there is a default sender (the test list also while earlier tests exist).
+
+Sending domains is one card: each domain shows its name, status badge, one sentence of state with when the provider last answered (or when it was verified), and its actions — Check verification (Start setup for a domain the provider has never been asked about; none once verified), Apply and verify only when the business's own connected DNS can publish the records, and Remove as a quiet control behind a confirmation. A domain that still needs records shows them beneath it under DNS records with one instruction: each record's type, the provider's purpose word, its status (Verified, Not found or Pending), and its host and value stacked under their labels with a Copy control, so a long DKIM value never pushes a control off screen. Add another domain stays available beneath the list; with no domain, the card asks for the first one directly. What verifying does (it authorizes sending; it creates no mailbox) is an info popover on the card.
+
+Check verification reports what the provider said, beside the domain: verified; verification requested and still pending, with how many of the records are not yet verified; records not found; sending from own domains unavailable; or the provider's error. Only a verified answer is also confirmed in a toast. A check that went through never reads as success while the domain is pending.
+

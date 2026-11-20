@@ -25,8 +25,11 @@ import { PROVIDER_UNAVAILABLE_MESSAGE } from './presentation';
  * point of calling this a sending domain throughout.
  */
 
-export type { SendingDomainPresentation } from './presentation';
+export type { DomainCheckResult, EmailSetupStep, SendingDomainPresentation } from './presentation';
 export {
+  domainCheckFailure,
+  domainCheckResult,
+  emailSetupStep,
   MANAGED_SENDING,
   PROVIDER_UNAVAILABLE_MESSAGE,
   SENDING_DOMAIN_BADGE,
@@ -48,6 +51,8 @@ export type SendingDomain = {
   errorCode: string | null;
   errorMessage: string | null;
   lastVerifiedAt: string | null;
+  /** When the provider's last answer about this domain was recorded; null before it has given one. */
+  checkedAt: string | null;
   createdAt: string;
 };
 
@@ -98,7 +103,7 @@ function stateFrom(status: string): SendingDomainState {
 export async function listSendingDomains(db: Db, organizationId: string): Promise<SendingDomain[]> {
   const { data, error } = await db
     .from('organization_provider_resources')
-    .select('id, external_id, status, config, last_verified_at, created_at')
+    .select('id, external_id, status, config, last_verified_at, created_at, updated_at')
     .eq('organization_id', organizationId)
     .eq('resource_type', SENDING_DOMAIN_RESOURCE_TYPE)
     .order('created_at');
@@ -118,6 +123,9 @@ export async function listSendingDomains(db: Db, organizationId: string): Promis
       errorCode: text(config.error_code),
       errorMessage: text(config.last_error),
       lastVerifiedAt: row.last_verified_at,
+      // Only the provider's answers write a sending-domain row after it is named, so its last
+      // update is when the provider last answered.
+      checkedAt: text(config.provider_domain_id) ? row.updated_at : null,
       createdAt: row.created_at,
     };
   });

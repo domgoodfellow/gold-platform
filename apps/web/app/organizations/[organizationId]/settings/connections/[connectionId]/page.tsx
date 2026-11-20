@@ -1,18 +1,18 @@
 import { notFound } from 'next/navigation';
 import { ButtonLink } from '@/components/controls/button';
 import { Badge } from '@/components/display/data';
-import { PageHeader } from '@/components/headers/page-header';
 import { ConnectionDetail } from '@/features/integrations/connections/connection-detail';
 import { CheckConnectionForm, DisconnectForm } from '@/features/integrations/connections/connection-controls';
 import { getConnection } from '@/lib/domain/integrations/connections';
 import { connectorLogoUrl, getConnector, isConnectable, usesSignIn } from '@/lib/domain/integrations/connectors';
 import { listResources } from '@/lib/domain/integrations/resources';
 import { requireOrganization } from '@/lib/route/organization';
-import { settingsScopeHref } from '@/lib/route/settings';
 import { loadConnectorReadiness } from '@/lib/domain/integrations/readiness';
 import { sourceControlReader, type SourceRepository } from '@/lib/adapters/source-control';
 import { listGrantedResourceIds } from '@/lib/domain/integrations/assistant-grants';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
+import { PageHeader } from '@/components/headers/page-header';
+import { settingsScopeHref } from '@/lib/route/settings';
 import { ConnectionCapabilities } from '@/features/integrations/connections/connection-capabilities';
 import { listActiveGrants, listGrantableAgents, listNativeCapabilities } from '@/lib/domain/integrations/tool-access';
 import { LibraryReads } from '@/features/integrations/connections/library-controls';
@@ -70,9 +70,11 @@ export default async function ConnectionDetailPage({
 
   return (
     <SettingsPageFrame width="fluid">
+      {/* A connection has no business noun for the resolver to fall back on, so its trail is written here, matching Settings (A6). */}
       <PageHeader
         title={name}
-        crumbs={[{ label: 'Connections', href: settingsScopeHref('connections', organizationId) }]}
+        recordTitle
+        crumbs={[{ label: 'Settings' }, { label: 'Connections', href: settingsScopeHref('connections', organizationId) }]}
         meta={
           <Badge tone={connection.status === 'active' || connection.status === 'connecting' ? 'success' : 'neutral'}>
             {connection.status.replace(/_/g, ' ')}

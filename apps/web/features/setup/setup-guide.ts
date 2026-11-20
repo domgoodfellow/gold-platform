@@ -30,6 +30,9 @@ export function setupGuide(organizationId: string, overview: SetupOverview, gate
     { key: 'team', title: 'Access', description: 'Members, invitations and roles.', path: configTarget('team').path },
     { key: 'integrations', title: 'Connections', description: 'Customer-owned connected applications.', path: configTarget('integrations').path },
     { key: 'plan', title: 'Plan & usage', description: 'Subscription status and recorded usage.', path: configTarget('plan').path },
+    // CRM's own settings, outside the Settings directory but still part of setting a business up.
+    { key: 'sales-stages', title: 'Relationship stages', description: 'The stages a customer relationship moves through, in order.', path: configTarget('sales-stages').path },
+    { key: 'opportunity-stages', title: 'Opportunity stages', description: 'The stages potential business moves through, classified as Open, Won or Lost.', path: configTarget('opportunity-stages').path },
   ];
   const byKey = new Map([...entries, ...extras].map((entry) => [entry.key, entry]));
   const assigned = new Set<string>();

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useActionState, useEffect, useId, useState } from 'react';
 import { Plus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Button } from '@/components/controls/button';
 import { ErrorText, FieldLabel, TextArea, TextInput } from '@/components/controls/inputs';
@@ -80,7 +81,13 @@ export function RecurringItemsSection({ organizationId, items, mayManage }: { or
 
 function NewRecurringItemDrawer({ organizationId }: { organizationId: string }) {
   const formId = useId();
+  const router = useRouter();
   const [state, action, pending] = useActionState(createRecurringItemAction, INITIAL);
+  useEffect(() => {
+    if (!state.success || !state.itemId) return;
+    toast.success(state.success);
+    router.push(`/organizations/${organizationId}/finance/catalog/${state.itemId}`);
+  }, [state, organizationId, router]);
   return (
     <PageDrawer>
       <PageDrawerTrigger asChild>
@@ -197,7 +204,7 @@ function CheckoutCell({ organizationId, itemId, price, environment, provisioned,
   const [state, action, pending] = useActionState(provisionItemPriceAction, INITIAL);
   useToast(state);
   if (!environment) return <span className="text-muted">Billing not set up</span>;
-  if (provisioned) return <Badge tone="success" title={provisioned.priceReference}>Ready ({environment})</Badge>;
+  if (provisioned) return <Badge tone="success">Ready ({environment})</Badge>;
   if (!mayManage || price.approvalState !== 'approved') return <span className="text-muted">Not ready</span>;
   return (
     <form action={action} className="flex flex-wrap items-center gap-2">

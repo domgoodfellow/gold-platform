@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
-import { PageHeader } from '@/components/headers/page-header';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
+import { PageHeader } from '@/components/headers/page-header';
+import { settingsScopeHref } from '@/lib/route/settings';
 import { LibraryKeyForm } from '@/features/integrations/connections/library-controls';
 import { libraryApplication } from '@/lib/domain/integrations/app-library';
 import { requireOrganization } from '@/lib/route/organization';
@@ -15,6 +16,6 @@ export default async function ConnectLibraryApp({params,searchParams}:PageProps<
     const connection=await getConnection(db,{organizationId,connectionId});
     if(!connection||connection.connectorKey!==app.connector_key)notFound();
   }
-  return <SettingsPageFrame><PageHeader title={`Connect ${app.name}`} crumbs={[{label:'App Library',href:`/organizations/${organizationId}/settings/connections?catalog=open`}]}/>
+  return <SettingsPageFrame><PageHeader title={`Connect ${app.name}`} recordTitle crumbs={[{ label: 'Settings' }, { label: 'Connections', href: settingsScopeHref('connections', organizationId) }]} />
     <LibraryKeyForm organizationId={organizationId} application={app.key} connectionId={typeof connectionId==='string'?connectionId:undefined}/></SettingsPageFrame>;
 }

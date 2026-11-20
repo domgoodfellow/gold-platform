@@ -112,8 +112,8 @@ test.describe.serial('UX drift and guided configuration', () => {
     await dialog.getByRole('link', { name: 'Create Work', exact: true }).click();
     await expect(page).toHaveURL(/work\/new\?returnTo=quote/);
     await expect(page.getByRole('region', { name: /needs a starting stage/ })).toBeVisible();
-    await page.getByLabel('Starting stage name', { exact: true }).fill('Received');
-    await page.getByRole('button', { name: 'Add stage and continue', exact: true }).click();
+    await page.getByLabel('Or name the starting stage', { exact: true }).fill('Received');
+    await page.getByRole('button', { name: 'Add stage', exact: true }).click();
     await page.getByLabel('Job title', { exact: true }).fill('Work prepared from Finance');
     await page.getByRole('button', { name: 'Create work', exact: true }).click();
     await expect(page).toHaveURL(/\/work\/[^/?]+\?tab=financials/);
@@ -210,8 +210,8 @@ test.describe.serial('UX drift and guided configuration', () => {
     await guardedShot(page, { url: `${base}/setup`, content: link }, { path: path.join(output, 'setup-missing-workflow.png'), fullPage: true });
     await link.click();
     await expect(page).toHaveURL(new RegExp(`type=${missing}.*tab=workflow.*setupStep=operations`));
-    await page.getByLabel('Starting stage name', { exact: true }).fill('Received');
-    await page.getByRole('button', { name: 'Add starting stage', exact: true }).click();
+    await page.getByLabel('Or name the starting stage', { exact: true }).fill('Received');
+    await page.getByRole('button', { name: 'Add stage', exact: true }).click();
     await page.getByRole('link', { name: 'Return to setup', exact: true }).click();
     await expect(page).toHaveURL(`${base}/setup?step=operations`);
     await expect(page.getByRole('navigation', { name: 'Operations destinations', exact: true }).getByRole('link', { name: /Work types/ })).toContainText('Ready');

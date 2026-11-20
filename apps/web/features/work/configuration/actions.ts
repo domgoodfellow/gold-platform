@@ -21,6 +21,7 @@ import {
 import { isResourceClass } from '@/lib/domain/resources/resource-class';
 import { createWorkItemTransition } from '@/lib/domain/work-items/transitions';
 import {
+  addStarterStages,
   createWorkItemType,
   renameWorkItemType,
   setTypeBookable,
@@ -107,6 +108,28 @@ export async function createTypeAction(
 
   revalidateWork(organizationId);
   return { error: null, createdTypeId };
+}
+
+/** Booked, In progress and Done for a type that has no stage yet — the stages a new type starts with. */
+export async function addStarterStagesAction(
+  _previous: WorkConfigActionState,
+  formData: FormData,
+): Promise<WorkConfigActionState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
+
+  try {
+    await addStarterStages(db, { organizationId, typeId: String(formData.get('typeId') ?? '') });
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return { error: error.message };
+    }
+    throw error;
+  }
+
+  revalidateWork(organizationId);
+  return { error: null };
 }
 
 export async function createTransitionAction(

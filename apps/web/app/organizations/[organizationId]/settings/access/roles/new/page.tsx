@@ -1,8 +1,6 @@
 import { notFound } from 'next/navigation';
-import { PageHeader } from '@/components/headers/page-header';
 import { RoleEditor } from '@/features/team/role-editor';
-import { teamViewHref } from '@/features/team/team-views';
-import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
+import { SettingsPageFrame, SettingsPageHeader } from '@/features/settings/settings-page-frame';
 import { listRoleSuggestions } from '@/lib/domain/tenancy/role-suggestions';
 import { listRoles } from '@/lib/domain/tenancy/roles';
 import { requireOrganization } from '@/lib/route/organization';
@@ -21,7 +19,7 @@ export default async function NewRolePage({
 
   return (
     <SettingsPageFrame width="fluid">
-      <PageHeader title="New role" crumbs={[{ label: 'Roles & permissions', href: teamViewHref(organizationId, 'roles') }]} />
+      <SettingsPageHeader title="New role" />
       <RoleEditor organizationId={organizationId} grantable={organization.capabilities} suggestions={suggestions} />
     </SettingsPageFrame>
   );

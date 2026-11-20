@@ -14,6 +14,7 @@ export default async function HomePage({ params, searchParams }: PageProps<'/org
     loadHome(db, organization, await searchParams),
     inSetup ? computeSetupOverview(db, { organizationId }).catch(() => null) : null,
   ]);
-  const setup = inSetup ? <SetupBanner organizationId={organizationId} overview={overview} mayLaunch={organization.capabilities.includes('organization.manage')} /> : null;
+  // Keyed: made here on the server and placed among the client dashboard's children.
+  const setup = inSetup ? <SetupBanner key="setup" organizationId={organizationId} overview={overview} mayLaunch={organization.capabilities.includes('organization.manage')} /> : null;
   return <HomeDashboard key={`${organizationId}:${data.query.scope}:${data.query.attention}`} data={data} setup={setup} />;
 }

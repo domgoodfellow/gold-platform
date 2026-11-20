@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/controls/button';
 import { ConfirmSubmit } from '@/components/controls/confirm-submit';
 import { ErrorText, Hint } from '@/components/controls/inputs';
+import { cx } from '@/components/class-names';
 import {
   applySendingDomainDnsAction,
   checkSendingDomainAction,
@@ -12,9 +13,11 @@ import {
   requestSendingDomainAction,
   type EmailDomainState,
 } from '@/app/organizations/[organizationId]/settings/email/actions';
+import type { DomainCheckResult } from '@/lib/domain/email/sending-domains';
 
 const INITIAL: EmailDomainState = { error: null, notice: null, done: false };
 
+/** Runs a command; a toast confirms it only when `done` is true and nothing needs reading. */
 function useCommand(action: typeof checkSendingDomainAction, success: string) {
   const [state, run, pending] = useActionState(action, INITIAL);
   useEffect(() => {
@@ -23,39 +26,58 @@ function useCommand(action: typeof checkSendingDomainAction, success: string) {
   return { state, run, pending };
 }
 
-function notice(...states: EmailDomainState[]): string | null {
-  return states.find((state) => state.notice)?.notice ?? null;
+const RESULT_TONE: Record<DomainCheckResult['kind'], string> = {
+  verified: 'text-success',
+  pending: '',
+  records_missing: 'text-danger',
+  provider_unavailable: '',
+  provider_error: 'text-danger',
+  rejected: 'text-danger',
+};
+
+/** A time as a sentence ends it: some locales already end it with a full stop (p.m.). */
+function time(value: string): string {
+  const text = new Date(value).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  return text.endsWith('.') ? text : `${text}.`;
 }
 
 /**
- * Check verification, apply (only when this business's own connected DNS can publish what is
- * outstanding), start setup (for a domain the provider has never been asked about), and remove —
- * each a form with the ids hidden in it, the refusal in words.
+ * Check verification (or Start setup, for a domain the provider has never been asked about),
+ * Apply and verify (only when this business's own connected DNS can publish what is outstanding),
+ * and Remove — each a form with the ids hidden in it.
  *
- * **Apply is never the default and never automatic.** It appears only once the records are
- * already on the page to read, which is the review this platform owes somebody before it writes
- * to DNS it does not own. A record it could not prove it owns comes back as a notice rather than
- * a success, because a toast saying "published" over a conflict it refused would be the one lie
- * this whole screen exists to avoid.
+ * **A check reports what the provider said, on the domain itself.** Only a verified domain is
+ * confirmed with a toast; a pending one says how many records are outstanding and when it was
+ * checked, so pressing the button never reads as success when nothing was verified. Apply is
+ * never automatic and appears only beside the records it would publish.
  */
 export function SendingDomainActions({
   organizationId,
   resourceId,
   domain,
   canStart,
+  canCheck = true,
   canApply,
 }: {
   organizationId: string;
   resourceId: string;
   domain: string;
   canStart: boolean;
+  /** False once verified: there is nothing left to check. */
+  canCheck?: boolean;
   canApply: boolean;
 }) {
-  const check = useCommand(checkSendingDomainAction, `Checked ${domain}.`);
-  const apply = useCommand(applySendingDomainDnsAction, `Published DNS for ${domain}.`);
-  const start = useCommand(requestSendingDomainAction, `Started setting up ${domain}.`);
+  const check = useCommand(checkSendingDomainAction, `${domain} is verified.`);
+  const apply = useCommand(applySendingDomainDnsAction, `${domain} is verified.`);
+  const start = useCommand(requestSendingDomainAction, `Setting up ${domain}. Publish its DNS records next.`);
   const remove = useCommand(releaseSendingDomainAction, `${domain} removed.`);
   const removeFormId = `release-sending-domain-${useId().replace(/:/g, '')}`;
+  // The latest answer from either way of asking the provider.
+  const result = [check.state.result, apply.state.result]
+    .filter((candidate): candidate is DomainCheckResult => Boolean(candidate))
+    .sort((a, b) => b.checkedAt.localeCompare(a.checkedAt))[0];
+  const error = check.state.error ?? apply.state.error ?? start.state.error ?? remove.state.error;
+  const notice = apply.state.notice;
 
   const hidden = (
     <>
@@ -65,8 +87,8 @@ export function SendingDomainActions({
   );
 
   return (
-    <div className="flex w-full flex-col items-stretch gap-1 @min-[38rem]:items-end">
-      <div className="flex flex-wrap gap-2 @min-[38rem]:justify-end">
+    <div className="flex min-w-0 flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {canStart ? (
           <form action={start.run}>
             {hidden}
@@ -77,14 +99,14 @@ export function SendingDomainActions({
               {start.pending ? 'Starting…' : 'Start setup'}
             </Button>
           </form>
-        ) : (
+        ) : canCheck ? (
           <form action={check.run}>
             {hidden}
-            <Button type="submit" tone="secondary" size="small" disabled={check.pending}>
+            <Button type="submit" tone={canApply ? 'secondary' : 'primary'} size="small" disabled={check.pending} aria-label={`Check verification for ${domain}`}>
               {check.pending ? 'Checking…' : 'Check verification'}
             </Button>
           </form>
-        )}
+        ) : null}
         {canApply ? (
           <form action={apply.run}>
             {hidden}
@@ -99,16 +121,20 @@ export function SendingDomainActions({
         <ConfirmSubmit
           formId={removeFormId}
           label="Remove"
+          tone="ghost"
           confirmLabel="Remove domain"
           description={`${domain} can no longer be used for sending. Your DNS records are not changed.`}
           pending={remove.pending}
           ariaLabel={`Remove ${domain}`}
         />
       </div>
-      <ErrorText>{check.state.error ?? apply.state.error ?? start.state.error ?? remove.state.error}</ErrorText>
-      {notice(apply.state, check.state) ? (
-        <Hint className="text-left @min-[38rem]:text-right">{notice(apply.state, check.state)}</Hint>
+      {result ? (
+        <p role="status" className={cx('text-sm', RESULT_TONE[result.kind])}>
+          {result.message} <span className="text-xs text-muted">Checked {time(result.checkedAt)}</span>
+        </p>
       ) : null}
+      {notice ? <Hint role="status">{notice}</Hint> : null}
+      <ErrorText>{error}</ErrorText>
     </div>
   );
 }

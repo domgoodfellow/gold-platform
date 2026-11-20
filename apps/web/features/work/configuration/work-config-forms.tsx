@@ -51,6 +51,7 @@ export function CreateStatusForm({
           required
           maxLength={64}
           aria-label={starting ? 'Starting stage name' : 'Stage name'}
+          placeholder="New stage name"
           className="flex-1"
         />
         <Button type="submit" disabled={pending} tone="secondary" className="w-fit">
@@ -221,7 +222,8 @@ export function CreateTransitionForm({
         <span aria-hidden className="text-subtle">
           →
         </span>
-        <SelectField name="toStatusId" aria-label="Move to" className="flex-1" options={[...statuses.map((status) => ({ value: status.id, label: status.name }))]} />
+        {/* Starts on the second stage, so the first choice offered is a real move rather than Booked → Booked. */}
+        <SelectField name="toStatusId" aria-label="Move to" className="flex-1" defaultValue={statuses[1]?.id} options={[...statuses.map((status) => ({ value: status.id, label: status.name }))]} />
         <Button type="submit" disabled={pending} tone="secondary" className="w-fit">
           {pending ? 'Allowing…' : 'Allow move'}
         </Button>
@@ -290,17 +292,20 @@ export function EditStatusForm({
         size="small"
         className="min-w-40 flex-1"
       />
-      <TextInput
-        name="position"
-        type="number"
-        required
-        min={0}
-        step={1}
-        defaultValue={status.position}
-        aria-label={`Position of stage ${status.name}`}
-        size="small"
-        className="w-20"
-      />
+      <label className="flex items-center gap-1.5 text-xs text-muted">
+        Order
+        <TextInput
+          name="position"
+          type="number"
+          required
+          min={0}
+          step={1}
+          defaultValue={status.position}
+          aria-label={`Position of stage ${status.name}`}
+          size="small"
+          className="w-16"
+        />
+      </label>
       {/* The two questions the platform asks about a status, and both are the tenant's to
           answer. Neither is `is_terminal`: that would be the platform deciding what a word
           means, and these ask about two different consequences of it. "Cancelled" frees the

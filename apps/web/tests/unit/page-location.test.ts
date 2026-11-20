@@ -385,7 +385,15 @@ describe('the migration boundary', () => {
       expect(adoptsResolvedLocation(`${ORG}${path}`), path).toBe(false);
     }
     expect(adoptsResolvedLocation(`${ORG}/calls`)).toBe(false);
-    expect(adoptsResolvedLocation(`${ORG}/settings/general`)).toBe(false);
+    // Settings (A6): every destination but Custom fields and Secrets, which wait for the configuration review (B-D5).
+    for (const path of ['/settings/general', '/settings/email', '/settings/access/members', '/settings/access/roles/new', '/settings/connections', '/settings/connections/mcp', '/settings/plan', '/settings/public-profile']) {
+      expect(adoptsResolvedLocation(`${ORG}${path}`), path).toBe(true);
+    }
+    expect(adoptsResolvedLocation('/settings/account/appearance')).toBe(true);
+    // Records with no business noun write the same trail themselves; Custom fields and Secrets wait for the review.
+    for (const path of ['/settings/access/roles/r1', '/settings/connections/c1', '/settings/connections/apps/slack', '/settings/secrets', '/settings/custom-fields']) {
+      expect(adoptsResolvedLocation(`${ORG}${path}`), path).toBe(false);
+    }
     expect(adoptsResolvedLocation('/platform/plans')).toBe(false);
     expect(adoptsResolvedLocation(`${ORG}/nonsense`)).toBe(false);
   });

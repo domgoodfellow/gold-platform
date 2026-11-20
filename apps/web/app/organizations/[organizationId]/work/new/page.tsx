@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/headers/page-header';
 import { WorkCreatePage } from '@/features/work/work-create-page';
 import { workCreateOptions } from '@/lib/application/work/create-options';
 import { requireOrganization } from '@/lib/route/organization';
-import { areaAvailable, areaHref, areaLabel } from '@/lib/navigation';
+import { areaAvailable, areaHref, areaLabel, workspaceAncestry } from '@/lib/navigation';
 import { activeModuleKeys, availableFeatureKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
 
 export const dynamic = 'force-dynamic';
@@ -28,7 +28,7 @@ export default async function NewWorkPage({ params, searchParams }: PageProps<'/
   const delivery = proposal && proposalLine ? { proposalId: proposal.id, position: proposalLine.position, customerId: proposal.customerId, name: proposalLine.name } : undefined;
   // A bounded Form page: one focused creation task, not a fluid workspace surface.
   return <AppPage width="form">
-    <PageHeader title="New work" crumbs={[{ label: areaLabel('work'), href: areaHref(organizationId, 'work') }]} />
+    <PageHeader title="New work" crumbs={[...workspaceAncestry(organizationId, 'work'), { label: areaLabel('work'), href: areaHref(organizationId, 'work') }]} />
     <WorkCreatePage options={options} delivery={delivery} initialServiceId={typeof service === 'string' ? service : undefined} initialCustomerId={typeof customer === 'string' ? customer : undefined} initialTypeId={typeof type === 'string' ? type : undefined} mayConfigure={organization.capabilities.includes('field.manage')} returnToQuote={returnTo === 'quote'} setupStep={typeof setupStep === 'string' ? setupStep : undefined} />
   </AppPage>;
 }

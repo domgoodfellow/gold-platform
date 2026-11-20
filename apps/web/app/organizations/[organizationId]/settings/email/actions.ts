@@ -9,6 +9,9 @@ import {
   listSendingDomains,
   releaseSendingDomain,
   requestSendingDomain,
+  domainCheckFailure,
+  domainCheckResult,
+  type DomainCheckResult,
   type SendingDomainOutcome,
 } from '@/lib/domain/email/sending-domains';
 import { createEmailIdentity, setEmailIdentityReceiving } from '@/lib/domain/email/identities';
@@ -21,7 +24,13 @@ import { requireOrganization } from '@/lib/route/organization';
  * comes back as a sentence, never as a thrown page.
  */
 
-export type EmailDomainState = { error: string | null; notice: string | null; done: boolean };
+export type EmailDomainState = {
+  error: string | null;
+  notice: string | null;
+  done: boolean;
+  /** What a verification check found, shown on the domain itself. Only `verified` is good news. */
+  result?: DomainCheckResult;
+};
 
 function words(error: unknown): string {
   if (error instanceof DomainError) return error.message;
@@ -34,9 +43,8 @@ function refresh(organizationId: string) {
 }
 
 /**
- * What an outcome reads as once the row has already been updated behind it. An `ok` outcome is
- * not automatically good news: the provider may have taken the domain and still be waiting on
- * DNS, which is the ordinary case and not an error.
+ * What naming a domain came to. `ok` here means only that the provider accepted the name and
+ * answered with the records it wants; verification is the separate question `checked` answers.
  */
 function settle(outcome: SendingDomainOutcome): EmailDomainState {
   switch (outcome.kind) {
@@ -67,6 +75,20 @@ export async function requestSendingDomainAction(
   }
 }
 
+/**
+ * A check's answer, read as the provider gave it. The request going through is not the domain
+ * verifying: a pending domain stays pending, with how many records are outstanding, and only the
+ * provider's own `ready` is reported as verified (`done`).
+ */
+function checked(outcome: SendingDomainOutcome): EmailDomainState {
+  const at = new Date().toISOString();
+  if (outcome.kind === 'ok') {
+    const result = domainCheckResult(outcome.standing, at);
+    return { error: null, notice: null, done: result.kind === 'verified', result };
+  }
+  return { error: null, notice: null, done: false, result: domainCheckFailure(outcome.kind, outcome.message, at) };
+}
+
 export async function checkSendingDomainAction(
   _previous: EmailDomainState,
   form: FormData,
@@ -79,7 +101,7 @@ export async function checkSendingDomainAction(
       resourceId: String(form.get('resourceId') ?? ''),
     });
     refresh(organizationId);
-    return settle(outcome);
+    return checked(outcome);
   } catch (error) {
     return { error: words(error), notice: null, done: false };
   }
@@ -107,16 +129,16 @@ export async function applySendingDomainDnsAction(
       resourceId: String(form.get('resourceId') ?? ''),
     });
     refresh(organizationId);
-    if (outcome.kind !== 'ok') return settle(outcome);
+    if (outcome.kind !== 'ok') return checked(outcome);
 
     const unfinished = (outcome.standing.dnsOutcome?.records ?? []).filter(
       (record) => record.outcome === 'conflict' || record.outcome === 'failed',
     );
-    if (unfinished.length === 0) return { error: null, notice: null, done: true };
+    const after = checked(outcome);
+    if (unfinished.length === 0) return after;
 
     return {
-      error: null,
-      done: true,
+      ...after,
       notice: `${unfinished.length} record${unfinished.length === 1 ? ' needs' : 's need'} attention at your DNS host: ${unfinished
         .map((record) => `${record.type} ${record.name} — ${record.message ?? 'could not be published'}`)
         .join('; ')}`,

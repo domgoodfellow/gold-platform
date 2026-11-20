@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
 import { cx } from '@/components/class-names';
-import { DividedList, EmptyState, GroupHeading } from '@/components/surfaces/section';
+import { Badge } from '@/components/display/data';
+import { DividedList, EmptyState } from '@/components/surfaces/section';
 import { ViewNav } from '@/components/navigation/view-nav';
 import { NavigationList } from '@/components/navigation/navigation-list';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@gold/ui/components/tabs';
@@ -17,6 +18,8 @@ import type { ResourceRequirement } from '@/lib/domain/work-items/requirements';
 import { NewTypeDialog } from './new-type-dialog';
 import { TypeLifecycle } from './type-lifecycle';
 import { ResourceRequirementsEditor } from './resource-requirements';
+import { TypePricing, type TypePricingData } from './type-pricing';
+import { StartingStageForm } from '../starting-stage-form';
 import {
   AddTypeChecklistItemForm,
   CreateStatusForm,
@@ -63,6 +66,12 @@ export type WorkConfigurationData = {
   /** Opens the New type drawer on load (`?new=1`). */
   createOpen?: boolean;
   deletable?: boolean;
+  /** The selected type's priced items and stage costs; the Pricing tab appears when given. */
+  pricing?: TypePricingData;
+  /** Page variant only: the custom fields of all work are open instead of a type. */
+  fieldsOpen?: boolean;
+  /** Page variant only: where Fields opens. */
+  fieldsHref?: string;
 };
 
 /**
@@ -99,7 +108,7 @@ export function WorkConfiguration(props: WorkConfigurationData) {
     );
   }
 
-  const showDetail = Boolean(props.typeRequested);
+  const showDetail = Boolean(props.typeRequested || props.fieldsOpen);
   return (
     <div className="@container min-w-0">
     <div className="grid min-w-0 gap-5 @3xl:grid-cols-[13rem_minmax(0,1fr)] @3xl:items-start">
@@ -107,7 +116,10 @@ export function WorkConfiguration(props: WorkConfigurationData) {
         <div className="mb-1 flex min-h-9 items-center justify-between gap-2">
           <h2 className="text-sm font-medium">Work types</h2>{newType}
         </div>
-        <NavigationList label="Work types" density="compact" current={selectedType?.id} items={types.map(type => ({ key: type.id, title: type.name, href: typeHref(type.id), metadata: type.archivedAt ? 'Archived' : `${type.schedulable ? 'Scheduled' : 'Not scheduled'}${type.id === selectedType?.id ? ' · Selected' : ''}`, chevron: true }))} />
+        <NavigationList label="Work types" density="compact" current={props.fieldsOpen ? undefined : selectedType?.id} items={types.map(type => ({ key: type.id, title: type.name, href: typeHref(type.id), metadata: type.archivedAt ? 'Archived' : type.schedulable ? 'Scheduled' : 'Not scheduled', chevron: true }))} />
+        {props.fieldsHref ? (
+          <NavigationList label="All work" density="compact" className="mt-3 border-t border-border pt-3" current={props.fieldsOpen ? 'fields' : undefined} items={[{ key: 'fields', title: 'Fields', href: props.fieldsHref, metadata: 'Every work type', chevron: true }]} />
+        ) : null}
       </div>
 
       <div className={cx('min-w-0', !showDetail && 'hidden @3xl:block')}>
@@ -117,7 +129,7 @@ export function WorkConfiguration(props: WorkConfigurationData) {
             Work types
           </Link>
         ) : null}
-        <TypeDetail {...props} />
+        {props.fieldsOpen ? <WorkFields {...props} /> : <TypeDetail {...props} />}
       </div>
     </div>
     </div>
@@ -142,10 +154,11 @@ function TypeDetail({
   intakeForms,
   initialTab,
   deletable = false,
+  pricing,
 }: WorkConfigurationData) {
   if (!selectedType) return null;
 
-  const tabs = ['general', 'workflow', ...(selectedType.schedulable ? ['requirements'] : []), 'checklists', ...(bookingEnabled ? ['booking'] : []), 'fields'];
+  const tabs = ['general', 'workflow', ...(selectedType.schedulable ? ['requirements'] : []), 'checklists', ...(bookingEnabled ? ['booking'] : []), ...(pricing ? ['pricing'] : [])];
   // `?tab=` is a deep link, kept: the earlier name `types` still means General, and an unknown or unavailable value falls back to it.
   const requested = initialTab === 'types' ? 'general' : initialTab;
   const startTab = requested && tabs.includes(requested) ? requested : initialTab === undefined && statuses.length === 0 ? 'workflow' : 'general';
@@ -154,9 +167,9 @@ function TypeDetail({
 
   return (
     <div className="flex min-w-0 flex-col gap-4">
-      <div className="min-w-0">
+      <div className="flex flex-wrap items-center gap-2">
         <h2 className="wrap-break-word text-lg font-semibold">{selectedType.name}</h2>
-        <p className="mt-1 text-sm text-muted">{selectedType.schedulable ? 'Scheduled work' : 'Not scheduled'} · {statuses.length === 1 ? '1 stage' : `${statuses.length} stages`}{mayConfigure ? '' : ' · View only'}.</p>
+        {mayConfigure ? null : <Badge>View only</Badge>}
       </div>
 
       <Tabs key={`${selectedType.id}:${initialTab ?? 'default'}`} defaultValue={startTab} className="min-w-0 gap-5">
@@ -166,11 +179,10 @@ function TypeDetail({
           {selectedType.schedulable ? <TabsTrigger value="requirements">Requirements</TabsTrigger> : null}
           <TabsTrigger value="checklists">Checklists</TabsTrigger>
           {bookingEnabled ? <TabsTrigger value="booking">Booking</TabsTrigger> : null}
-          <TabsTrigger value="fields">Fields</TabsTrigger>
+          {pricing ? <TabsTrigger value="pricing">Pricing</TabsTrigger> : null}
         </TabsList>
 
         <TabsContent value="general" className="flex max-w-2xl flex-col gap-5">
-          <p className="text-sm text-muted">Name and scheduling behavior are saved separately.</p>
           {mayConfigure ? (
             <>
               <RenameTypeForm organizationId={organizationId} typeId={selectedType.id} name={selectedType.name} />
@@ -192,8 +204,8 @@ function TypeDetail({
         <TabsContent value="workflow" className="flex max-w-3xl flex-col gap-8">
           {/* Stages in their order, then the moves between them: the workflow work of this type follows. */}
           <section className="flex flex-col gap-3" aria-labelledby="workflow-stages">
-            <GroupHeading id="workflow-stages">Stages</GroupHeading>
-            <p className="text-sm text-muted">{statuses.length === 0 ? 'A starting stage is required before creating Work of this type. Add the stage new Work starts in.' : 'New work starts in the first stage. Order sets the sequence.'}</p>
+            <h3 id="workflow-stages" className="text-sm font-semibold">Stages</h3>
+            {statuses.length === 0 ? (mayConfigure ? <StartingStageForm organizationId={organizationId} typeId={selectedType.id} typeName={selectedType.name} /> : <p className="text-sm text-muted">No stages yet.</p>) : null}
             {statuses.length > 0 ? (
               <ol aria-label="Stages in order" className="flex flex-col divide-y divide-border rounded-[var(--visual-radius,0.625rem)] border border-border">
                 {statuses.map((status, index) => (
@@ -207,12 +219,12 @@ function TypeDetail({
                 ))}
               </ol>
             ) : null}
-            {mayConfigure ? <CreateStatusForm organizationId={organizationId} typeId={selectedType.id} starting={statuses.length === 0} /> : null}
+            {mayConfigure && statuses.length > 0 ? <CreateStatusForm organizationId={organizationId} typeId={selectedType.id} /> : null}
           </section>
 
           {statuses.length >= 2 ? (
             <section className="flex flex-col gap-3" aria-labelledby="workflow-moves">
-              <GroupHeading id="workflow-moves">Allowed moves</GroupHeading>
+              <h3 id="workflow-moves" className="text-sm font-semibold">Allowed moves</h3>
               {/* An unconfigured type is frozen, not unconstrained. */}
               {transitions.length === 0 ? <p className="text-sm text-muted">None yet, so work of this type cannot change stage.</p> : (
                 <ul aria-label="Allowed moves" className="flex flex-col gap-1 text-sm">
@@ -273,17 +285,28 @@ function TypeDetail({
           </TabsContent>
         ) : null}
 
-        <TabsContent value="fields" className="flex max-w-2xl flex-col gap-3">
-          <p className="text-sm text-muted">Custom fields apply to every work type.</p>
-          <EntityFieldsConfiguration
-            organizationId={organizationId}
-            entityType="work_item"
-            role={role}
-            mayConfigure={mayConfigure}
-            definitions={fieldDefinitions}
-          />
-        </TabsContent>
+        {pricing ? (
+          <TabsContent value="pricing" className="max-w-3xl">
+            <TypePricing organizationId={organizationId} typeId={selectedType.id} typeName={selectedType.name} data={pricing} />
+          </TabsContent>
+        ) : null}
       </Tabs>
+    </div>
+  );
+}
+
+/** The custom fields every piece of work carries, whatever its type. */
+function WorkFields({ organizationId, role, mayConfigure, fieldDefinitions }: WorkConfigurationData) {
+  return (
+    <div className="flex min-w-0 max-w-2xl flex-col gap-4">
+      <h2 className="text-lg font-semibold">Fields</h2>
+      <EntityFieldsConfiguration
+        organizationId={organizationId}
+        entityType="work_item"
+        role={role}
+        mayConfigure={mayConfigure}
+        definitions={fieldDefinitions}
+      />
     </div>
   );
 }

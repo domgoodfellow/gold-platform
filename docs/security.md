@@ -675,7 +675,11 @@ Three tenant permissions govern selling and its economics in any business's Fina
 cost to serve and margins) and `cost.manage` (record supplier costs and economics assumptions).
 They were granted by forward backfill to unrestricted administrators only
 (`20261120000001`); other roles receive them explicitly from someone who holds them. `cost.read`
-and `cost.manage` are marked sensitive in the role editor.
+and `cost.manage` are marked sensitive in the role editor. They also govern a business's own expected
+costs: the cost lines on its priced items and the time and cost per hour of its Work types' stages
+(`price_book_item_expected_costs`, `work_item_status_expected_costs`) are read only with `cost.read`
+and changed only with `cost.manage`, because a cost rate states what the business pays its people and
+suppliers. Prices stay readable to every member as before.
 
 ---
 

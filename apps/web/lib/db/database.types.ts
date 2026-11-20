@@ -11236,6 +11236,61 @@ export type Database = {
           },
         ]
       }
+      price_book_item_expected_costs: {
+        Row: {
+          amount_minor: number
+          created_at: string
+          created_by: string
+          currency: string
+          description: string
+          id: string
+          item_id: string
+          organization_id: string
+        }
+        Insert: {
+          amount_minor: number
+          created_at?: string
+          created_by?: string
+          currency: string
+          description: string
+          id?: string
+          item_id: string
+          organization_id: string
+        }
+        Update: {
+          amount_minor?: number
+          created_at?: string
+          created_by?: string
+          currency?: string
+          description?: string
+          id?: string
+          item_id?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_book_item_expected_costs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_book_item_expected_costs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_book_item_expected_costs_organization_id_item_id_fkey"
+            columns: ["organization_id", "item_id"]
+            isOneToOne: false
+            referencedRelation: "price_book_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       price_book_item_prices: {
         Row: {
           amount_minor: number
@@ -14257,6 +14312,58 @@ export type Database = {
             columns: ["organization_id", "work_item_id"]
             isOneToOne: false
             referencedRelation: "work_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      work_item_status_expected_costs: {
+        Row: {
+          currency: string
+          expected_minutes: number
+          hourly_cost_minor: number
+          organization_id: string
+          status_id: string
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          currency: string
+          expected_minutes: number
+          hourly_cost_minor: number
+          organization_id: string
+          status_id: string
+          updated_at?: string
+          updated_by?: string
+        }
+        Update: {
+          currency?: string
+          expected_minutes?: number
+          hourly_cost_minor?: number
+          organization_id?: string
+          status_id?: string
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_item_status_expected_costs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_item_status_expected_costs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_item_status_expected_costs_organization_id_status_id_fkey"
+            columns: ["organization_id", "status_id"]
+            isOneToOne: false
+            referencedRelation: "work_item_statuses"
             referencedColumns: ["organization_id", "id"]
           },
         ]
@@ -20017,6 +20124,22 @@ export type Database = {
         }[]
       }
       work_type_deletable: { Args: { p_type_id: string }; Returns: boolean }
+      work_type_results: {
+        Args: {
+          p_currency: string
+          p_from?: string
+          p_organization_id: string
+          p_to?: string
+        }
+        Returns: {
+          cost_minor: number
+          finished_jobs: number
+          open_jobs: number
+          priced_jobs: number
+          priced_minor: number
+          type_id: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

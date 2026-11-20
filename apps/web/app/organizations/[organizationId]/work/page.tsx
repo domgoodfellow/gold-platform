@@ -9,7 +9,7 @@ import { listResources } from '@/lib/domain/resources/resources';
 import { listUsableModules } from '@/lib/domain/tenancy/modules';
 import type { Capability } from '@/lib/domain/tenancy/capabilities';
 import { listTypeChecklistItems } from '@/lib/domain/work-items/checklists';
-import { listWorkItemStatuses } from '@/lib/domain/work-items/statuses';
+import { listOrganizationStatuses, listWorkItemStatuses } from '@/lib/domain/work-items/statuses';
 import { listWorkItemTransitions } from '@/lib/domain/work-items/transitions';
 import { listBookingIntakeForms } from '@/lib/domain/booking/intake';
 import { getTypeBooking, listWorkItemTypes } from '@/lib/domain/work-items/types';
@@ -45,7 +45,9 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
   const { db, organization } = await requireOrganization(organizationId);
   if (create === '1') redirect(newWorkHref(organizationId, view.type));
   const types = await listWorkItemTypes(db, { organizationId, includeArchived: true });
-  const selectedType = types.find((type) => type.id === view.type) ?? types[0] ?? null;
+  // With no type in the address, the first type that can hold work opens, not a half-made one.
+  const staged = new Set((await listOrganizationStatuses(db, { organizationId })).map((status) => status.typeId));
+  const selectedType = types.find((type) => type.id === view.type) ?? types.find((type) => !type.archivedAt && staged.has(type.id)) ?? types[0] ?? null;
   const statuses = selectedType ? await listWorkItemStatuses(db, { organizationId, typeId: selectedType.id }) : [];
   const statusId = statuses.find(s => s.id === view.status)?.id;
   // A status belongs to one type, and the Board shows every status: an address that keeps one it

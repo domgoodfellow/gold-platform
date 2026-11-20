@@ -1666,6 +1666,14 @@
       ],
       "note": "The provider's required DNS records render whole (a long DKIM key is never truncated), with MX priority and per-record verification status."
     },
+    "apps/web/tests/component/sending-domains.test.tsx": {
+      "category": "component",
+      "concerns": [
+        "communications",
+        "providers"
+      ],
+      "note": "Sending domains are one section with each domain's status and next action; a pending check is never shown as success, and every check result is stated beside the domain."
+    },
     "apps/web/tests/component/ui-components.test.ts": {
       "category": "component",
       "concerns": [
@@ -2042,6 +2050,14 @@
         "billing",
         "security"
       ]
+    },
+    "apps/web/tests/integration/database/expected-costs.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "billing",
+        "security"
+      ],
+      "note": "Expected costs on priced items and stages are seen only with cost.read, changed only with cost.manage, stay in the item's currency and within one business; a Work type's finished jobs are counted once with their price and recorded cost."
     },
     "apps/web/tests/integration/database/platform-customer-link.test.ts": {
       "category": "database-integration",
@@ -2856,6 +2872,14 @@
         "providers"
       ],
       "note": "The eight presentation states a sending domain reads as, and the sentence/badge for each; never confuses a refused account with a refused name."
+    },
+    "apps/web/tests/unit/expected-costs.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "billing",
+        "pricing"
+      ],
+      "note": "An item's expected unit cost is its cost lines plus its delivering stages' time and hourly cost, never converted between currencies; a missing or foreign assumption leaves the margin unknown."
     },
     "apps/web/tests/unit/service-access.test.ts": {
       "category": "unit",

@@ -296,6 +296,12 @@ export const RESOLVED_LOCATION_ROUTES: ReadonlySet<string> = new Set([
   'area:customers', 'record:customer',
   // Slice 1C — CRM operating pages. The Opportunity pipeline (U-17) and CRM configuration (Batch 3) stay on their own trails.
   'workspace:crm', 'area:pipeline', 'area:opportunity-pipeline', 'area:opportunities', 'record:opportunity', 'area:follow-ups', 'area:calendar', 'area:crm-search',
+  // Settings (A6): `Settings › {Page}` in the bar and no printed title. Custom fields and Secrets keep
+  // their own trails until the configuration review (B-D5).
+  'target:general', 'target:payments', 'target:branding', 'target:domains', 'target:email', 'target:features', 'target:terminology',
+  'target:public-profile', 'target:integrations', 'target:plan',
+  'view:access-members', 'view:access-invitations', 'view:access-roles', 'view:access-history', 'create:role', 'view:mcp-servers',
+  'personal:profile', 'personal:security', 'personal:appearance',
 ]);
 
 export function adoptsResolvedLocation(pathname: string): boolean {

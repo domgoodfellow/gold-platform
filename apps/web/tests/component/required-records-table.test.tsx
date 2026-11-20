@@ -12,7 +12,7 @@ import type { RequiredDnsRecord } from '@/lib/domain/email/sending-domains';
  * that MX's preference is visible, and that a record the provider has already seen is not asking
  * to be published again. The copyable value lives in a read-only input, so its full text is the
  * element's value rather than its text content — which is also why a 400-character DKIM key
- * cannot be clipped by the cell it sits in.
+ * cannot be clipped by the row it sits in.
  */
 
 // A real 2048-bit DKIM public key is a little over 400 characters. This is the length that would
@@ -31,45 +31,47 @@ describe('the records a sending domain still needs', () => {
   it('shows every value whole, so a long DKIM key can be copied exactly', () => {
     render(<RequiredRecordsTable records={RECORDS} />);
 
-    // The narrow rendering repeats each row, so there is one input per layout.
     const fields = screen.getAllByLabelText('TXT record value') as HTMLInputElement[];
-    expect(fields.some((field) => field.value === DKIM_VALUE)).toBe(true);
+    expect(fields.map((field) => field.value)).toContain(DKIM_VALUE);
     expect(fields.every((field) => !field.value.includes('…'))).toBe(true);
   });
 
-  it('shows the preference on the MX record, and nothing where a type has none', () => {
-    // Priority is a `card-only` column, so `DataTable` keeps it out of the wide table and shows it
-    // only in the narrow card rendering. jsdom renders both layouts and does not compute CSS, so
-    // this looks for the value in either rather than asserting which one is visible.
+  it('gives each record its own copy control for host and value, named for the record', () => {
     render(<RequiredRecordsTable records={RECORDS} />);
 
-    expect(screen.getAllByText('10').length).toBeGreaterThan(0);
-    expect(screen.queryAllByText('—').length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('textbox', { name: /record host$/ })).toHaveLength(3);
+    expect(screen.getAllByRole('textbox', { name: /record value$/ })).toHaveLength(3);
+    expect(screen.getAllByRole('button', { name: /^Copy/ }).length).toBe(6);
   });
 
-  it('says which records the provider has already seen, so the count on the page is honest', () => {
+  it('shows the preference on the MX record only', () => {
     render(<RequiredRecordsTable records={RECORDS} />);
 
-    expect(screen.getAllByText('Verified').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Waiting').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Priority')).toHaveLength(1);
+    expect(screen.getByText('10')).toBeTruthy();
   });
 
-  it('names what each record is for, in the provider’s own word', () => {
+  it('says which records the provider has verified, not found or not yet looked at', () => {
+    render(<RequiredRecordsTable records={[...RECORDS, { ...RECORDS[1], name: 'missing.acme.ca', status: 'failed' }]} />);
+
+    expect(screen.getAllByText('Verified')).toHaveLength(1);
+    expect(screen.getAllByText('Pending')).toHaveLength(2);
+    expect(screen.getAllByText('Not found')).toHaveLength(1);
+  });
+
+  it('names what each record is for, in the provider’s own word, beside its type', () => {
     render(<RequiredRecordsTable records={RECORDS} />);
 
-    expect(screen.getAllByText('DKIM').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('SPF').length).toBeGreaterThan(0);
+    expect(screen.getByText('DKIM')).toBeTruthy();
+    expect(screen.getAllByText('SPF')).toHaveLength(2);
+    expect(screen.getAllByText('TXT')).toHaveLength(2);
+    expect(screen.getByRole('list', { name: 'DNS records' })).toBeTruthy();
   });
 
-  it('says the host’s own default for TTL rather than inventing a number', () => {
-    render(<RequiredRecordsTable records={RECORDS} />);
-
-    expect(screen.getAllByText(/Your host’s default/).length).toBeGreaterThan(0);
-  });
-
-  it('says nothing is required rather than drawing an empty table', () => {
+  it('says nothing is required rather than drawing an empty list', () => {
     render(<RequiredRecordsTable records={[]} />);
 
     expect(screen.getByText('No records are needed yet.')).toBeTruthy();
+    expect(screen.queryByRole('list')).toBeNull();
   });
 });

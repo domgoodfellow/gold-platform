@@ -1,14 +1,12 @@
 import { EmptyState } from '@/components/surfaces/section';
-import { PageHeader } from '@/components/headers/page-header';
 import { IntegrationsNav } from '@/features/integrations/integrations-nav';
 import { McpOverview } from '@/features/integrations/mcp/mcp-overview';
-import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
+import { SettingsPageFrame, SettingsPageHeader } from '@/features/settings/settings-page-frame';
 import { listConnections } from '@/lib/domain/integrations/connections';
 import { listMcpServers } from '@/lib/domain/integrations/mcp';
 import { loadConnectorReadiness } from '@/lib/domain/integrations/readiness';
 import { listActiveGrants, listExecutions, listGrantableAgents } from '@/lib/domain/integrations/tool-access';
 import { requireOrganization } from '@/lib/route/organization';
-import { settingsScopeHref } from '@/lib/route/settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,10 +32,7 @@ export default async function McpServersPage({ params }: PageProps<'/organizatio
 
   return (
     <SettingsPageFrame width="fluid">
-      <PageHeader
-        title="MCP servers"
-        crumbs={[{ label: 'Connections', href: settingsScopeHref('connections', organizationId) }]}
-      />
+      <SettingsPageHeader title="MCP servers" />
       <IntegrationsNav organizationId={organizationId} current="mcp" />
       {!mayManage ? (
         <EmptyState

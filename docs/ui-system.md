@@ -704,7 +704,7 @@ The shared page-identity components own this responsibility.
 
 ### Page location contract (ADR-047)
 
-**Status.** This is the approved target. Migration is per route (`RESOLVED_LOCATION_ROUTES` in `lib/route/page-location.ts`). Today the CRM operating pages take their location from the resolver: CRM Home, Customers and Customer detail, Relationship pipeline, Opportunities and Opportunity detail, Tasks, shared Calendar and CRM Search. The Opportunity pipeline (open decision U-17), CRM configuration (Batch 3) and every other workspace still publish their own trail through `PageLocation`. A route uses exactly one of the two, never both. On a migrated route the shell resolves the location once, and the bar, the phone's Up control and the page's `h1` read that one answer; loading and refused states keep the known ancestors.
+**Status.** This is the approved target. Migration is per route (`RESOLVED_LOCATION_ROUTES` in `lib/route/page-location.ts`). Today the CRM operating pages take their location from the resolver: CRM Home, Customers and Customer detail, Relationship pipeline, Opportunities and Opportunity detail, Tasks, shared Calendar and CRM Search; so do the Settings destinations (A6) apart from Custom fields and Secrets. The Opportunity pipeline (open decision U-17), CRM configuration (Batch 3) and every other workspace still publish their own trail through `PageLocation`. A route uses exactly one of the two, never both. On a migrated route the shell resolves the location once, and the bar, the phone's Up control and the page's `h1` read that one answer; loading and refused states keep the known ancestors.
 
 - **One location.** Every page inside the organization, Settings and Platform shells shows one location: its ancestors and the current page, resolved by `resolveLocation` (`lib/route/page-location.ts`) from the canonical registries. A page supplies only server-known record labels; it never writes its own ancestors.
 - **Loading and missing.** A loading page keeps its known ancestors and shows the record name only once it is known. A missing, deleted or unauthorized record shows not-found inside its nearest valid ancestors, without disclosing which it was. Record data is never invented.
@@ -1372,7 +1372,7 @@ Search covers these destinations and the configuration workspaces own (from `CON
 
 ### A6 — Settings Page Identity
 
-Target (ADR-047, not yet migrated): Settings follows the shared page location contract, so the bar shows `Settings › {Page}`, "Settings" is plain text because it has no index page, and the page title is not printed again in the content. Current behaviour: every Settings page still uses `PageHeader section="Settings"`, so the bar names the section and the page title is visible beneath it. Forms use the bounded `form` width; pages with tables or catalogues use `fluid`.
+Settings follows the shared page location contract (ADR-047): the bar shows `Settings › {Page}` (Access views `Settings › Access › {Page}`), "Settings" and "Access" are plain text because they have no index page, and the page title is not printed again in the content; the page keeps a visually hidden `h1`. Organization and personal destinations take this from the resolver (`SettingsPageHeader`). A role, a connection and an app being connected write the same trail themselves, because the resolver has no business noun for them. Custom fields and Secrets keep "Settings" with a visible title until the configuration review (B-D5). Forms use the bounded `form` width; pages with tables or catalogues use `fluid`.
 
 ---
 

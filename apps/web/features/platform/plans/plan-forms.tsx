@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState, useId, useState } from 'react';
+import { useActionState, useEffect, useId, useState } from 'react';
+import { toast } from 'sonner';
 import { Button } from '@/components/controls/button';
 import { ErrorText, FieldLabel, Hint, TextInput } from '@/components/controls/inputs';
 import {
@@ -30,6 +31,15 @@ import { SelectField } from '@/components/controls/select-field';
 
 const CREATE_INITIAL: CreatePlanState = { error: null };
 const ACTION_INITIAL: PlanActionState = { error: null, updated: false };
+
+/** A saved drawer closes and says so in a toast, the shared feedback after an action. */
+function useSavedFeedback(state: PlanActionState, close: () => void, message: string) {
+  useEffect(() => {
+    if (!state.updated) return;
+    toast.success(message);
+    close();
+  }, [state]); // eslint-disable-line react-hooks/exhaustive-deps
+}
 
 export function CreatePlanSheet() {
   const [open, setOpen] = useState(false);
@@ -79,6 +89,7 @@ export function EditPlanSwitchesSheet({ plan }: { plan: Plan }) {
   const [open, setOpen] = useState(false);
   const formId = useId();
   const [state, action, pending] = useActionState(updatePlanSwitchesAction, ACTION_INITIAL);
+  useSavedFeedback(state, () => setOpen(false), 'Plan saved.');
 
   return (
     <PageDrawer open={open} onOpenChange={setOpen}>
@@ -107,7 +118,6 @@ export function EditPlanSwitchesSheet({ plan }: { plan: Plan }) {
           <Button type="submit" form={formId} disabled={pending}>
             {pending ? 'Saving…' : 'Save'}
           </Button>
-          {state.updated ? <Hint role="status">Saved.</Hint> : null}
         </PageDrawerFooter>
       </PageDrawerContent>
     </PageDrawer>
@@ -191,6 +201,7 @@ export function QuotaSheet({ planId, planKey, quota }: { planId: string; planKey
   const [open, setOpen] = useState(false);
   const formId = useId();
   const [state, action, pending] = useActionState(setPlanQuotaAction, ACTION_INITIAL);
+  useSavedFeedback(state, () => setOpen(false), 'Allowance saved.');
   const [overageBehavior, setOverageBehavior] = useState(quota?.overageBehavior ?? 'not_applicable');
 
   return (
@@ -261,7 +272,6 @@ export function QuotaSheet({ planId, planKey, quota }: { planId: string; planKey
           <Button type="submit" form={formId} disabled={pending}>
             {pending ? 'Saving…' : 'Save'}
           </Button>
-          {state.updated ? <Hint role="status">Saved.</Hint> : null}
         </PageDrawerFooter>
       </PageDrawerContent>
     </PageDrawer>

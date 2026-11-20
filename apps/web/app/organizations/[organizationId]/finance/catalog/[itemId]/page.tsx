@@ -12,16 +12,36 @@ import {
 import { priceText } from '@/lib/domain/pricing/recurring-items';
 import { loadRecurringItem } from '@/lib/application/finance/recurring-items';
 import { requireOperatingArea } from '@/lib/route/workspace-configuration';
+import { loadItemEconomics } from '@/lib/application/finance/expected-economics';
+import { listWorkItemTypes } from '@/lib/domain/work-items/types';
+import { UnitItem } from '@/features/finance/catalog/unit-item';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * One recurring item in Catalog & Pricing (ADR-057): its price history, add-ons and, for an item
- * that sells a GildOps plan, what the plan switches on, its usage prices and checkout readiness.
+ * One item in Catalog & Pricing. An item sold per unit shows its price, the Work type that delivers
+ * it and what selling one is expected to cost. A recurring item (ADR-057) shows its price history,
+ * add-ons and, for an item that sells a GildOps plan, what the plan switches on, its usage prices and
+ * checkout readiness.
  */
-export default async function RecurringItemPage({ params }: PageProps<'/organizations/[organizationId]/finance/catalog/[itemId]'>) {
+export default async function CatalogItemPage({ params }: PageProps<'/organizations/[organizationId]/finance/catalog/[itemId]'>) {
   const { organizationId, itemId } = await params;
   const { db, organization, gate } = await requireOperatingArea(organizationId, 'finance-catalog');
+  const unit = await loadItemEconomics(db, { organizationId, itemId });
+  if (unit) {
+    const has = (capability: (typeof organization.capabilities)[number]) => organization.capabilities.includes(capability);
+    const type = unit.item.deliveryTypeId ? (await listWorkItemTypes(db, { organizationId, includeArchived: true })).find((candidate) => candidate.id === unit.item.deliveryTypeId) ?? null : null;
+    return (
+      <UnitItem
+        organizationId={organizationId}
+        economics={unit}
+        deliveryType={type}
+        mayReadCosts={has('cost.read')}
+        mayManageCosts={has('cost.manage')}
+        mayConfigureWork={has('field.manage')}
+      />
+    );
+  }
   if (!gate.featureAvailability.has('recurring_items')) notFound();
   const model = await loadRecurringItem(db, { organizationId, itemId });
   if (!model) notFound();

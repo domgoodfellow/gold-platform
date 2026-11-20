@@ -63,7 +63,7 @@ export const SENDING_DOMAIN_BADGE: Record<SendingDomainPresentation, { label: st
   ready: { label: 'Verified', tone: 'success' },
   automatic_dns: { label: 'DNS required', tone: 'neutral' },
   manual_dns: { label: 'DNS required', tone: 'neutral' },
-  checking: { label: 'Checking', tone: 'neutral' },
+  checking: { label: 'Pending', tone: 'neutral' },
   not_created: { label: 'Not started', tone: 'neutral' },
   provider_unavailable: { label: 'Unavailable', tone: 'neutral' },
   provider_error: { label: 'Check failed', tone: 'danger' },
@@ -73,19 +73,21 @@ export const SENDING_DOMAIN_BADGE: Record<SendingDomainPresentation, { label: st
 /** One sentence of state for a sending domain. Never the provider's raw payload. */
 export function sendingDomainSentence(
   presentation: SendingDomainPresentation,
-  domain: { errorMessage: string | null; outstandingRecords: number; zoneName: string | null },
+  domain: { errorMessage: string | null; outstandingRecords: number; zoneName: string | null; totalRecords: number; missingRecords: number },
 ): string {
   switch (presentation) {
     case 'ready':
-      return 'Ready for sending. Mail from addresses at this domain is authorized.';
+      return 'Verified. Addresses at this domain can send.';
     case 'automatic_dns':
       return domain.zoneName
-        ? `${domain.outstandingRecords} record${domain.outstandingRecords === 1 ? '' : 's'} still to publish. GildOps can publish them in your connected ${domain.zoneName} zone — review them first.`
-        : `${domain.outstandingRecords} record${domain.outstandingRecords === 1 ? '' : 's'} still to publish.`;
+        ? `${domain.outstandingRecords} of ${domain.totalRecords} DNS record${domain.totalRecords === 1 ? '' : 's'} still to publish. GildOps can publish them in your connected ${domain.zoneName} zone.`
+        : `${domain.outstandingRecords} of ${domain.totalRecords} DNS record${domain.totalRecords === 1 ? '' : 's'} still to publish.`;
     case 'manual_dns':
-      return `Add the ${domain.outstandingRecords} record${domain.outstandingRecords === 1 ? '' : 's'} below at the company that manages DNS for this domain, then check verification. Changes can take a while to spread.`;
+      return domain.missingRecords
+        ? `${domain.missingRecords} of ${domain.totalRecords} DNS record${domain.totalRecords === 1 ? '' : 's'} not found yet.`
+        : `${domain.outstandingRecords} of ${domain.totalRecords} DNS record${domain.totalRecords === 1 ? '' : 's'} not verified yet.`;
     case 'checking':
-      return 'Your DNS is being checked. This can take a few minutes — check again shortly.';
+      return 'Every record is published; the domain is still being confirmed. Check again in a few minutes.';
     case 'not_created':
       return 'Not set up yet. Start setup to find out which records to publish.';
     case 'provider_unavailable':
@@ -95,4 +97,56 @@ export function sendingDomainSentence(
     case 'failed':
       return domain.errorMessage ?? 'This domain can’t be used for sending.';
   }
+}
+
+/**
+ * What one press of Check verification found. The request
+ * succeeding is not the domain verifying: only the provider's own `ready` is "verified", and a
+ * pending answer says how many records are still outstanding, never "Checked".
+ */
+export type DomainCheckKind = 'verified' | 'pending' | 'records_missing' | 'provider_unavailable' | 'provider_error' | 'rejected';
+export type DomainCheckResult = { kind: DomainCheckKind; message: string; checkedAt: string };
+
+type CheckedRecord = { status: 'pending' | 'verified' | 'failed' };
+
+export function domainCheckResult(
+  standing: { state: 'pending' | 'ready' | 'failed'; records: readonly CheckedRecord[] },
+  checkedAt: string,
+): DomainCheckResult {
+  const total = standing.records.length;
+  const missing = standing.records.filter((record) => record.status === 'failed').length;
+  const outstanding = standing.records.filter((record) => record.status !== 'verified').length;
+  const records = (count: number) => `${count} of ${total} DNS record${total === 1 ? '' : 's'}`;
+  if (standing.state === 'ready') return { kind: 'verified', message: 'Verified. You can add sender addresses at this domain.', checkedAt };
+  if (standing.state === 'failed') return { kind: 'rejected', message: 'This domain was rejected. It can’t be used for sending.', checkedAt };
+  if (missing > 0) return { kind: 'records_missing', message: `${records(missing)} not found. Publish them at your DNS host, then check again.`, checkedAt };
+  if (outstanding > 0) return { kind: 'pending', message: `Verification requested. ${records(outstanding)} not verified yet; DNS changes can take a while to spread.`, checkedAt };
+  return { kind: 'pending', message: 'Verification requested. Every record is published; the domain is still being confirmed.', checkedAt };
+}
+
+/** A refused check, in the same shape, so the domain row can say why rather than only a toast. */
+export function domainCheckFailure(kind: 'provider_unavailable' | 'provider_error' | 'rejected', message: string, checkedAt: string): DomainCheckResult {
+  return { kind, message, checkedAt };
+}
+
+/**
+ * Where a business stands in setting up email, in the order it must happen: a domain registered,
+ * its DNS published and verified, a sender address at it, that address made the default, and a
+ * test sent. Each step names only what to do next.
+ */
+export type EmailSetupStep = 'add_domain' | 'verify_domain' | 'add_sender' | 'choose_default' | 'default_not_ready' | 'unavailable' | 'send_test' | 'ready';
+
+export function emailSetupStep(input: {
+  sendingState: 'ready' | 'not_ready' | 'unavailable' | 'missing';
+  domains: readonly { state: 'pending' | 'ready' | 'failed' }[];
+  readySenders: number;
+  testsSent: number;
+}): EmailSetupStep {
+  if (input.sendingState === 'unavailable') return 'unavailable';
+  if (input.sendingState === 'ready') return input.testsSent > 0 ? 'ready' : 'send_test';
+  if (input.sendingState === 'not_ready') return 'default_not_ready';
+  if (input.domains.length === 0) return 'add_domain';
+  if (!input.domains.some((domain) => domain.state === 'ready')) return 'verify_domain';
+  if (input.readySenders === 0) return 'add_sender';
+  return 'choose_default';
 }

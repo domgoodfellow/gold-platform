@@ -54,6 +54,32 @@ export async function listWorkItemStatuses(
   }));
 }
 
+/** Every type's stages at once, each with its type, in board order — for reading across types (Finance's expected costs). */
+export async function listOrganizationStatuses(
+  db: Db,
+  input: { organizationId: string },
+): Promise<Array<WorkItemStatus & { typeId: string }>> {
+  const { data, error } = await db
+    .from('work_item_statuses')
+    .select('id, type_id, name, position, releases_resource, marks_complete')
+    .eq('organization_id', input.organizationId)
+    .order('position', { ascending: true })
+    .order('name', { ascending: true });
+
+  if (error) {
+    throw fromDatabaseError(error, 'statuses.list_failed');
+  }
+
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    typeId: row.type_id,
+    name: row.name,
+    position: row.position,
+    releasesResource: row.releases_resource,
+    marksComplete: row.marks_complete,
+  }));
+}
+
 /** `position` defaults to the end, not zero — a status added later is almost always a later stage. */
 export async function createWorkItemStatus(
   db: Db,

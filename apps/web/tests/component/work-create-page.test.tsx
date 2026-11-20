@@ -7,7 +7,7 @@ import type { WorkCreateOptions } from '@/lib/application/work/create-options';
 import { chooseOption, fieldValue, optionLabels } from '../support/select-field';
 const router = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => router }));
-const config = vi.hoisted(() => ({ createStatusAction: vi.fn(async () => ({ error: null as string | null })), createTypeAction: vi.fn(async () => ({ error: null, createdTypeId: 'new-type' })) }));
+const config = vi.hoisted(() => ({ createStatusAction: vi.fn(async () => ({ error: null as string | null })), addStarterStagesAction: vi.fn(async () => ({ error: null as string | null })), createTypeAction: vi.fn(async () => ({ error: null, createdTypeId: 'new-type' })) }));
 vi.mock('@/features/work/configuration/actions', () => config);
 
 vi.mock('@/app/organizations/[organizationId]/work/actions', () => ({ createWorkItemAction: vi.fn(async () => ({ error: null })) }));
@@ -43,7 +43,7 @@ describe('New work page', () => {
 
   it('explains a type with no stages, offers ready types and no configuration when not permitted', async () => {
     await open(<WorkCreatePage options={options()} mayConfigure={false} initialTypeId="t3" />);
-    expect(screen.getByText(/A starting stage is required/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Survey needs a starting stage' })).toBeInTheDocument();
     expect(screen.getByText(/has to finish setting up this kind of work/)).toBeInTheDocument();
     expect(screen.getByText(/choose a Work type that is ready/)).toBeInTheDocument();
     expect(screen.queryByRole('form', { name: /Add a starting stage/ })).toBeNull();
@@ -55,13 +55,13 @@ describe('New work page', () => {
   it('lets a configuring member add the starting stage in place, naming nothing for them, then returns to creation', async () => {
     const user = await open(<WorkCreatePage options={options()} mayConfigure initialTypeId="t3" />);
     const form = screen.getByRole('form', { name: 'Add a starting stage to Survey' });
-    const name = within(form).getByLabelText('Starting stage name') as HTMLInputElement;
+    const name = within(form).getByLabelText('Or name the starting stage') as HTMLInputElement;
     // No stage is invented: the field starts empty and nothing is written until it is submitted.
     expect(name.value).toBe('');
     expect(config.createStatusAction).not.toHaveBeenCalled();
     expect(screen.queryByRole('button', { name: 'Create work' })).toBeNull();
     await user.type(name, 'Booked in');
-    await user.click(within(form).getByRole('button', { name: 'Add stage and continue' }));
+    await user.click(within(form).getByRole('button', { name: 'Add stage' }));
     expect(config.createStatusAction).toHaveBeenCalledTimes(1);
     const sent = (config.createStatusAction.mock.calls[0] as unknown as [unknown, FormData])[1];
     expect(Object.fromEntries(sent)).toEqual({ organizationId: 'org', typeId: 't3', name: 'Booked in' });
@@ -71,12 +71,22 @@ describe('New work page', () => {
     expect(screen.getByRole('link', { name: 'Open Work type settings' })).toHaveAttribute('href', '/organizations/org/work/configuration?type=t3&tab=workflow&returnTo=create');
   });
 
+  it('offers the standard stages in one step, through the same Work type action', async () => {
+    const user = await open(<WorkCreatePage options={options()} mayConfigure initialTypeId="t3" />);
+    await user.click(screen.getByRole('button', { name: 'Add Booked, In progress and Done' }));
+    expect(config.addStarterStagesAction).toHaveBeenCalledTimes(1);
+    const sent = (config.addStarterStagesAction.mock.calls[0] as unknown as [unknown, FormData])[1];
+    expect(Object.fromEntries(sent)).toEqual({ organizationId: 'org', typeId: 't3' });
+    expect(router.refresh).toHaveBeenCalled();
+    expect(config.createStatusAction).not.toHaveBeenCalled();
+  });
+
   it('keeps the typed stage name when the stage is refused, and does not move on', async () => {
     config.createStatusAction.mockResolvedValueOnce({ error: 'A status with that name already exists.' });
     const user = await open(<WorkCreatePage options={options()} mayConfigure initialTypeId="t3" />);
-    const name = screen.getByLabelText('Starting stage name') as HTMLInputElement;
+    const name = screen.getByLabelText('Or name the starting stage') as HTMLInputElement;
     await user.type(name, 'Booked');
-    await user.click(screen.getByRole('button', { name: 'Add stage and continue' }));
+    await user.click(screen.getByRole('button', { name: 'Add stage' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('already exists');
     expect(name.value).toBe('Booked');
     expect(router.refresh).not.toHaveBeenCalled();

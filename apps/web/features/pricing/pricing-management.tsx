@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import Link from 'next/link';
 import { Plus, Tag } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import { Hint } from '@/components/controls/inputs';
@@ -50,7 +51,7 @@ export function PricingManagement({ organizationId, items, currency, mayManage, 
               <li key={item.id} className={ROW}>
                 <span className="flex min-w-0 items-center gap-2.5">
                   <span aria-hidden className="flex size-7 shrink-0 items-center justify-center rounded-full bg-secondary text-muted"><Tag className="size-3.5" /></span>
-                  <span className="min-w-0"><span className="block break-words font-medium">{item.name}</span>{currency && item.currency !== currency ? <Badge className="mt-0.5">Priced in {item.currency}</Badge> : null}</span>
+                  <span className="min-w-0"><Link href={`/organizations/${organizationId}/finance/catalog/${item.id}`} className="block break-words font-medium hover:underline">{item.name}</Link>{currency && item.currency !== currency ? <Badge className="mt-0.5">Priced in {item.currency}</Badge> : null}</span>
                 </span>
                 <span className="pl-9.5 text-sm text-muted @min-[40rem]/prices:pl-0">per {item.unit}</span>
                 <span className="pl-9.5 text-sm font-semibold tabular-nums @min-[40rem]/prices:pl-0 @min-[40rem]/prices:text-right">{formatMoney(item.unitAmountMinor, item.currency)} <span className="text-xs font-normal text-subtle">{item.currency}</span></span>

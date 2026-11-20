@@ -17,6 +17,7 @@ export default async function SecretsSettingsPage({ params }: PageProps<'/organi
   return (
     <SettingsPageFrame width="fluid">
       <SettingsPageHeader
+        legacyTrail
         title="Secrets & credentials"
         actions={mayManage ? <SecretSheet mode="create" organizationId={organizationId} /> : undefined}
       />

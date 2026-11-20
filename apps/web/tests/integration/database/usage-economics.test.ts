@@ -37,7 +37,8 @@ function code(): string {
   return `X${pick(letters.slice(0, 25))}${pick(letters)}`;
 }
 
-const CURRENCY = code();
+/** Chosen in `beforeAll` from codes no rate uses yet: other suites keep rates in their own random codes. */
+let CURRENCY = code();
 const DAY = 86_400_000;
 
 type Tenant = { db: SupabaseClient; organizationId: string; customerId: string };
@@ -125,6 +126,9 @@ beforeAll(async () => {
   pg = new Client({ connectionString: CONNECTION });
   await pg.connect();
   await holdPlatformProviderTables(pg);
+  while ((await pg.query('select 1 from public.platform_retail_rates where currency = $1 union all select 1 from public.platform_provider_rates where currency = $1 limit 1', [CURRENCY])).rowCount) {
+    CURRENCY = code();
+  }
   staff = await asPlatformStaff();
   await purgeOwnRateHistory();
 

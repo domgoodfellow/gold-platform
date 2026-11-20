@@ -21,7 +21,7 @@ export function AddSendingDomainForm({ organizationId }: { organizationId: strin
   const [state, run, pending] = useActionState(requestSendingDomainAction, INITIAL);
 
   return (
-    <form action={run} className="mt-3 flex flex-col gap-2">
+    <form action={run} className="flex flex-col gap-2">
       <input type="hidden" name="organizationId" value={organizationId} />
       <div className="flex flex-wrap items-center gap-3">
         <TextInput
@@ -30,11 +30,11 @@ export function AddSendingDomainForm({ organizationId }: { organizationId: strin
           required
           autoComplete="off"
           placeholder="mail.yourbusiness.com"
-          aria-label="Sending domain"
+          aria-label="Domain to send from"
           className="w-full max-w-72"
         />
         <Button type="submit" disabled={pending}>
-          {pending ? 'Setting up…' : 'Set up sending domain'}
+          {pending ? 'Adding…' : 'Add domain'}
         </Button>
       </div>
       <Hint>

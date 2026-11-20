@@ -1,7 +1,6 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 import { DomainError } from '@/lib/domain/errors';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
 import { parseMicrosInput, parseMoneyInput } from '@/lib/domain/pricing/money-input';
@@ -22,7 +21,7 @@ import { requireOperatingArea } from '@/lib/route/workspace-configuration';
  * feature before writing; the database checks the pricing permission again.
  */
 
-export type RecurringItemState = { error: string | null; success?: string };
+export type RecurringItemState = { error: string | null; success?: string; itemId?: string };
 
 const INTERVALS: readonly BillingInterval[] = ['month', 'year', 'one_time'];
 const SALE_STATUSES: readonly ItemSaleStatus[] = ['active', 'unlisted', 'archived'];
@@ -46,7 +45,6 @@ function failed(error: unknown): RecurringItemState {
 }
 
 export async function createRecurringItemAction(_: RecurringItemState, form: FormData): Promise<RecurringItemState> {
-  let target: string;
   try {
     const { db, organizationId } = await context(form);
     const itemId = await createRecurringItem(db, {
@@ -56,11 +54,11 @@ export async function createRecurringItemAction(_: RecurringItemState, form: For
       description: String(form.get('description') ?? ''),
     });
     refresh(organizationId);
-    target = `/organizations/${organizationId}/finance/catalog/${itemId}`;
+    // The drawer opens the new item and confirms it in a toast.
+    return { error: null, success: 'Recurring item created.', itemId };
   } catch (error) {
     return failed(error);
   }
-  redirect(target);
 }
 
 export async function updateRecurringItemAction(_: RecurringItemState, form: FormData): Promise<RecurringItemState> {

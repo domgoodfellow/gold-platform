@@ -11,6 +11,8 @@ import { CollectionToolbar, type ActiveFilter } from '@/components/patterns/coll
 import { NewWorkAction } from './new-work-action';
 import { MoveWorkItemForm } from './work-operations-forms';
 import { WorkTypeSelect } from './work-type-select';
+import { StartingStageForm } from './starting-stage-form';
+import { Card } from '@/components/surfaces/card';
 import { WORK_PAGE_SIZE, WORK_SORTS, workDirectoryHref, type WorkDirectoryView } from './work-directory';
 import { formatWindow } from '@/lib/domain/scheduling/window';
 import { allowedNextStatusIds, type WorkItemTransition } from '@/lib/domain/work-items/transitions';
@@ -56,14 +58,19 @@ export function WorkList({ title, crumbs, organizationId, timezone, types, selec
     {mayAdd && ready && !selectedType?.archivedAt ? <NewWorkAction organizationId={organizationId} typeId={selectedType?.id} /> : null}
   </>} />;
 
+  const typeSelect = selectedType ? <WorkTypeSelect types={types} value={selectedType.id} hrefs={Object.fromEntries(types.map(type => [type.id, href({ type: type.id })]))} /> : null;
+
+  // A type with no stages cannot hold work yet: the type stays choosable, and the one thing missing
+  // is offered where the person already is.
   if (!selectedType || !ready) return <>
     {header}
-    <section aria-labelledby="work-setup" data-slot="compact-empty" className="flex flex-col gap-3 rounded-[var(--visual-radius,0.625rem)] border border-border bg-surface p-5 sm:flex-row sm:items-center sm:justify-between">
-      <div className="min-w-0"><h2 id="work-setup" className="text-base font-semibold">{selectedType ? `${selectedType.name} has no starting stage` : 'No work types yet'}</h2>
-        <p className="mt-1 text-sm text-muted">{selectedType ? 'Work of this type can be created once it has a first stage.' : 'Work types name the jobs this business does and the stages each one moves through.'}</p></div>
-      {mayConfigure ? <ButtonLink tone="primary" size="small" href={`${base}/work/configuration${selectedType ? `?type=${selectedType.id}` : ''}`}>{selectedType ? 'Add a starting stage' : 'Set up work types'}</ButtonLink> : <p className="text-sm text-muted">Someone who manages Work sets this up.</p>}
-    </section>
-    {selectedType && types.length > 1 ? <nav aria-label="Other work types" className="mt-3 flex flex-wrap gap-2 text-sm">{types.filter(type => type.id !== selectedType.id).map(type => <Link key={type.id} className="text-accent-text underline underline-offset-4" href={href({ type: type.id })}>{type.name}</Link>)}</nav> : null}
+    {typeSelect && types.length > 1 ? <div className="mb-4 max-w-xs">{typeSelect}</div> : null}
+    <Card as="section" aria-labelledby="work-setup" className="flex flex-col gap-4">
+      <h2 id="work-setup" className="min-w-0 text-base font-semibold">{selectedType ? `${selectedType.name} needs a starting stage` : 'No work types yet'}</h2>
+      {mayConfigure ? (!selectedType ? <ButtonLink tone="primary" size="small" className="w-fit" href={`${base}/work/configuration`}>Set up work types</ButtonLink>
+        : <StartingStageForm organizationId={organizationId} typeId={selectedType.id} typeName={selectedType.name} />)
+        : <p className="text-sm text-muted">Someone who manages Work sets this up.</p>}
+    </Card>
   </>;
 
   const filtered = Boolean(view.q || view.status);
@@ -92,7 +99,7 @@ export function WorkList({ title, crumbs, organizationId, timezone, types, selec
   return <>
     {header}
     <CollectionToolbar action={`${base}/work`} viewId="work" className="mb-4"
-      leading={<WorkTypeSelect types={types} value={selectedType.id} hrefs={Object.fromEntries(types.map(type => [type.id, href({ type: type.id })]))} />}
+      leading={typeSelect}
       search={{ name: 'q', value: view.q, label: 'Search work', placeholder: 'Search work titles' }}
       hidden={{ view: view.view === 'board' ? 'board' : undefined }}
       filterCount={view.status ? 1 : 0}

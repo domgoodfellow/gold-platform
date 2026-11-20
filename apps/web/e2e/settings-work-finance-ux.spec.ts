@@ -119,7 +119,7 @@ test.describe.serial('Settings, Work and Finance UX correction', () => {
     const url = `${base}/work/new?type=${typeId}`;
     await page.goto(url);
     await expect(main(page).getByRole('heading', { name: 'Site survey needs a starting stage' })).toBeVisible();
-    await expect(main(page).getByLabel('Starting stage name')).toHaveValue('');
+    await expect(main(page).getByLabel('Or name the starting stage')).toHaveValue('');
     await expect(main(page).getByRole('button', { name: 'Create work' })).toHaveCount(0);
     // The parent is the business's own label for Work items (renamed to Jobs in journey 3), never a hardcoded word.
     await expect(breadcrumb(page).getByRole('link', { name: 'Jobs', exact: true })).toHaveAttribute('href', `${base}/work`);
@@ -129,8 +129,8 @@ test.describe.serial('Settings, Work and Finance UX correction', () => {
     await page.goto(url);
     // Nothing exists until the person names a stage and submits it.
     expect((await owner.db.from('work_item_statuses').select('id').eq('type_id', typeId)).data).toEqual([]);
-    await main(page).getByLabel('Starting stage name').fill('Booked');
-    await main(page).getByRole('button', { name: 'Add stage and continue' }).click();
+    await main(page).getByLabel('Or name the starting stage').fill('Booked');
+    await main(page).getByRole('button', { name: 'Add stage' }).click();
     await expect(main(page).getByRole('form', { name: 'Create work' })).toBeVisible();
     await expect(selectFieldValue(main(page).getByLabel('Work type'))).toHaveValue(typeId);
     await expect(main(page).getByLabel('Starting stage', { exact: true })).toHaveText('Booked');
@@ -180,7 +180,7 @@ test.describe.serial('Settings, Work and Finance UX correction', () => {
         await expect(page.getByText('This page does not exist.')).toBeVisible();
       }
       await expect(main(page).getByRole('form', { name: /Add a starting stage/ })).toHaveCount(0);
-      await expect(main(page).getByRole('button', { name: 'Add stage and continue' })).toHaveCount(0);
+      await expect(main(page).getByRole('button', { name: 'Add stage' })).toHaveCount(0);
       await expect(main(page).getByRole('link', { name: 'Open Work type settings' })).toHaveCount(0);
     } finally { await context.close(); }
   });

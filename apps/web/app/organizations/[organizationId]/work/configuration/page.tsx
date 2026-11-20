@@ -16,6 +16,8 @@ import { listWorkItemTransitions } from '@/lib/domain/work-items/transitions';
 import { listBookingIntakeForms } from '@/lib/domain/booking/intake';
 import { getTypeBooking, listWorkItemTypes } from '@/lib/domain/work-items/types';
 import { requireConfigurationTarget } from '@/lib/route/workspace-configuration';
+import { areaAvailable } from '@/lib/navigation';
+import { loadTypeEconomics } from '@/lib/application/finance/expected-economics';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,7 +37,11 @@ export default async function WorkConfigurationPage({
   const { db, organization, gate } = await requireConfigurationTarget(organizationId, 'work-configuration');
 
   const types = await listWorkItemTypes(db, { organizationId, includeArchived: true });
-  const selectedType = types.find((type) => type.id === requestedType) ?? types[0] ?? null;
+  // Fields belong to all work, not to one type: `?tab=fields` opens them on their own.
+  const fieldsOpen = requestedTab === 'fields';
+  const selectedType = fieldsOpen ? null : types.find((type) => type.id === requestedType) ?? types[0] ?? null;
+  const has = (capability: (typeof organization.capabilities)[number]) => organization.capabilities.includes(capability);
+  const sells = areaAvailable('finance-catalog', { ...gate, enabled: gate.enabledModules });
 
   const [statuses, transitions, templateSteps, fieldDefinitions, prices, booking, enabledModules, requirements, capabilities, intakeForms] = await Promise.all([
     selectedType
@@ -60,6 +66,15 @@ export default async function WorkConfigurationPage({
     listBookingIntakeForms(db, { organizationId }),
   ]);
 
+  const pricing = selectedType && sells
+    ? {
+        ...(await loadTypeEconomics(db, { organizationId, typeId: selectedType.id, mayReadCosts: has('cost.read') })),
+        currency: organization.currency,
+        mayReadCosts: has('cost.read'),
+        mayManageCosts: has('cost.manage'),
+        mayManagePrices: has('price.manage'),
+      }
+    : undefined;
   const deletable = selectedType?.archivedAt ? (await db.rpc('work_type_deletable', { p_type_id: selectedType.id })).data === true : false;
   const mayConfigure = organization.capabilities.includes('field.manage');
 
@@ -68,8 +83,8 @@ export default async function WorkConfigurationPage({
       {/* The configuration layout's section navigation and the workspace bar already name this place. */}
       <PageHeader
         title={<span className="sr-only">Work type settings</span>}
-        breadcrumbLabel={selectedType?.name ?? 'Work types'}
-        crumbs={[...workspaceConfigCrumbs(organizationId, 'work-configuration', gate), ...(selectedType ? [{ label: 'Work types', href: `/organizations/${organizationId}/work/configuration` }] : [])]}
+        breadcrumbLabel={fieldsOpen ? 'Fields' : selectedType?.name ?? 'Work types'}
+        crumbs={[...workspaceConfigCrumbs(organizationId, 'work-configuration', gate), ...(selectedType ? [{ label: 'Work types', href: listHref }] : [])]}
         className="mb-0"
         actions={!selectedType?.archivedAt && (returnTo === 'create' || statuses.length > 0) && organization.capabilities.includes('work_item.create') ? <NewWorkAction organizationId={organizationId} typeId={selectedType?.id} returnTo={quote === '1' ? 'quote' : undefined} setupStep={step ?? undefined} /> : undefined}
       />
@@ -83,6 +98,9 @@ export default async function WorkConfigurationPage({
         role={organization.role}
         mayConfigure={mayConfigure}
         deletable={deletable}
+        pricing={pricing}
+        fieldsOpen={fieldsOpen}
+        fieldsHref={`/organizations/${organizationId}/work/configuration?${new URLSearchParams([...context, ['tab', 'fields']])}`}
         types={types}
         selectedType={selectedType}
         statuses={statuses}

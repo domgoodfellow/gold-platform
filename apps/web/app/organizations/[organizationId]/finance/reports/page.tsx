@@ -10,6 +10,8 @@ import { PricingPlanner } from '@/features/finance/pricing-planner';
 import { todayInZone } from '@/lib/domain/scheduling/window';
 import { financePeriod } from '@/lib/application/finance/operating';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
+import { loadExpectedEconomics } from '@/lib/application/finance/expected-economics';
+import { ExpectedEconomicsReport } from '@/features/finance/expected-economics-report';
 
 export default async function FinanceReports({ params, searchParams }: PageProps<'/organizations/[organizationId]/finance/reports'>) {
   const { organizationId } = await params;
@@ -17,9 +19,12 @@ export default async function FinanceReports({ params, searchParams }: PageProps
   const { db, organization } = await requireOperatingArea(organizationId, 'finance-reports');
   const query = await searchParams;
   const period = financePeriod(todayInZone(organization.timezone), typeof query.month === 'string' ? query.month : undefined);
-  const [rows, items] = await Promise.all([
+  // Expected costs are what the business pays its people and suppliers: only `cost.read` sees them.
+  const currency = organization.currency;
+  const [rows, items, economics] = await Promise.all([
     listInvoicedAndIncurred(db, { organizationId, grouping: 'customer', period }),
     listPriceBookItems(db, { organizationId }),
+    organization.capabilities.includes('cost.read') && currency ? loadExpectedEconomics(db, { organizationId, currency, from: period.from, to: period.to }) : Promise.resolve(null),
   ]);
   return <AppPage>
     <CollectionHeader title="Financial performance" crumbs={[{ label: 'Finance', href: `/organizations/${organizationId}/finance` }]} />
@@ -35,6 +40,7 @@ export default async function FinanceReports({ params, searchParams }: PageProps
       { key: 'cost', header: 'Costs recorded', numeric: true, cell: r => r.incurredMinor === null ? 'Unknown' : formatMoney(r.incurredMinor, r.currency) },
       { key: 'margin', header: 'Margin on recorded costs', numeric: true, cell: r => r.marginMinor === null ? 'Unknown' : formatMoney(r.marginMinor, r.currency) },
     ]} />
+    {economics && currency ? <ExpectedEconomicsReport organizationId={organizationId} currency={currency} month={period.month} {...economics} /> : null}
     <div className="mt-6"><PricingPlanner key={organizationId} currency={organization.currency} items={items} /></div>
   </AppPage>;
 }

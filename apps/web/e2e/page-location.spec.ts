@@ -370,6 +370,8 @@ test('Customers collection and Customer detail resolve one location', async ({ p
 function crmRoutes() {
   const base = `/organizations/${fixture.plain}`;
   const crm = { label: 'CRM', href: `${base}/crm` };
+  const settings = { label: 'Settings', href: null };
+  const access = { label: 'Access', href: null };
   const followUps = fixture.followUps
     ? { trail: [crm], current: 'Tasks', heading: 'Tasks' }
     : { trail: [crm], current: 'Not found', heading: 'This page does not exist', stateHeading: true };
@@ -383,6 +385,23 @@ function crmRoutes() {
     'area:follow-ups': { path: `${base}/crm/tasks`, expected: followUps },
     'area:calendar': { path: `${base}/calendar`, expected: { trail: [], current: 'Calendar', heading: 'Calendar' } },
     'area:crm-search': { path: `${base}/crm/search`, expected: { trail: [crm], current: 'Search CRM', heading: 'Search CRM' } },
+    // Settings (A6): "Settings" is plain text because it has no index page; Access groups its views.
+    ...Object.fromEntries(([
+      ['target:general', 'settings/general', 'General'], ['target:payments', 'settings/payments', 'Customer payments'],
+      ['target:branding', 'settings/branding', 'Branding'], ['target:domains', 'settings/domains', 'Domains'],
+      ['target:email', 'settings/email', 'Email sending'], ['target:features', 'settings/features', 'Features'],
+      ['target:terminology', 'settings/terminology', 'Words & navigation'], ['target:public-profile', 'settings/public-profile', 'Public profile'],
+      ['target:integrations', 'settings/connections', 'Connections'], ['target:plan', 'settings/plan', 'Plan & usage'],
+    ] as const).map(([id, route, label]) => [id, { path: `${base}/${route}`, expected: { trail: [settings], current: label, heading: label } }])),
+    ...Object.fromEntries(([
+      ['view:access-members', 'members', 'Members'], ['view:access-invitations', 'invitations', 'Invitations'],
+      ['view:access-roles', 'roles', 'Roles & permissions'], ['view:access-history', 'history', 'Access history'],
+    ] as const).map(([id, view, label]) => [id, { path: `${base}/settings/access/${view}`, expected: { trail: [settings, access], current: label, heading: label } }])),
+    'create:role': { path: `${base}/settings/access/roles/new`, expected: { trail: [settings, access, { label: 'Roles & permissions', href: `${base}/settings/access/roles` }], current: 'New role', heading: 'New role' } },
+    'view:mcp-servers': { path: `${base}/settings/connections/mcp`, expected: { trail: [settings, { label: 'Connections', href: `${base}/settings/connections` }], current: 'MCP servers', heading: 'MCP servers' } },
+    ...Object.fromEntries(([
+      ['personal:profile', '', 'Profile'], ['personal:security', '/security', 'Security & sign-in'], ['personal:appearance', '/appearance', 'Appearance'],
+    ] as const).map(([id, route, label]) => [id, { path: `/settings/account${route}?org=${fixture.plain}`, expected: { trail: [settings], current: label, heading: label } }])),
   } as Record<string, { path: string; expected: Parameters<typeof expectLocation>[2] }>;
 }
 

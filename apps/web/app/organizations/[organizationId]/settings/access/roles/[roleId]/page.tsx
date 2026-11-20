@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation';
-import { PageHeader } from '@/components/headers/page-header';
 import { RoleEditor } from '@/features/team/role-editor';
-import { teamViewHref } from '@/features/team/team-views';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
+import { PageHeader } from '@/components/headers/page-header';
+import { teamViewHref } from '@/features/team/team-views';
 import { listMembers } from '@/lib/domain/tenancy/members';
 import { listRoles } from '@/lib/domain/tenancy/roles';
 import { requireOrganization } from '@/lib/route/organization';
@@ -29,7 +29,8 @@ export default async function RolePage({
 
   return (
     <SettingsPageFrame width="fluid">
-      <PageHeader title={role.name} crumbs={[{ label: 'Roles & permissions', href: teamViewHref(organizationId, 'roles') }]} />
+      {/* A role has no business noun for the resolver to fall back on, so its trail is written here, matching Settings (A6). */}
+      <PageHeader title={role.name} recordTitle crumbs={[{ label: 'Settings' }, { label: 'Access' }, { label: 'Roles & permissions', href: teamViewHref(organizationId, 'roles') }]} />
       <RoleEditor
         organizationId={organizationId}
         role={role}

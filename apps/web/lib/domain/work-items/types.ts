@@ -122,16 +122,34 @@ export async function createWorkItemType(
     throw fromDatabaseError(error, 'work_item_types.create_failed');
   }
 
-  if (input.withStarterStages) {
-    const [booked, inProgress, done] = await Promise.all(STARTER_STAGES.map((stage, position) =>
-      createWorkItemStatus(db, { organizationId: input.organizationId, typeId: data, name: stage, position })));
-    for (const [from, to] of [[booked, inProgress], [inProgress, done], [booked, done]]) {
-      await createWorkItemTransition(db, { organizationId: input.organizationId, typeId: data, fromStatusId: from, toStatusId: to });
-    }
-    await updateWorkItemStatus(db, { id: done, name: STARTER_STAGES[2], position: 2, releasesResource: true, marksComplete: true });
-  }
+  if (input.withStarterStages) await writeStarterStages(db, { organizationId: input.organizationId, typeId: data });
 
   return data;
+}
+
+async function writeStarterStages(db: Db, input: { organizationId: string; typeId: string }): Promise<void> {
+  const [booked, inProgress, done] = await Promise.all(STARTER_STAGES.map((stage, position) =>
+    createWorkItemStatus(db, { organizationId: input.organizationId, typeId: input.typeId, name: stage, position })));
+  for (const [from, to] of [[booked, inProgress], [inProgress, done], [booked, done]]) {
+    await createWorkItemTransition(db, { organizationId: input.organizationId, typeId: input.typeId, fromStatusId: from, toStatusId: to });
+  }
+  await updateWorkItemStatus(db, { id: done, name: STARTER_STAGES[2], position: 2, releasesResource: true, marksComplete: true });
+}
+
+/**
+ * Gives a type that has no stages the same three a new type starts with. Refused once the type has
+ * any stage, so it never adds a second Booked beside stages the business chose itself.
+ */
+export async function addStarterStages(db: Db, input: { organizationId: string; typeId: string }): Promise<void> {
+  await requireActor(db);
+  const { count, error } = await db
+    .from('work_item_statuses')
+    .select('id', { count: 'exact', head: true })
+    .eq('organization_id', input.organizationId)
+    .eq('type_id', input.typeId);
+  if (error) throw fromDatabaseError(error, 'statuses.list_failed');
+  if ((count ?? 0) > 0) throw new DomainError('This type already has stages.', 'work_item_types.has_stages');
+  await writeStarterStages(db, input);
 }
 
 /**

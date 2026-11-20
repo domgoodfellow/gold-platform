@@ -48,7 +48,7 @@ export function SenderAddresses({
   return (
     <CardSection title="Sender addresses" className="mt-6">
       {senders.length === 0 ? (
-        <Hint className="mt-3">No sender address yet. Add one below once a domain is verified.</Hint>
+        <Hint className="mt-3">No sender address yet.</Hint>
       ) : (
         <ul className="mt-3 divide-y divide-border border-y border-border">
           {senders.map((sender) => (

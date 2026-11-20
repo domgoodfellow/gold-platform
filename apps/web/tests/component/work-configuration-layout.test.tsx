@@ -18,6 +18,7 @@ vi.mock('@/features/work/configuration/actions', () => {
     setTypeBookingPolicyAction: action,
     setTypeSchedulableAction: action,
     updateStatusAction: action,
+    addStarterStagesAction: action,
     createResourceRequirementAction: action,
     deleteResourceRequirementAction: action,
     updateResourceRequirementAction: action,
@@ -31,6 +32,11 @@ vi.mock('@/components/panels/page-drawer', () => ({
   PageDrawerTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
 }));
 vi.mock('@/features/custom-fields/configuration/entity-fields-configuration', () => ({ EntityFieldsConfiguration: () => <div>fields</div> }));
+vi.mock('@/app/organizations/[organizationId]/finance/catalog/expected-cost-actions', () => {
+  const action = vi.fn(async () => ({ error: null }));
+  return { addItemExpectedCostAction: action, removeItemExpectedCostAction: action, setStageExpectedCostAction: action };
+});
+vi.mock('@/app/organizations/[organizationId]/finance/configuration/pricing/actions', () => ({ setDeliveryTypeAction: vi.fn(async () => ({ error: null })) }));
 
 afterEach(cleanup);
 beforeEach(() => {
@@ -95,8 +101,10 @@ describe('Work configuration layout', () => {
   it('points a type with no stages at the Workflow tab’s first step', () => {
     render(<WorkConfiguration {...props()} />);
     expect(screen.getByRole('tab', { name: 'Workflow' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByText(/A starting stage is required before creating Work/)).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Add starting stage' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Add Booked, In progress and Done' })).toBeTruthy();
+    expect(screen.getByLabelText('Or name the starting stage')).toBeTruthy();
+    // A heading, not an uppercase label above the stages.
+    expect(screen.getByRole('heading', { name: 'Stages' }).className).not.toMatch(/uppercase/);
     expect(screen.queryByRole('button', { name: 'Save name' })).toBeNull();
   });
 
@@ -105,5 +113,40 @@ describe('Work configuration layout', () => {
     expect(screen.getByRole('tab', { name: 'General' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('button', { name: 'Save name' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Save scheduling behavior' })).toBeVisible();
+  });
+});
+
+describe('fields and pricing', () => {
+  const booked = { id: 's1', name: 'Booked', position: 0, releasesResource: false, marksComplete: false };
+
+  it('keeps Fields, which every work type shares, out of one type’s tabs and opens it on its own', () => {
+    const { rerender } = render(<WorkConfiguration {...props({ fieldsHref: '/c?tab=fields' })} />);
+    expect(screen.queryByRole('tab', { name: 'Fields' })).toBeNull();
+    const all = screen.getByRole('navigation', { name: 'All work' });
+    expect(within(all).getByRole('link', { name: /Fields/ })).toHaveAttribute('href', '/c?tab=fields');
+    rerender(<WorkConfiguration {...props({ fieldsHref: '/c?tab=fields', fieldsOpen: true, typeRequested: false, selectedType: null })} />);
+    expect(screen.getByRole('heading', { name: 'Fields' })).toBeTruthy();
+    expect(within(screen.getByRole('navigation', { name: 'All work' })).getByRole('link', { name: /Fields/ })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('offers Pricing only when the business sells through its catalog, with costs only for cost readers', () => {
+    const item = { id: 'i1', name: 'Oil change, workshop', unit: 'job', unitAmountMinor: 8900, currency: 'EUR', createdAt: '', deliveryTypeId: 't1' };
+    const stages = [{ ...booked, cost: { statusId: 's1', expectedMinutes: 30, hourlyCostMinor: 6000, currency: 'EUR' } }];
+    const pricing = (mayReadCosts: boolean) => ({
+      items: [{ item, lines: [], stages, expected: { costMinor: 3000, marginMinor: 5900, itemCostMinor: 0, stageCostMinor: 3000, minutes: 30, issue: null } }],
+      stages: mayReadCosts ? stages : [], otherItems: [], currency: 'EUR', mayReadCosts, mayManageCosts: false, mayManagePrices: false,
+    });
+    render(<WorkConfiguration {...props({ statuses: [booked], initialTab: 'pricing' })} />);
+    expect(screen.queryByRole('tab', { name: 'Pricing' })).toBeNull();
+    cleanup();
+    render(<WorkConfiguration {...props({ statuses: [booked], initialTab: 'pricing', pricing: pricing(true) })} />);
+    expect(screen.getByRole('tab', { name: 'Pricing' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('link', { name: 'Oil change, workshop' })).toHaveAttribute('href', '/organizations/org/finance/catalog/i1');
+    expect(screen.getByText(/Expected cost €30\.00 · margin €59\.00 \(66\.3%\)/)).toBeTruthy();
+    expect(screen.getByText('Per job: 30 min · €30.00')).toBeTruthy();
+    cleanup();
+    render(<WorkConfiguration {...props({ statuses: [booked], initialTab: 'pricing', pricing: pricing(false) })} />);
+    expect(screen.queryByText(/Expected cost/)).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Time and cost per stage' })).toBeNull();
   });
 });

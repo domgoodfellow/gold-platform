@@ -74,14 +74,13 @@ export function WorkCreatePage({ options, initialTypeId, delivery, initialServic
         }} options={[{ value: '', label: 'Choose a Work type' }, ...options.types.map((t) => ({ value: t.id, label: ready(t.id) ? t.name : `${t.name} (needs a starting stage)` }))]} />
       }</FormField> : null}
 
-      {mayConfigure && options.types.length ? <ButtonLink size="small" tone="secondary" href={newTypeHref}>New Work type</ButtonLink> : null}
+      {mayConfigure && options.types.length ? <ButtonLink size="small" tone="secondary" href={newTypeHref} className="w-fit">New Work type</ButtonLink> : null}
 
       {returnToQuote ? <Hint>Create the Work item, then continue to its Financials to add a quoted price.</Hint> : null}
       {selected && statuses.length ? <CreateWorkItemForm key={`${typeId}:${serviceId}`} {...options} typeId={typeId} statuses={statuses} onDirtyChange={setDirty} cancelHref={cancelHref} returnToQuote={returnToQuote || Boolean(service) || Boolean(delivery)} setupStep={setupStep} service={service} initialCustomerId={delivery?.customerId ?? initialCustomerId} delivery={delivery} />
         : <div className="flex flex-col gap-4" role="region" aria-labelledby="new-work-prerequisite">
           <div>
             <SectionHeading id="new-work-prerequisite">{selected ? `${selected.name} needs a starting stage` : options.types.length ? 'Choose a Work type' : 'No work types yet'}</SectionHeading>
-            {selected || !options.types.length ? <Hint className="mt-1">{selected ? 'A starting stage is required before work of this type can be created.' : 'A Work type and a starting stage are required before creating work.'}</Hint> : null}
           </div>
           {!selected && options.types.length ? null : mayConfigure
             ? selected
