@@ -116,12 +116,12 @@ const RPC_CAPABILITIES: Record<string, string> = {
   "start_support_session": "platform.organizations",
   "end_support_session": "platform.organizations",
   "bootstrap_gold_internal_workspace": "platform.organizations",
-  "grant_plan_product": "platform.commercial",
-  "revoke_plan_product": "platform.commercial",
-  "grant_plan_module": "platform.commercial",
-  "revoke_plan_module": "platform.commercial",
-  "set_plan_feature_override": "platform.commercial",
-  "clear_plan_feature_override": "platform.commercial",
+  "grant_plan_product": "platform.catalogue",
+  "revoke_plan_product": "platform.catalogue",
+  "grant_plan_module": "platform.catalogue",
+  "revoke_plan_module": "platform.catalogue",
+  "set_plan_feature_override": "platform.catalogue",
+  "clear_plan_feature_override": "platform.catalogue",
   "update_platform_product": "platform.catalogue",
   "update_catalog_product": "platform.catalogue",
   "update_catalog_module": "platform.catalogue",
@@ -154,10 +154,11 @@ const RPC_CAPABILITIES: Record<string, string> = {
   "record_provider_rate": "platform.commercial",
   "record_product_price": "platform.commercial",
   "record_usage_reconciliation": "platform.commercial",
-  "create_plan": "platform.commercial",
+  "create_plan": "platform.catalogue",
   "update_plan": "platform.commercial",
-  "set_plan_quota": "platform.commercial",
-  "remove_plan_quota": "platform.commercial",
+  "update_plan_switches": "platform.catalogue",
+  "set_plan_quota": "platform.catalogue",
+  "remove_plan_quota": "platform.catalogue",
   "record_plan_price": "platform.commercial",
   "record_plan_provider_price": "platform.commercial",
   "record_retail_rate": "platform.commercial",
@@ -168,7 +169,7 @@ const RPC_CAPABILITIES: Record<string, string> = {
   "attach_plan_addon": "platform.commercial",
   "detach_plan_addon": "platform.commercial",
   "platform_usage_cost_components": "platform.commercial",
-  "set_plan_allowance": "platform.commercial",
+  "set_plan_allowance": "platform.catalogue",
   "record_plan_utilization_assumption": "platform.commercial",
   "set_meter_cost_model_component": "platform.commercial",
   "record_commercial_retail_rate": "platform.commercial",
@@ -321,8 +322,8 @@ describe('granular platform authority at the database boundary', () => {
     expect((await actor.db.rpc('end_support_session', { p_id: opened.data })).error).toBeNull();
   });
 
-  it('permits commercial-only package changes without catalogue authority', async () => {
-    const db = actors.get('platform.commercial')!.db;
+  it('permits catalogue-only plan switch changes without commercial authority (ADR-057)', async () => {
+    const db = actors.get('platform.catalogue')!.db;
     const plan = await db.rpc('create_plan', {
       p_key: 'p0_' + randomUUID().replaceAll('-', ''), p_kind: 'plan', p_label: 'P0 test package',
       p_description: '', p_billable: false, p_sale_status: 'active', p_display_order: 0,

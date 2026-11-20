@@ -113,6 +113,7 @@ const LOCATION_METADATA: readonly LocationNode[] = [
   { id: 'record:location', scope: 'organization', kind: 'record', pattern: 'locations/[locationId]', parent: 'area:locations', record: 'locationId', noun: 'location' },
   { id: 'record:asset', scope: 'organization', kind: 'record', pattern: 'assets/[assetId]', parent: 'area:assets', record: 'assetId' },
   // Finance
+  { id: 'record:finance-catalog-item', scope: 'organization', kind: 'record', pattern: 'finance/catalog/[itemId]', parent: 'area:finance-catalog', record: 'itemId' },
   { id: 'view:finance-search', scope: 'organization', kind: 'view', pattern: 'finance/search', parent: 'workspace:finance', label: 'Search', open: 'U-12' },
   { id: 'view:finance-reports', scope: 'organization', kind: 'view', pattern: 'finance/reports', parent: 'workspace:finance', label: 'Financial performance', open: 'U-12' },
   // Automations, AI, Studio
@@ -158,7 +159,7 @@ const LOCATION_METADATA: readonly LocationNode[] = [
   { id: 'record:platform-provider', scope: 'platform', kind: 'record', pattern: 'providers/[providerKey]', parent: 'platform:providers', record: 'providerKey' },
   { id: 'view:platform-twilio', scope: 'platform', kind: 'view', pattern: 'providers/twilio', parent: 'platform:providers', label: 'Twilio' },
   { id: 'view:platform-twilio-configure', scope: 'platform', kind: 'view', pattern: 'providers/twilio/configure', parent: 'view:platform-twilio', label: 'Edit' },
-  { id: 'record:platform-plan', scope: 'platform', kind: 'record', pattern: 'plans/[planKey]', parent: 'platform:plans', record: 'planKey' },
+  { id: 'record:platform-plan', scope: 'platform', kind: 'record', pattern: 'catalog/plans/[planKey]', parent: 'platform:plans', record: 'planKey' },
   { id: 'record:platform-tenant-economics', scope: 'platform', kind: 'record', pattern: 'economics/[targetOrganizationId]', parent: 'platform:portfolio-economics', record: 'targetOrganizationId' },
 ];
 

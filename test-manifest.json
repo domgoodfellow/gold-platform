@@ -2057,6 +2057,14 @@
         "pricing"
       ]
     },
+    "apps/web/tests/integration/database/finance-recurring-items.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "billing",
+        "pricing",
+        "security"
+      ]
+    },
     "apps/web/tests/integration/database/identity.test.ts": {
       "category": "database-integration",
       "concerns": [

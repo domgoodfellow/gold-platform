@@ -164,14 +164,17 @@ describe('Administration inside GildOps', () => {
   it('opens the agreed Administration groups, with Commercial administration among them', () => {
     expect(entry()!.destinations?.map((item) => item.label)).toEqual(['Overview', 'Organizations', 'Product Registry', 'Integration Registry', 'Infrastructure', 'Reliability', 'Commercial administration']);
     const commercial = entry()!.destinations!.find((item) => item.key === 'platform-group-commercial')!;
-    expect(commercial.children?.map((item) => item.key)).toEqual(['platform-plans', 'platform-pricing', 'platform-usage-economics', 'platform-vendor-rates', 'platform-package-economics', 'platform-portfolio-economics', 'platform-billing']);
+    // Plans and Pricing left: GildOps sells through its own Finance; Product Registry keeps the switch lists (ADR-057).
+    expect(commercial.children?.map((item) => item.key)).toEqual(['platform-usage-economics', 'platform-vendor-rates', 'platform-package-economics', 'platform-portfolio-economics', 'platform-billing']);
+    const registry = entry()!.destinations!.find((item) => item.key === 'platform-group-product-registry')!;
+    expect(registry.children?.map((item) => item.key)).toEqual(['platform-products', 'platform-meters', 'platform-plans']);
   });
   it('links AI to AI Runtime and never links Finance to Commercial administration', () => {
     // Finance is the tenant's own ledger; GildOps' commercial control is reached from Administration only (ADR-051).
     expect(row('workspace-finance')?.administration).toBeUndefined();
     expect(row('workspace-ai')?.administration).toEqual({ key: 'platform-link-ai-runtime', label: 'AI answering', href: platformHref(ORG, 'ai-runtime'), section: 'workspaces' });
     expect(projectedItems(workspaceNavigation(gildops, `/organizations/${ORG}/finance`)!.sections).map((item) => item.key)).not.toContain('platform-link-commercial');
-    expect(workspaceNavigation(gildops, platformHref(ORG, 'plans/base'))?.workspace.key).toBe('administration');
+    expect(workspaceNavigation(gildops, platformHref(ORG, 'catalog/plans/base'))?.workspace.key).toBe('administration');
     expect(workspaceNavigation(gildops, platformHref(ORG, 'ai-runtime'))?.workspace.key).toBe('administration');
   });
   it('adds nothing without a platform permission', () => {
@@ -182,9 +185,9 @@ describe('Administration inside GildOps', () => {
     expect(row('workspace-finance', commercial)?.administration).toBeUndefined();
     expect(entry(commercial)?.contextOnly).toBeUndefined();
     expect(projectedItems(topLevelSections(commercial)).map((item) => item.key)).toContain('administration');
-    const context = workspaceNavigation(commercial, platformHref(ORG, 'pricing'))!;
+    const context = workspaceNavigation(commercial, platformHref(ORG, 'billing'))!;
     expect(context.workspace.key).toBe('administration');
-    expect(activeItemKey(context.sections, platformHref(ORG, 'pricing'))).toBe('platform-pricing');
+    expect(activeItemKey(context.sections, platformHref(ORG, 'billing'))).toBe('platform-billing');
   });
   it('offers provider-only staff Infrastructure and their AI link, never Commercial', () => {
     const providers = withAdministration(project(), ORG, new Set(['platform.providers']));
@@ -233,7 +236,8 @@ describe('Administration breadcrumbs', () => {
   it('lead with Administration, never the workspace that links in', () => {
     expect(platformAncestry(ORG, 'providers')).toEqual([{ label: 'Administration', href: platformHref(ORG) }, { label: 'Infrastructure' }]);
     expect(platformAncestry(ORG, 'organizations')).toEqual([{ label: 'Administration', href: platformHref(ORG) }]);
-    expect(platformAncestry(ORG, 'pricing')).toEqual([{ label: 'Administration', href: platformHref(ORG) }, { label: 'Commercial administration' }]);
+    expect(platformAncestry(ORG, 'billing')).toEqual([{ label: 'Administration', href: platformHref(ORG) }, { label: 'Commercial administration' }]);
+    expect(platformAncestry(ORG, 'plans')).toEqual([{ label: 'Administration', href: platformHref(ORG) }, { label: 'Product Registry' }]);
   });
 });
 
@@ -244,11 +248,13 @@ describe('platform routes and their permission', () => {
     expect(platformRouteRequires('failures')).toBe('platform.health');
     expect(platformRouteRequires('organizations')).toBe('platform.organizations');
     expect(platformRouteRequires('organizations/abc/providers')).toBe('platform.organizations');
-    // Plans & Add-ons and portfolio economics are the commercial plane's, not the catalogue's.
-    expect(platformRouteRequires('plans/base')).toBe('platform.commercial');
+    // A plan's switch list is the catalogue's; its prices are GildOps' Finance (ADR-057).
+    expect(platformRouteRequires('catalog/plans/base')).toBe('platform.catalogue');
     expect(platformRouteRequires('economics/abc')).toBe('platform.commercial');
     expect(platformRouteRequires('integrations/new')).toBe('platform.catalogue');
-    expect(platformRouteRequires('pricing')).toBe('platform.commercial');
+    // Retired addresses are nobody's destination: they redirect under the overview's permission.
+    expect(platformRouteRequires('pricing')).toBe('platform.health');
+    expect(platformRouteRequires('plans/base')).toBe('platform.health');
     expect(platformRouteRequires('billing')).toBe('platform.commercial');
     expect(platformRouteRequires('providers/twilio/configure')).toBe('platform.providers');
   });
@@ -408,9 +414,9 @@ describe('responsive page-location projection', () => {
   });
   it('keeps commercial pages in an Administration dropdown, never Finance', () => {
     const gildops = { organizationId: ORG, sections: withAdministration(project(), ORG, new Set(['platform.commercial'])) };
-    const location = pageNavigation(gildops, platformHref(ORG, 'pricing'), []);
+    const location = pageNavigation(gildops, platformHref(ORG, 'billing'), []);
     expect(location.groups.map((group) => group.label)).toEqual(['Commercial administration']);
-    expect(location.activeKey).toBe('platform-pricing');
+    expect(location.activeKey).toBe('platform-billing');
   });
 });
 

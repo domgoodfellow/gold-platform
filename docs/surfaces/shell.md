@@ -54,6 +54,7 @@ Organizations
 Product Registry
   Products
   Meters
+  Plans
 Integration Registry
   Connectors
 Infrastructure
@@ -62,9 +63,11 @@ Infrastructure
 Reliability
   Failures
 Commercial administration
-  Plans & Add-ons / Pricing / Usage & economics / Vendor rates /
+  Usage & economics / Vendor rates /
   Package economics / Portfolio economics / Billing
 ```
+
+Product Registry → Plans holds what each plan and add-on switches on (products, modules, feature overrides and allowances), whether it is billed and the businesses that hold it, under `platform.catalogue`. Its name, description, prices, add-ons and sale status are the recurring item in GildOps' own Finance that sells it, reached by Pricing in Finance (ADR-057). The former Plans & Add-ons and Pricing addresses redirect: plans to Product Registry, pricing to GildOps' Catalog & Pricing, whose own guard decides access.
 
 Each destination is offered only to its own permission. Platform's separate sidebar uses the canonical registry; tenant vocabulary does not relabel control-plane concepts. The same shared header, surfaces, focus states and responsive sidebar apply. During an active business call, entering `/platform` opens a separate tab to retain the business telephone runtime.
 

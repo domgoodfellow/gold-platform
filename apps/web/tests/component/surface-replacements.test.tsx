@@ -14,7 +14,7 @@ import type { Role } from '@/lib/domain/tenancy/roles';
 
 const marketing = vi.hoisted(() => ({ marketingCommandAction: vi.fn(), previewAudienceAction: vi.fn(), inspectInquiryAction: vi.fn(), searchMarketingCustomersAction: vi.fn() }));
 vi.mock('@/app/organizations/[organizationId]/marketing/actions', () => marketing);
-const pricing = vi.hoisted(() => ({ createPriceItemAction: vi.fn(), updatePriceItemAction: vi.fn(), chooseCurrencyAction: vi.fn() }));
+const pricing = vi.hoisted(() => ({ createPriceItemAction: vi.fn(), updatePriceItemAction: vi.fn(), chooseCurrencyAction: vi.fn(), setDeliveryTypeAction: vi.fn() }));
 vi.mock('@/app/organizations/[organizationId]/finance/configuration/pricing/actions', () => pricing);
 const access = vi.hoisted(() => ({ inviteMemberAction: vi.fn(), addMemberAction: vi.fn() }));
 vi.mock('@/app/organizations/[organizationId]/settings/access/actions', () => access);

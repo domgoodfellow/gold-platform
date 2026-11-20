@@ -8,19 +8,26 @@ import { PricingManagement } from '@/features/pricing/pricing-management';
 import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
 import { requireOperatingArea } from '@/lib/route/workspace-configuration';
 import { listWorkItemTypes } from '@/lib/domain/work-items/types';
+import { RecurringItemsSection } from '@/features/finance/catalog/recurring-items';
+import { loadRecurringItems } from '@/lib/application/finance/recurring-items';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * Catalog & Pricing: the operating price book — what this business sells and charges, edited in
- * its rows. A price change reaches new quote lines only; quoted Work and issued invoices keep the
+ * its rows — and, where the business sells them, its recurring items (ADR-057). A price change reaches new quote lines only; quoted Work and issued invoices keep the
  * snapshot they took. Trading currency is configured in Settings → General, payment collection in Settings → Customer payments.
  */
 export default async function FinanceCatalogPage({ params, searchParams }: PageProps<'/organizations/[organizationId]/finance/catalog'>) {
   const { organizationId } = await params;
   const { returnTo } = await searchParams;
-  const { db, organization } = await requireOperatingArea(organizationId, 'finance-catalog');
-  const [items, types] = await Promise.all([listPriceBookItems(db, { organizationId }), listWorkItemTypes(db, { organizationId, includeArchived: true })]);
+  const { db, organization, gate } = await requireOperatingArea(organizationId, 'finance-catalog');
+  const sellsRecurring = gate.featureAvailability.has('recurring_items');
+  const [items, types, recurring] = await Promise.all([
+    listPriceBookItems(db, { organizationId }),
+    listWorkItemTypes(db, { organizationId, includeArchived: true }),
+    sellsRecurring ? loadRecurringItems(db, { organizationId }) : Promise.resolve(null),
+  ]);
   const has = (capability: (typeof organization.capabilities)[number]) => organization.capabilities.includes(capability);
   const mayManage = has('price.manage');
   return <AppPage>
@@ -28,5 +35,6 @@ export default async function FinanceCatalogPage({ params, searchParams }: PageP
     {!organization.currency ? <CompactEmptyState kind="not-configured" action={has('organization.manage') ? <Link className="text-sm font-medium text-accent-text underline-offset-4 hover:underline" href={`/organizations/${organizationId}/settings/general#regional-heading`}>Choose a currency</Link> : undefined}>No trading currency is set, so services cannot be priced yet.</CompactEmptyState> : null}
     <PricingManagement organizationId={organizationId} items={items} currency={organization.currency} mayManage={mayManage} types={types} mayCreate={has('work_item.create') && has('work_item.price')} />
     <p className="mt-3 text-xs text-muted">{mayManage ? 'Changing a price affects new quote lines only. Quoted Work and issued invoices keep their original prices.' : 'Your role can view the catalog but cannot change prices.'}</p>
+    {recurring ? <RecurringItemsSection organizationId={organizationId} items={recurring} mayManage={mayManage} /> : null}
   </AppPage>;
 }

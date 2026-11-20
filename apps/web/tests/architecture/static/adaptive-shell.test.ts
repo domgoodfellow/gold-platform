@@ -19,7 +19,7 @@ describe('hiding a navigation item is never the security boundary', () => {
   it('every platform area refuses, on the server, a person whose staff row does not name it', () => {
     // One layout per area, calling the guard with the permission the registry assigns that path.
     const segments = [...new Set(PLATFORM_DESTINATIONS.map((destination) => destination.path.split('/')[0]).filter(Boolean))];
-    expect(segments.sort()).toEqual(['ai-runtime', 'billing', 'catalog', 'economics', 'failures', 'integrations', 'organizations', 'package-economics', 'plans', 'pricing', 'providers', 'usage', 'vendor-rates']);
+    expect(segments.sort()).toEqual(['ai-runtime', 'billing', 'catalog', 'economics', 'failures', 'integrations', 'organizations', 'package-economics', 'providers', 'usage', 'vendor-rates']);
     for (const segment of segments) {
       const layout = `app/platform/${segment}/layout.tsx`;
       expect(existsSync(`${WEB}/${layout}`), `${segment} has no guard layout`).toBe(true);
@@ -43,12 +43,11 @@ describe('hiding a navigation item is never the security boundary', () => {
     for (const page of pages) {
       const subpath = page.slice(root.length + 1).replace(/\/?page\.tsx$/, '').replace('[targetOrganizationId]', 'x');
       if (subpath.startsWith('[...unmatched]')) continue;
-      // Plans & Add-ons moved to Finance; these two addresses are bookmark redirects only, the
-      // same pattern as the top-level legacy `/platform` route — they prove nothing themselves,
-      // and the canonical Finance page is where `requirePlatformArea` actually runs.
-      if (subpath === 'catalog/plans' || subpath === 'catalog/plans/[planKey]') continue;
       const cap = platformRouteRequires(subpath);
       const source = readFileSync(page, 'utf8');
+      // A retired address that only redirects reads nothing and proves nothing: the root layout
+      // still requires Platform scope, and the page it sends to guards itself (ADR-057).
+      if (/\bredirect\(/.test(source) && !/getDb|@\/lib\/domain|@\/lib\/db|@\/lib\/application|features\//.test(source)) continue;
       // The overview is the front door and names its own landing option; every other page is the plain call.
       expect(source, page.slice(WEB.length)).toMatch(new RegExp(`requirePlatformArea\\((goldId|organizationId), '${cap}'`));
     }

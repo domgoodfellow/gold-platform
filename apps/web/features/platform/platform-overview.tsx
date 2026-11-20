@@ -20,7 +20,6 @@ export function PlatformOverview({
   organizations,
   failures,
   catalogue,
-  rates,
 }: PlatformOverviewData & { goldId: string }) {
   const totalFailures = failures.operational + failures.providerReconciliation;
 
@@ -44,12 +43,6 @@ export function PlatformOverview({
           value={catalogue.products}
           note={`Sellable products · ${catalogue.meters} meter${catalogue.meters === 1 ? '' : 's'} defined`}
           href={platformHref(goldId, 'catalog/products')}
-        />
-        <Widget
-          title="Rate cards"
-          value={rates.retail}
-          note={`Retail rates recorded · ${rates.provider} provider rate${rates.provider === 1 ? '' : 's'}`}
-          href={platformHref(goldId, 'pricing')}
         />
       </WidgetGrid>
 

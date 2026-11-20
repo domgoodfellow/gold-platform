@@ -18,6 +18,7 @@ export type PlatformOverview = {
     products: number;
     meters: number;
   };
+  /** Still returned by the health summary; not shown, since rates are Finance's (ADR-057). */
   rates: {
     retail: number;
     provider: number;

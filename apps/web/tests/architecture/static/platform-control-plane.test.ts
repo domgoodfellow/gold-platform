@@ -21,13 +21,11 @@ const allMigrations = () =>
     .join('\n');
 
 describe('platform control-plane scope boundaries', () => {
-  it('owns global rates in Pricing without an organization id', () => {
-    const page = source('app/platform/pricing/page.tsx');
-    expect(page).toContain('listProviderRates(db)');
-    expect(page).toContain('listRetailRates(db)');
-    // The only organization the route names is GOLD's own, as the context the page is drawn in.
-    expect(page.replace(/PageProps<[^>]*>/, '').replace('organizationId: goldId', '')).not.toContain('organizationId');
-    expect(source('features/platform/pricing/rate-forms.tsx').replace(/@\/app\/organizations\/\[organizationId\]\/platform/g, '')).not.toContain('organizationId');
+  it('reads no prices or rates in Product Registry, now that GildOps prices in its own Finance (ADR-057)', () => {
+    for (const path of ['app/platform/catalog/meters/page.tsx', 'app/platform/catalog/products/page.tsx', 'app/platform/catalog/products/[productKey]/page.tsx', 'app/platform/catalog/plans/page.tsx', 'app/platform/catalog/plans/[planKey]/page.tsx']) {
+      expect(source(path), path).not.toMatch(/listProviderRates|listRetailRates|listProductPrices|listPlanPrices|formatMoney/);
+    }
+    expect(source('app/platform/pricing/page.tsx')).toMatch(/redirect\(`\/organizations\/\$\{organizationId\}\/finance\/catalog`\)/);
   });
 
   it('keeps tenant commercial and provider tasks in their tenant routes', () => {

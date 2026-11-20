@@ -17846,6 +17846,15 @@ export type Database = {
         Args: { p_customer_id: string; p_organization_id: string }
         Returns: Json
       }
+      price_book_item_switches: {
+        Args: { p_item_id: string; p_organization_id: string }
+        Returns: {
+          detail: string
+          display_order: number
+          kind: string
+          label: string
+        }[]
+      }
       proposal_context: {
         Args: never
         Returns: {
@@ -18387,6 +18396,41 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      record_item_price: {
+        Args: {
+          p_amount_minor: number
+          p_billing_interval: string
+          p_currency: string
+          p_effective_from?: string
+          p_item_id: string
+          p_note?: string
+          p_organization_id: string
+        }
+        Returns: string
+      }
+      record_item_provider_price: {
+        Args: {
+          p_environment: string
+          p_item_price_id: string
+          p_organization_id: string
+          p_price_reference: string
+          p_product_reference: string
+          p_provider?: string
+        }
+        Returns: string
+      }
+      record_item_usage_price: {
+        Args: {
+          p_currency: string
+          p_effective_from?: string
+          p_item_id: string
+          p_meter_id: string
+          p_note?: string
+          p_organization_id: string
+          p_unit_amount_micros: number
+        }
+        Returns: string
       }
       record_managed_integration_resource: {
         Args: {
@@ -19245,6 +19289,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      set_item_addon: {
+        Args: {
+          p_addon_item_id: string
+          p_attached: boolean
+          p_included_by_default?: boolean
+          p_item_id: string
+          p_organization_id: string
+        }
+        Returns: undefined
+      }
       set_mcp_server_enabled: {
         Args: {
           p_enabled: boolean
@@ -19757,6 +19811,14 @@ export type Database = {
           p_label: string
           p_plan_id: string
           p_sale_status: string
+        }
+        Returns: undefined
+      }
+      update_plan_switches: {
+        Args: {
+          p_billable: boolean
+          p_display_order: number
+          p_plan_id: string
         }
         Returns: undefined
       }

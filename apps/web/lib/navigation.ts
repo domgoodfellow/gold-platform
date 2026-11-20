@@ -67,7 +67,7 @@ export const WORKSPACES = [
   { key: 'marketing', label: 'Marketing', home: 'marketing', featureKeys: [] },
   { key: 'support', label: 'Support', home: 'support', featureKeys: [] },
   { key: 'field', label: 'Work', home: 'field', featureKeys: ['resource_records', 'assignment', 'locations', 'weather_aware_dispatch', 'assets'] },
-  { key: 'finance', label: 'Finance', home: 'finance', featureKeys: ['price_book', 'quote_creation', 'quote_to_invoice', 'invoices', 'invoice_history', 'card_payments', 'connected_processor', 'adjustments_credits'] },
+  { key: 'finance', label: 'Finance', home: 'finance', featureKeys: ['price_book', 'quote_creation', 'quote_to_invoice', 'invoices', 'invoice_history', 'card_payments', 'connected_processor', 'adjustments_credits', 'recurring_items'] },
   { key: 'automations', label: 'Automations', home: 'automations', featureKeys: ['rule_authoring', 'domain_event_trigger', 'email_action', 'run_history'] },
   { key: 'ai', label: 'AI', home: 'ai', featureKeys: ['agent_tools'] },
   { key: 'studio', label: 'Studio', home: 'studio', featureKeys: ['pages_sections', 'draft_review_publish', 'seo_metadata', 'booking', 'portal_auth', 'portal_history'] },

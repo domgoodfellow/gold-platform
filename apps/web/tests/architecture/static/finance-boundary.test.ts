@@ -97,17 +97,48 @@ describe('Finance is tenant Financial Operations', () => {
   });
 });
 
-describe("During transition, Plans & Add-ons and GildOps' portfolio economics stay in Platform (ADR-051)", () => {
-  it('are registered Platform destinations behind the commercial permission', () => {
-    for (const key of ['plans', 'portfolio-economics']) {
-      expect(PLATFORM_DESTINATIONS.find((destination) => destination.key === key)?.requires).toBe('platform.commercial');
+describe("GildOps' plans are recurring items of its own Finance (ADR-057)", () => {
+  it('leaves Platform only what a plan switches on, under Product Registry', () => {
+    expect(PLATFORM_DESTINATIONS.find((destination) => destination.key === 'plans')).toMatchObject({ path: 'catalog/plans', requires: 'platform.catalogue', under: 'product-registry' });
+    expect(PLATFORM_DESTINATIONS.find((destination) => destination.key === 'pricing')).toBeUndefined();
+    const registry = [
+      ...walk(join(WEB, 'app/platform/catalog/plans')),
+      ...walk(join(WEB, 'features/platform/plans')),
+      join(WEB, 'lib/application/platform/plan-switches.ts'),
+    ];
+    const pricing = registry.filter((file) => /@\/lib\/domain\/pricing\/|price_book_item_prices|record_item_price|platform-billing/.test(code(file)));
+    expect(pricing.map(rel)).toEqual([]);
+  });
+
+  it('keeps the retired Platform and Finance plan addresses as redirects that end in Product Registry or Finance', () => {
+    for (const path of ['app/platform/plans/page.tsx', 'app/platform/plans/[planKey]/page.tsx', 'app/platform/pricing/page.tsx']) {
+      const source = code(join(WEB, path));
+      expect(source, path).toMatch(/redirect\(/);
+      expect(source, path).not.toMatch(/getDb|@\/lib\/domain|@\/features\//);
+      expect(source, path).toMatch(/\/platform\/catalog\/plans|\/finance\/catalog/);
+    }
+    for (const file of walk(join(FINANCE_ROUTES, 'plans'))) {
+      expect(code(file), rel(file)).toMatch(/redirect\(`\/organizations\/\$\{organizationId\}\/finance\/catalog/);
     }
   });
 
-  it('are served from /platform, and what remains under /finance for them is only a redirect', () => {
-    expect(existsSync(join(WEB, 'app/platform/plans/page.tsx'))).toBe(true);
+  it('reads a recurring item only after the catalog area and the recurring-items feature are proven', () => {
+    const route = code(join(FINANCE_ROUTES, 'catalog/[itemId]/page.tsx'));
+    const guard = route.indexOf("requireOperatingArea(organizationId, 'finance-catalog')");
+    expect(guard).toBeGreaterThan(-1);
+    expect(guard).toBeLessThan(route.indexOf("featureAvailability.has('recurring_items')"));
+    expect(route.indexOf("featureAvailability.has('recurring_items')")).toBeLessThan(route.indexOf('loadRecurringItem(db'));
+  });
+});
+
+describe("During transition, GildOps' portfolio economics stays in Platform (ADR-051)", () => {
+  it('is a registered Platform destination behind the commercial permission', () => {
+    expect(PLATFORM_DESTINATIONS.find((destination) => destination.key === 'portfolio-economics')?.requires).toBe('platform.commercial');
+  });
+
+  it('is served from /platform, and what remains under /finance for it is only a redirect', () => {
     expect(existsSync(join(WEB, 'app/platform/economics/page.tsx'))).toBe(true);
-    const leftovers = ['plans', 'economics'].flatMap((segment) => walk(join(FINANCE_ROUTES, segment)));
+    const leftovers = walk(join(FINANCE_ROUTES, 'economics'));
     expect(leftovers.length).toBeGreaterThan(0);
     for (const file of leftovers) {
       expect(code(file), `${rel(file)} must only redirect`).toMatch(/redirect\(/);
@@ -115,9 +146,7 @@ describe("During transition, Plans & Add-ons and GildOps' portfolio economics st
     }
   });
 
-  it('have no feature or projection left under Finance', () => {
-    expect(existsSync(join(WEB, 'features/finance/plans'))).toBe(false);
-    expect(existsSync(join(WEB, 'lib/application/finance/plan-detail.ts'))).toBe(false);
+  it('has no feature or projection left under Finance', () => {
     expect(existsSync(join(WEB, 'lib/application/finance/economics-overview.ts'))).toBe(false);
   });
 });

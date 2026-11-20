@@ -26,6 +26,8 @@ export type Plan = {
   billable: boolean;
   saleStatus: SaleStatus;
   displayOrder: number;
+  /** The recurring item of GildOps' operating organization that sells this plan (ADR-057). Label, description and sale status are copies of it. */
+  priceBookItemId: string | null;
 };
 
 export type PlanQuota = {
@@ -73,7 +75,7 @@ export type PlanOverageRate = {
 export type PlanMarginPolicy = { targetMargin: number; warningMargin: number; hardFloorMargin: number; currency: string; effectiveFrom: string };
 export type PlanUtilizationAssumption = { scenario: 'low' | 'expected' | 'heavy' | 'max_allowance'; allowanceKey: string; utilization: number; effectiveFrom: string };
 
-const PLAN_COLUMNS = 'id, key, kind, label, description, billable, sale_status, display_order';
+const PLAN_COLUMNS = 'id, key, kind, label, description, billable, sale_status, display_order, price_book_item_id';
 
 function toPlan(row: {
   id: string;
@@ -84,6 +86,7 @@ function toPlan(row: {
   billable: boolean;
   sale_status: string;
   display_order: number;
+  price_book_item_id: string | null;
 }): Plan {
   return {
     id: row.id,
@@ -94,6 +97,7 @@ function toPlan(row: {
     billable: row.billable,
     saleStatus: row.sale_status as SaleStatus,
     displayOrder: row.display_order,
+    priceBookItemId: row.price_book_item_id,
   };
 }
 
@@ -163,6 +167,12 @@ export async function updatePlan(db: Db, input: UpdatePlanInput): Promise<void> 
     p_sale_status: input.saleStatus,
     p_display_order: input.displayOrder,
   });
+  if (error) staffOnly(error, 'plans.update_failed');
+}
+
+/** Product Registry's own fields: whether a plan is billed and where it sits. Its name, description and sale status are set in GildOps' Finance. */
+export async function updatePlanSwitches(db: Db, input: { planId: string; billable: boolean; displayOrder: number }): Promise<void> {
+  const { error } = await db.rpc('update_plan_switches', { p_plan_id: input.planId, p_billable: input.billable, p_display_order: input.displayOrder });
   if (error) staffOnly(error, 'plans.update_failed');
 }
 

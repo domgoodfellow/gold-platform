@@ -7,8 +7,7 @@ import { RecordHeader } from '@/components/headers/record-header';
 import { DefinitionList, Detail } from '@/components/display/data';
 import { Section, SectionHeading } from '@/components/surfaces/section';
 import { getDb } from '@/lib/db/server';
-import { getProduct, listProductPrices, productKeyFromUrlSegment } from '@/lib/domain/commercial/catalogue';
-import { formatMoney } from '@/lib/domain/work-items/consumption';
+import { getProduct, productKeyFromUrlSegment } from '@/lib/domain/commercial/catalogue';
 import { ProductForm } from '@/features/platform/catalog/product-form';
 
 export default async function ProductPage({
@@ -22,11 +21,6 @@ export default async function ProductPage({
   if (!product) {
     notFound();
   }
-
-  const prices = await listProductPrices(db);
-  const currentPrice = prices.find(
-    (price) => price.productKey === product.key && price.approvalState === 'approved',
-  );
 
   return (
     <>
@@ -50,18 +44,6 @@ export default async function ProductPage({
             </Link>
           ) : (
             '—'
-          )}
-        </Detail>
-        <Detail label="Current list price">
-          {currentPrice ? (
-            <Link href={platformHref(goldId, 'pricing')} className="underline underline-offset-4">
-              {formatMoney(currentPrice.amountMinor, currentPrice.currency)} /{' '}
-              {currentPrice.billingInterval.replace('_', ' ')}
-            </Link>
-          ) : (
-            <Link href={platformHref(goldId, 'pricing')} className="text-muted-foreground underline underline-offset-4">
-              Not priced
-            </Link>
           )}
         </Detail>
       </DefinitionList>

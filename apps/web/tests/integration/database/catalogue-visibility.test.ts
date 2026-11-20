@@ -45,7 +45,6 @@ const CONTROL_PLANE = [
   'platform_provider_services',
   'platform_provider_service_features',
   'platform_connector_app_features',
-  'platform_plan_provider_prices',
 ] as const;
 
 const FIXTURE = `visibility-${randomUUID().slice(0, 8)}`;
@@ -164,7 +163,11 @@ describe('the control plane is for staff only', () => {
   it('is not vacuous: who GOLD uses is recorded', async () => {
     expect(await realCount('platform_providers')).toBeGreaterThan(0);
     expect(await realCount('platform_provider_services')).toBeGreaterThan(0);
-    expect(await realCount('platform_plan_provider_prices')).toBeGreaterThan(0);
+  });
+
+  it("keeps GildOps' billing-provider price references from staff and businesses alike: they are GildOps' Finance (ADR-057)", async () => {
+    // finance-recurring-items.test.ts proves GildOps' own price managers do read them.
+    for (const db of [member, visitor, staff]) expect(await seenBy(db, 'price_book_item_provider_prices')).toBe(0);
   });
 
   it('keeps the vendor rows of the runtime mapping table from anybody but staff, and the module rows from nobody', async () => {

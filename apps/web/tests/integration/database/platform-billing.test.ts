@@ -11,7 +11,11 @@ import { beginPlatformBillingCheckout } from '@/lib/domain/platform-billing/chec
 import { buildOrganizationPurchaseQuote } from '@/lib/domain/platform-billing/quote';
 import { beginPlatformBillingPortalSession } from '@/lib/domain/platform-billing/portal';
 import { getOrganizationSubscription } from '@/lib/domain/platform-billing/subscriptions';
-import { provisionAgreementPlanPrice, provisionPlanPrice } from '@/lib/domain/platform-billing/provisioning';
+import { provisionAgreementPlanPrice } from '@/lib/domain/platform-billing/provisioning';
+import { getRecurringItem } from '@/lib/domain/pricing/recurring-items';
+import { listItemProviderPrices, provisionItemPrice } from '@/lib/domain/pricing/item-provider-prices';
+import { bootstrapOperatingOrganization } from '@/lib/domain/platform/operating-organization';
+import { setAsideOperatingOrganization } from '@/tests/support/operating-organization';
 import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
 import { applySubscriptionEvent } from '@/tests/support/subscription-events';
 import { BILLING_PROVISIONER_API, provisionerFinalize, withBillingProvisionerApi } from '@/tests/support/billing-provisioner';
@@ -98,6 +102,33 @@ let staff: SupabaseClient;
 let tenant: Tenant;
 let other: Tenant;
 let noBillingMember: Tenant;
+/** GildOps' operating organization and the member who prices its plans (ADR-057). */
+let seller: Tenant;
+let restoreOperating: () => Promise<void>;
+
+/** A business founded by an owner who is also platform staff, so it can be designated GildOps. */
+async function newSeller(): Promise<Tenant> {
+  const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { autoRefreshToken: false, persistSession: false } });
+  const email = `gildops-${randomUUID().slice(0, 8)}@example.test`;
+  const password = `pw-${randomUUID()}`;
+  const { data: created, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
+  if (error) throw error;
+  await pg.query('insert into public.platform_staff (user_id, name) values ($1, $2)', [created.user.id, 'GildOps (test)']);
+  const db = createClient(SUPABASE_URL, ANON_KEY, { auth: { autoRefreshToken: false, persistSession: false } });
+  const signIn = await db.auth.signInWithPassword({ email, password });
+  if (signIn.error) throw signIn.error;
+  const organizationId = await foundBusiness({ ownerEmail: email, name: `GildOps ${randomUUID().slice(0, 8)}`, currency: 'CAD' });
+  await bootstrapOperatingOrganization(db, { organizationId });
+  return { db, organizationId, userId: created.user.id };
+}
+
+/** Provisioning a plan price for checkout, as GildOps' Finance does it. */
+async function provisionAsSeller(planId: string, priceId: string) {
+  const { rows } = await pg.query<{ item: string }>('select price_book_item_id as item from public.platform_plans where id = $1', [planId]);
+  const item = await getRecurringItem(seller.db, { organizationId: seller.organizationId, itemId: rows[0].item });
+  if (!item) throw new Error('plan has no item in GildOps’ price book');
+  return provisionItemPrice(seller.db, { organizationId: seller.organizationId, item, priceId });
+}
 
 beforeAll(async () => {
   if (!ANON_KEY || !SERVICE_ROLE_KEY) {
@@ -108,6 +139,8 @@ beforeAll(async () => {
   await pg.connect();
 
   staff = await asPlatformStaff();
+  restoreOperating = await setAsideOperatingOrganization(pg);
+  seller = await newSeller();
   tenant = await newTenant('billing');
   other = await newTenant('billing-other');
   noBillingMember = await restrictedMember(tenant, 'no-billing');
@@ -119,7 +152,11 @@ beforeAll(async () => {
 }, 60_000);
 
 afterAll(async () => {
-  await pg?.end();
+  try {
+    await restoreOperating?.();
+  } finally {
+    await pg?.end();
+  }
 });
 
 afterEach(() => {
@@ -202,7 +239,7 @@ async function seedProvisionedPlan(
     '/v1/products': { id: `prod_${randomUUID().slice(0, 8)}` },
     '/v1/prices': { id: `price_${randomUUID().slice(0, 8)}` },
   });
-  await provisionPlanPrice(staff, { planId, planPriceId: priceId });
+  await provisionAsSeller(planId, priceId);
   fetchSpy.mockRestore();
 
   return { planKey: key, planId, priceId };
@@ -221,7 +258,7 @@ async function seedProvisionedAddon(
     '/v1/products': { id: `prod_${randomUUID().slice(0, 8)}` },
     '/v1/prices': { id: `price_${randomUUID().slice(0, 8)}` },
   });
-  await provisionPlanPrice(staff, { planId, planPriceId: priceId });
+  await provisionAsSeller(planId, priceId);
   fetchSpy.mockRestore();
 
   return { planId, priceId };
@@ -250,9 +287,9 @@ describe('provisioning a Plan price with the billing provider', () => {
       return new Response(JSON.stringify({ id: `stub_${randomUUID().slice(0, 8)}` }), { status: 200 });
     });
 
-    const first = await provisionPlanPrice(staff, { planId, planPriceId: priceId });
+    const first = await provisionAsSeller(planId, priceId);
     const callsAfterFirst = calls;
-    const second = await provisionPlanPrice(staff, { planId, planPriceId: priceId });
+    const second = await provisionAsSeller(planId, priceId);
 
     expect(second).toEqual(first);
     // No further fetch — the second call reads the already-provisioned row rather than asking
@@ -281,17 +318,18 @@ describe('provisioning a Plan price with the billing provider', () => {
     expect(error).toBeTruthy();
   });
 
-  it('is readable by staff alone; a business reaches only the one reference checkout needs, through a door that checks billing.manage', async () => {
+  it('is readable by GildOps’ own members alone; a business reaches only the one reference checkout needs, through a door that checks billing.manage', async () => {
     const { priceId } = await seedProvisionedPlan();
 
-    const staffRead = await staff.from('platform_plan_provider_prices').select('id').eq('plan_price_id', priceId);
-    expect((staffRead.data ?? []).length).toBeGreaterThan(0);
+    expect(await listItemProviderPrices(seller.db, { organizationId: seller.organizationId, priceIds: [priceId], environment: 'sandbox' })).toHaveLength(1);
+    const staffRead = await staff.from('price_book_item_provider_prices').select('id').eq('plan_price_id', priceId);
+    expect(staffRead.data).toEqual([]);
 
     // DENY: the table is no longer a tenant's to read, and what it still cannot do is write.
-    const tenantRead = await tenant.db.from('platform_plan_provider_prices').select('id').eq('plan_price_id', priceId);
+    const tenantRead = await tenant.db.from('price_book_item_provider_prices').select('id').eq('plan_price_id', priceId);
     expect(tenantRead.error).toBeNull();
     expect(tenantRead.data).toEqual([]);
-    const forged = await tenant.db.from('platform_plan_provider_prices').insert({
+    const forged = await tenant.db.from('price_book_item_provider_prices').insert({
       plan_price_id: priceId,
       environment: 'sandbox',
       product_reference: 'prod_forged',

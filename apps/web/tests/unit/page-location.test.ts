@@ -124,6 +124,8 @@ describe('every location is a real page, and every shell page has a location', (
     // areas (`calendar`, `fields`, `roles`, …) are recognized as redirects and so are not listed.
     const expected = [
       'organizations/[organizationId]', 'organizations/[organizationId]/[...unmatched]', 'platform/[...unmatched]',
+      // Retired Platform addresses, kept as redirects (ADR-057).
+      'platform/plans', 'platform/plans/[planKey]', 'platform/pricing',
       ...['customers', 'follow-ups', 'opportunities', 'sales'].map((legacy) => `organizations/[organizationId]/${legacy}/[[...legacyPath]]`),
       ...['automations/[ruleId]', 'automations/activity', 'automations/rules', 'comms/numbers', 'comms/numbers/[phoneNumberId]', 'finance/configuration', 'finance/economics', 'finance/economics/[targetOrganizationId]', 'finance/plans', 'finance/plans/[planKey]', 'insights/reports', 'integrations/[connectionId]', 'integrations/imports', 'integrations/imports/[runId]', 'integrations/imports/new', 'integrations/sources', 'integrations/sources/[resourceId]',
         'settings/calls', 'settings/commerce', 'settings/communications', 'settings/connections/apps', 'settings/data-automation', 'settings/opportunity-stages', 'settings/organization', 'settings/people', 'settings/pricing', 'settings/sales-stages', 'settings/website'].map((path) => `organizations/[organizationId]/${path}`),
@@ -333,15 +335,16 @@ describe('Organization Settings', () => {
 
 describe('Platform', () => {
   it('starts at Platform and leaves out group headings that have no page', () => {
-    const location = at('/platform/plans/base', { records: { planKey: { state: 'ready', label: 'Base' } } });
-    expect(trail(location)).toEqual(['Platform → /platform', 'Plans & Add-ons → /platform/plans']);
+    const location = at('/platform/catalog/plans/base', { records: { planKey: { state: 'ready', label: 'Base' } } });
+    expect(trail(location)).toEqual(['Platform → /platform', 'Plans → /platform/catalog/plans']);
+    expect(location.trail.map((crumb) => crumb.label)).not.toContain('Product Registry');
     expect(location.trail.map((crumb) => crumb.label)).not.toContain('Commercial administration');
     expect(location.trail.map((crumb) => crumb.label)).not.toContain('Administration');
   });
 
   it('links only the Platform pages this person may open', () => {
-    const location = resolved(resolveLocation({ pathname: '/platform/plans/base', access: { platform: new Set<PlatformCapability>(['platform.commercial']) }, records: { planKey: { state: 'ready', label: 'Base' } } }));
-    expect(trail(location)).toEqual(['Platform', 'Plans & Add-ons → /platform/plans']);
+    const location = resolved(resolveLocation({ pathname: '/platform/catalog/plans/base', access: { platform: new Set<PlatformCapability>(['platform.catalogue']) }, records: { planKey: { state: 'ready', label: 'Base' } } }));
+    expect(trail(location)).toEqual(['Platform', 'Plans → /platform/catalog/plans']);
   });
 });
 

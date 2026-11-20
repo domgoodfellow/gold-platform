@@ -89,7 +89,8 @@ describe('Administration inside GildOps', () => {
     expect(screen.getByRole('link', { name: 'Meters' })).toHaveAttribute('href', `/platform/catalog/meters`);
     await user.click(screen.getByRole('button', { name: 'Collapse Infrastructure' }));
     expect(screen.queryByRole('link', { name: 'Vendors' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /Plans/ })).not.toBeInTheDocument();
+    // Plans sits in Product Registry, opened above; its prices are GildOps' Finance (ADR-057).
+    expect(screen.getByRole('link', { name: 'Plans' })).toHaveAttribute('href', `/platform/catalog/plans`);
   });
 
   it('gives commercial-only staff an Administration row, never a platform link inside Finance', () => {
@@ -100,11 +101,11 @@ describe('Administration inside GildOps', () => {
     route.pathname = `${base}/finance`;
     rerender(view(sections));
     expect(screen.queryByRole('link', { name: 'Commercial administration' })).not.toBeInTheDocument();
-    route.pathname = `/platform/pricing`;
+    route.pathname = `/platform/billing`;
     rerender(view(sections));
     expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument();
     expect(screen.getByText('Administration')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Pricing' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Billing' })).toHaveAttribute('aria-current', 'page');
     expect(screen.queryByRole('link', { name: 'Invoices' })).not.toBeInTheDocument();
   });
 });

@@ -7,21 +7,13 @@ import { PageHeader } from '@/components/headers/page-header';
 import { DataTable } from '@/components/display/table';
 import { Badge } from '@/components/display/data';
 import { getDb } from '@/lib/db/server';
-import { listProductPrices, listProducts, productKeyToUrlSegment } from '@/lib/domain/commercial/catalogue';
-import { formatMoney } from '@/lib/domain/work-items/consumption';
+import { listProducts, productKeyToUrlSegment } from '@/lib/domain/commercial/catalogue';
 
 export default async function ProductsPage({ params }: PageProps<'/platform/catalog/products'>) {
   const { organizationId: goldId } = await platformParams(params);
   await requirePlatformArea(goldId, 'platform.catalogue');
   const db = await getDb();
-  const [products, prices] = await Promise.all([listProducts(db), listProductPrices(db)]);
-
-  const currentPrice = new Map<string, (typeof prices)[number]>();
-  for (const price of prices) {
-    if (price.approvalState === 'approved' && !currentPrice.has(price.productKey)) {
-      currentPrice.set(price.productKey, price);
-    }
-  }
+  const products = await listProducts(db);
 
   return (
     <AppPage>
@@ -72,20 +64,6 @@ export default async function ProductsPage({ params }: PageProps<'/platform/cata
                   {product.saleStatus}
                 </Badge>
               ),
-            },
-            {
-              key: 'price',
-              header: 'Current list price',
-              cell: (product) => {
-                const price = currentPrice.get(product.key);
-                return price ? (
-                  `${formatMoney(price.amountMinor, price.currency)} / ${price.billingInterval.replace('_', ' ')}`
-                ) : (
-                  <Link className="text-muted-foreground underline underline-offset-4" href={platformHref(goldId, 'pricing')}>
-                    Not priced
-                  </Link>
-                );
-              },
             },
           ]}
         />

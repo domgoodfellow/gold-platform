@@ -34,6 +34,8 @@ let oneOff: string;
 let customer: string;
 let planId: string;
 let priceId: string;
+/** Unique per run: plan items move with the operating organization, so a fixed name collides across runs. */
+const PLAN_LABEL = `Price book test plan ${randomUUID().slice(0, 8)}`;
 
 async function person(label: string, options: { staff?: boolean } = {}): Promise<Person> {
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { autoRefreshToken: false, persistSession: false } });
@@ -80,8 +82,8 @@ beforeAll(async () => {
 
   // A plan with a price recorded before any operating organization exists.
   planId = (await pg.query<{ id: string }>(
-    `insert into public.platform_plans (key, kind, label) values ($1, 'plan', 'Price book test plan') returning id`,
-    [`pb_${randomUUID().slice(0, 8)}`],
+    `insert into public.platform_plans (key, kind, label) values ($1, 'plan', $2) returning id`,
+    [`pb_${randomUUID().slice(0, 8)}`, PLAN_LABEL],
   )).rows[0].id;
   priceId = (await pg.query<{ id: string }>(
     `insert into public.price_book_item_prices (plan_id, currency, amount_minor, billing_interval, effective_from) values ($1, 'CAD', 4900, 'month', '2026-01-01') returning id`,
@@ -184,7 +186,7 @@ describe('GildOps’ plans as recurring items of its operating organization', ()
 
     it('names a new plan’s item after the plan and reuses the plan’s id when it can', async () => {
       const { rows } = await pg.query('select i.id, i.name, i.unit, i.sale_status from public.platform_plans p join public.price_book_items i on i.id = p.price_book_item_id where p.id = $1', [planId]);
-      expect(rows[0]).toEqual({ id: planId, name: 'Price book test plan', unit: 'subscription', sale_status: 'active' });
+      expect(rows[0]).toEqual({ id: planId, name: PLAN_LABEL, unit: 'subscription', sale_status: 'active' });
     });
 
     it('gives a plan created afterwards its item at once', async () => {
