@@ -240,18 +240,20 @@
   }
 }
 
-/* The marketing frame's measure: header, main column and footer share it, so compositions,
-   navigation and footer align. Pages built on `MarketingPage` get the wider measure their
-   compositions need. Materials and section compositions live in marketing-site.css. */
-[data-marketing-site] { --marketing-measure: 64rem; }
-@media (min-width: 1024px) {
-  [data-marketing-site]:has([data-marketing-page]) { --marketing-measure: 75rem; }
+/* Marketing fills the viewport; only individual reading blocks have a bounded measure.
+   One fluid gutter keeps the header, compositions and footer aligned on large screens. */
+[data-marketing-site] {
+  --marketing-measure: 100%;
+  --marketing-gutter: clamp(1.5rem, 2.5vw, 4rem);
 }
 [data-marketing-site] .marketing-measure { max-width: var(--marketing-measure); }
+[data-marketing-site] > header,
+[data-marketing-site] > main,
+[data-marketing-site] .marketing-footer-inner { padding-inline: var(--marketing-gutter); }
 [data-marketing-page] { position: relative; padding-top: 1rem; }
 [data-marketing-page] .marketing-section { position: relative; padding-block: 2.5rem; }
 [data-marketing-page] [data-marketing-section=hero] { padding-block: 2rem 2.5rem; }
-[data-marketing-page] [data-marketing-section=hero] h1 { font-size: clamp(2.5rem, 4.1vw, 3.5rem); line-height: 1.06; letter-spacing: -.045em; }
+[data-marketing-page] [data-marketing-section=hero] h1 { font-size: clamp(2.5rem, 4.1vw, 5rem); line-height: 1.06; letter-spacing: -.045em; }
 [data-marketing-page] [data-marketing-section=hero] p { font-size: 1.0625rem; }
 [data-marketing-page] [data-section=problem] > section { background: var(--secondary); border-radius: .75rem; }
 [data-marketing-page] [data-section=capabilities] > section { padding-block: .5rem; }

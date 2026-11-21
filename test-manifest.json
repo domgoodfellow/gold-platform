@@ -326,6 +326,7 @@
     "apps/web/tests/integration/database/ai-workspace.test.ts": { "category": "database-integration", "concerns": ["ai", "authorization", "tenant-isolation", "versions", "handoff"] },
     "apps/web/e2e/support-workspace.spec.ts": { "category": "playwright-acceptance", "concerns": ["support", "crm", "communications", "work", "responsive"] },
     "apps/web/tests/integration/database/support-workspace.test.ts": { "category": "database-integration", "concerns": ["support", "authorization", "tenant-isolation", "sla", "history"] },
+    "apps/web/e2e/responsive-layout.spec.ts": { "category": "playwright-acceptance", "concerns": ["marketing", "dashboards", "responsive", "accessibility"], "note": "Rendered viewport coverage, readable text, empty panel height, overflow and navigation from phone through ultrawide desktops." },
     "apps/web/e2e/marketing.spec.ts": { "category": "playwright-acceptance", "concerns": ["marketing", "forms", "crm", "responsive"] },
     "apps/web/tests/integration/database/marketing.test.ts": { "category": "database-integration", "concerns": ["marketing", "forms", "crm", "authorization", "attribution"] },
     "apps/web/e2e/dialer-popout.spec.ts": {"category": "playwright-acceptance", "concerns": ["communications", "voice"], "note": "Real browser popup, draft, workspace navigation, mobile geometry and browser-chrome closure; runs on a disposable business (playwright.isolated.config.ts); never places a call."},

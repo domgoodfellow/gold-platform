@@ -106,7 +106,7 @@
 
 /* Hero: the copy sits on open ground inside the composition, its seam with the cluster beside it. */
 [data-marketing-site] [data-marketing-home] .ms-hero-copy { --cell-pad-block: 1rem 2.5rem; gap: 1.5rem; justify-content: center; padding-inline-start: 0; }
-[data-marketing-site] [data-marketing-home] .ms-hero-copy h1 { max-width: 38rem; text-wrap: balance; font-weight: 600; }
+[data-marketing-site] [data-marketing-home] .ms-hero-copy h1 { max-width: 56rem; text-wrap: balance; font-weight: 600; }
 [data-marketing-site] [data-marketing-home] .ms-hero-copy > p { max-width: 34rem; color: var(--muted); line-height: 1.6; text-wrap: pretty; }
 [data-marketing-site] .ms-hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem; margin-top: 0.5rem; }
 [data-marketing-site] .ms-hero-secondary { border-radius: 0.25rem; color: var(--muted); font-size: 0.875rem; font-weight: 500; }

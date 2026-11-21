@@ -14,8 +14,8 @@ const FALLBACK_TAGLINE = 'AI, automation and business software, set up around ho
  * every operator surface keep the neutral roles. The header already carries the one primary
  * action on every width; there is no second, fixed copy of it along the bottom of a phone.
  *
- * The main column is the frame's measure (`--marketing-measure`, globals.css), shared with the
- * header and footer so compositions, navigation and footer align.
+ * The main column fills the viewport with the same fluid gutter as the header and footer
+ * (globals.css). Reading measures belong to the individual text blocks, not the page frame.
  */
 export function MarketingShell({
   name,
