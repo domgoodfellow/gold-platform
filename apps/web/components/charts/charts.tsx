@@ -34,14 +34,14 @@ function useSize<T extends HTMLElement>() {
 }
 
 /** A chart's frame: what it shows, for which period and unit, its controls, and its state. */
-export function ChartFrame({ title, data, controls, state = { status: 'ready' }, children, headingLevel = 3 }: { title: ReactNode; data: Pick<ChartData, 'period' | 'format'>; controls?: ReactNode; state?: ChartState; children: ReactNode; headingLevel?: 2 | 3 }) {
+export function ChartFrame({ title, data, controls, state = { status: 'ready' }, children, headingLevel = 3, height = 'standard' }: { title: ReactNode; data: Pick<ChartData, 'period' | 'format'>; controls?: ReactNode; state?: ChartState; children: ReactNode; headingLevel?: 2 | 3; height?: ChartHeight }) {
   const Heading = headingLevel === 2 ? 'h2' : 'h3';
-  return <figure data-slot="chart" className="@container m-0 flex min-w-0 flex-col gap-2">
+  return <figure data-slot="chart" data-chart-height={height} className="@container m-0 flex min-w-0 flex-col gap-2">
     <div className="flex flex-wrap items-start justify-between gap-2">
       <figcaption className="min-w-0"><Heading className="text-sm font-semibold">{title}</Heading><p className="text-xs text-muted">{data.period} · {describeFormat(data.format)}</p></figcaption>
       {controls ? <div className="flex flex-wrap items-center gap-2">{controls}</div> : null}
     </div>
-    {state.status === 'ready' ? children : <ChartStateMessage state={state} />}
+    {state.status === 'ready' ? children : <div data-slot="chart-state" className={cx('flex items-center justify-center', HEIGHT[height])}><ChartStateMessage state={state} /></div>}
   </figure>;
 }
 
@@ -161,9 +161,9 @@ export function CartesianChart({ title, data, presentation, height = 'standard' 
   const uid = useId().replace(/:/g, '');
   // Later series are hatched as well as tinted, so bars never differ by colour alone.
   const barFill = (index: number) => index === 0 ? seriesColor(0) : `url(#${uid}-hatch-${index})`;
-  return <div className="flex min-w-0 flex-col gap-2">
+  return <div data-slot="chart-plot-group" className="flex min-w-0 flex-col gap-2">
     <ChartLegend data={data} kind={presentation === 'line' ? 'line' : 'bar'} patternFor={barFill} />
-    <div ref={ref} tabIndex={0} role="group" aria-roledescription="chart" aria-label={`${title}. Use arrow keys to read values${data.categories.some(c => c.href) ? '; Enter opens the selected item' : ''}.`} aria-describedby={describedBy}
+    <div ref={ref} data-slot="chart-plot" tabIndex={0} role="group" aria-roledescription="chart" aria-label={`${title}. Use arrow keys to read values${data.categories.some(c => c.href) ? '; Enter opens the selected item' : ''}.`} aria-describedby={describedBy}
       onKeyDown={move} onBlur={() => setActive(null)} onPointerMove={event => setActive(nearest(event.clientX, event.clientY))} onPointerLeave={() => setActive(null)}
       onClick={event => { const row = nearest(event.clientX, event.clientY); if (data.categories[row].href) router.push(data.categories[row].href!); }}
       className={cx('relative w-full min-w-0 overflow-hidden rounded-sm', HEIGHT[height], data.categories.some(c => c.href) && 'cursor-pointer', FOCUS_RING)}>
@@ -245,8 +245,8 @@ export function DonutChart({ title, data, height = 'standard' }: { title: string
   });
   const cx0 = width / 2, cy0 = plotHeight / 2;
   const at = (r: number, a: number) => `${cx0 + r * Math.cos(a)},${cy0 + r * Math.sin(a)}`;
-  return <div className="grid min-w-0 gap-3 @min-[28rem]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-    <div ref={ref} role="img" aria-label={`${title}: ${data.categories.map((category, row) => `${category.label} ${points[row]?.label}`).join(', ')}`} className={cx('min-w-0', HEIGHT[height])}>
+  return <div data-slot="chart-plot-group" className="grid min-w-0 gap-3 @min-[28rem]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+    <div ref={ref} data-slot="chart-plot" role="img" aria-label={`${title}: ${data.categories.map((category, row) => `${category.label} ${points[row]?.label}`).join(', ')}`} className={cx('min-w-0', HEIGHT[height])}>
       {width > 0 ? <svg width={width} height={plotHeight} aria-hidden>{arcs.map(arc => arc.share <= 0 ? null : arc.share >= 0.9999
         ? <circle key={arc.row} cx={cx0} cy={cy0} r={(radius + inner) / 2} fill="none" stroke={seriesColor(arc.row)} strokeWidth={radius - inner} />
         : <path key={arc.row} d={`M${at(radius, arc.start)} A${radius},${radius} 0 ${arc.end - arc.start > Math.PI ? 1 : 0} 1 ${at(radius, arc.end)} L${at(inner, arc.end)} A${inner},${inner} 0 ${arc.end - arc.start > Math.PI ? 1 : 0} 0 ${at(inner, arc.start)} Z`} fill={seriesColor(arc.row)} stroke="var(--surface, var(--background))" strokeWidth="1.5" />)}</svg> : null}
@@ -280,7 +280,7 @@ export function Chart({ title, data, variants, variant, onVariantChange, present
     {allowed.length > 1 && ready.status === 'ready' ? <label htmlFor={`${id}-presentation`} className="flex items-center gap-1.5 text-xs text-muted"><span className="sr-only">{title}: </span>Show as
       <SelectField id={`${id}-presentation`} aria-label={`${title} presentation`} size="small" value={presentation} onValueChange={(next) => { setLocal(next); onPresentationChange?.(next as ChartPresentation); }} className="w-40" options={[...allowed.map((option) => ({ value: option, label: PRESENTATION_LABEL[option] }))]} /></label> : null}
   </>;
-  return <ChartFrame title={title} data={data} controls={controls} state={ready} headingLevel={headingLevel}>
+  return <ChartFrame title={title} data={data} controls={controls} state={ready} headingLevel={headingLevel} height={height}>
     {presentation === 'table' ? <ChartDataTable title={title} data={data} />
       : <>{presentation === 'donut' ? <DonutChart title={title} data={data} height={height} /> : presentation === 'stacked-bar' && data.series.length === 1 ? <PartsBar title={title} data={data} /> : <CartesianChart title={title} data={data} presentation={presentation} height={height} />}
         <details className="text-xs"><summary className={cx('w-fit cursor-pointer text-muted', FOCUS_RING)}>View as table</summary><div className="mt-2"><ChartDataTable title={title} data={data} /></div></details></>}

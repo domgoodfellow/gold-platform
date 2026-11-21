@@ -73,7 +73,7 @@ export function CommunicationsHome({ organizationId, timezone, data, configure, 
   const blocker = data.callingBlocker;
   const noAttention = !attentionTabs.some(tab => tab.count > 0);
 
-  return <AppPage data-communications-dashboard className="@container/comms space-y-3 pb-14 md:pb-0">
+  return <AppPage data-dashboard-page data-communications-dashboard className="@container/comms pb-14 md:pb-0">
     <PageHeader title="Dashboard" crumbs={workspaceAncestry(organizationId, 'comms')} className="mb-0" actions={<>
       <PeriodSelect label="Communication date range" size="default" value={params.when} options={PERIODS.map(entry => ({ ...entry, href: link({ when: entry.value }) }))} />
       {mayMessage ? <ButtonLink tone="primary" href={inbox}><MessageSquare aria-hidden /> Conversations</ButtonLink> : null}
@@ -86,7 +86,7 @@ export function CommunicationsHome({ organizationId, timezone, data, configure, 
       {mayCall ? <><MetricTile label="Missed calls" value={data.missed?.total ?? '—'} detail={period} href={`${calls}?state=missed&when=${params.when}#call-history`} /><MetricTile label="Needs wrap-up" value={data.counts?.needsWrapUp ?? '—'} detail="Outstanding" href={`${calls}?wrap=1#call-history`} /></> : null}
       {mayMessage ? <><MetricTile label="Unread conversations" value={data.inboxCounts?.unread ?? '—'} detail="Outstanding" href={`${inbox}?view=unread`} /><MetricTile label="Unassigned conversations" value={data.inboxCounts?.unassigned ?? '—'} detail="Outstanding" href={`${inbox}?view=unassigned`} /></> : null}
     </div>
-    <div className="grid min-w-0 gap-3 @min-[64rem]/comms:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]">
+    <div data-dashboard-panels className="grid min-w-0 gap-3 @min-[64rem]/comms:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]">
       <div className="min-w-0 space-y-3">
         <OperationalPanel density="compact" title="Needs attention" href={noAttention ? undefined : attentionHref} hrefLabel={attention === 'unread' || attention === 'unassigned' ? 'Open conversations' : 'Open call history'}>
           <ViewNav label="Attention categories" variant="line" scroll={false} className="mb-3" items={attentionTabs.map(tab => ({ key: tab.key, label: `${tab.label} (${tab.count})`, href: link({ attention: tab.key }), current: attention === tab.key }))} />

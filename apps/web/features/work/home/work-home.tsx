@@ -109,7 +109,7 @@ export function WorkHome({ organizationId, timezone, today, data: d, capabilitie
   const volume = scheduledVolumeChart(d.history, d.date, day => `${base}/schedule?on=${day}&view=day`);
   const readable = readableWorkWidgets(d);
   const widgets: Record<string, DashboardWidgetContent> = {
-    overview: { kind: 'node', node: overview },
+    overview: { kind: 'node', node: overview, sizing: 'content' },
     attention: { kind: 'node', node: attention },
     today: { kind: 'node', node: schedule },
     volume: { kind: 'chart', title: 'Scheduled work', variants: [{ key: 'jobs', label: 'Jobs', data: volume }], state: d.history.some(h => h.count) ? undefined : { status: 'empty', message: 'No work was scheduled in these seven days.' } },
@@ -117,7 +117,7 @@ export function WorkHome({ organizationId, timezone, today, data: d, capabilitie
     upcoming: { kind: 'node', node: upcoming },
     activity: { kind: 'node', node: <OperationalPanel className="h-full min-w-0" density="compact" title="Recent activity" href={`${base}/work`} hrefLabel="Work items">{activity}</OperationalPanel> },
   };
-  return <WorkspaceHome location={{}} actions={actions}>
+  return <WorkspaceHome dashboard location={{}} actions={actions}>
     <DashboardLayoutGrid label="Work dashboard" registry={WORK_WIDGETS} saved={DEFAULT_LAYOUT} readable={[...readable]} widgets={widgets} />
   </WorkspaceHome>;
 }

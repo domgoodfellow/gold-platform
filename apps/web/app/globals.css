@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "../features/visual-composition/visual-composition.css";
 @import "../features/marketing-site/marketing-site.css";
+@import "../components/dashboard/dashboard.css";
 /* Scoped dark mode also covers explicit preferences opposite to the operating system. */
 @custom-variant dark {
   @container style(--appearance-scheme: dark) { @slot; }

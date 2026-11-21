@@ -581,7 +581,7 @@ export function SupportWorkspace({
     </OperationalPanel>
   ) : null;
   return (
-    <AppPage className={`@container ${view === "home" ? "space-y-3" : "space-y-4"}`}>
+    <AppPage data-dashboard-page={view === "home" || undefined} className={`@container ${view === "home" ? "space-y-3" : "space-y-4"}`}>
       <PageHeader
         crumbs={view === "home" ? [] : [{ label: "Support", href: base }]}
         title={view === "detail" ? `${c?.case_number} · ${c?.title}` : titles[view]}

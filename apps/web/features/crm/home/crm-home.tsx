@@ -55,7 +55,7 @@ export function CrmHome({organizationId,timezone,month,overview,relationships,sa
   const attentionSources=followUpsEnabled||salesEnabled; const attentionTotal=attention.overdue+attention.today+(salesEnabled?attention.unassigned+(followUpsEnabled?attention.noNext:0):0);
   const allClear=attentionSources&&!attentionTotal;
   const lifecycleTotal=overview?LIFECYCLES.reduce((sum,[key])=>sum+overview.lifecycles[key],0):0;
-  return <WorkspaceHome location={{}} activity actions={actions}>
+  return <WorkspaceHome dashboard location={{}} activity actions={actions}>
     {overview?<section aria-label="Relationship overview" className="mb-6 grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,2fr)]">
       <MetricTile label="Contacts" value={overview.total} detail={<span className="flex flex-wrap gap-x-3 gap-y-1">
         <Link className="underline underline-offset-4" href={`${contacts}?contactType=person`}>{overview.people} {overview.people===1?'person':'people'}</Link>
@@ -68,7 +68,7 @@ export function CrmHome({organizationId,timezone,month,overview,relationships,sa
         <ul aria-label="Contacts by lifecycle" className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-4">{LIFECYCLES.map(([key,label])=><li key={key}><Link className="flex items-center gap-1.5 hover:underline" href={`${contacts}?lifecycle=${key}`}><span aria-hidden className={`size-2 shrink-0 rounded-full ${SHADES[key]}`}/>{label} <span className="tabular-nums font-semibold">{overview.lifecycles[key]}</span></Link></li>)}</ul>
       </div>
     </section>:null}
-    <div className={`mb-6 grid min-w-0 items-start gap-6 ${overview&&attentionSources&&!allClear?'xl:grid-cols-[minmax(0,1fr)_24rem]':''}`}>
+    <div data-dashboard-panels className={`grid min-w-0 gap-6 ${overview&&attentionSources&&!allClear?'xl:grid-cols-[minmax(0,1fr)_24rem]':''}`}>
       {overview?<RecentRelationships organizationId={organizationId} timezone={timezone} {...relationships} hrefFor={group=>dashboardHref(base,{month:sales?monthParam:undefined,group})} totalContacts={overview.total} mayAddContacts={mayAddContacts}/>:null}
       {attentionSources&&!allClear?<OperationalPanel className="min-w-0" title="Needs attention" action={followUpsEnabled&&followUpOptions.mayManage?<FollowUpSheet {...followUpOptions}/>:null}><NeedsAttention counts={attention} overdue={overdue} today={today} noNext={noNext} unassigned={unassigned} options={followUpOptions} followUpsEnabled={followUpsEnabled} salesEnabled={salesEnabled}/></OperationalPanel>:null}
       {allClear?<p role="status" className="flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm"><CircleCheck aria-hidden className="size-4 text-muted"/><span><span className="font-medium">Needs attention:</span> nothing overdue{followUpsEnabled?' or due today':''}{salesEnabled?', and every open opportunity has an owner':''}.</span></p>:null}

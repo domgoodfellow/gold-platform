@@ -20,6 +20,7 @@ export function WorkspaceHome({
   insights = false,
   activity = false,
   configure = false,
+  dashboard = false,
   children,
 }: {
   /** Required unless `location` is given. */
@@ -32,13 +33,14 @@ export function WorkspaceHome({
   /** Offers the page-support Activity panel; the page registers its feed there instead of drawing it inline. */
   activity?: boolean;
   configure?: boolean;
+  dashboard?: boolean;
   children: ReactNode;
 }) {
   // The workspace bar already names the page on every width, so a plain-text title stays for assistive
   // technology only rather than being printed a second time.
   const titleInBar = typeof title === 'string';
   return (
-    <AppPage>
+    <AppPage data-dashboard-page={dashboard || undefined}>
       {location ? null : <PageLocation crumbs={crumbs} current={title} />}
       <div data-slot="workspace-intro" className="mb-6 flex flex-wrap items-center justify-end gap-x-4 gap-y-3">
         {location ? <LocationHeading required /> : <LocationHeading fallback={<h1 className={titleInBar ? 'sr-only' : 'mr-auto text-2xl font-semibold tracking-tight'}>{title}</h1>} />}

@@ -153,7 +153,7 @@ export function SupportHome({
     ["new", "open", "waiting"].includes(c.status),
   );
   return (
-    <div className="grid min-w-0 items-start gap-4 @4xl:grid-cols-[minmax(0,1fr)_320px] @6xl:grid-cols-[minmax(0,1fr)_340px]">
+    <div data-dashboard-panels className="grid min-w-0 gap-4 @4xl:grid-cols-[minmax(0,1fr)_320px] @6xl:grid-cols-[minmax(0,1fr)_340px]">
       <div className="min-w-0 space-y-3">
         <div className="grid grid-cols-2 gap-2.5 @3xl:grid-cols-4">
           {metrics.map((m) => (
@@ -190,6 +190,7 @@ export function SupportHome({
         )}
         <section
           aria-label="Case workbench"
+          data-dashboard-panel
           className="min-w-0 overflow-hidden rounded-md border border-border bg-background"
         >
           <h2 className="sr-only">Active Cases</h2>

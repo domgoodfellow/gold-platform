@@ -84,6 +84,9 @@ export async function cleanupRun(manifest: RunManifest, env: NodeJS.ProcessEnv =
   try {
     await pg.query('begin');
     try {
+      // Plans now create a selling-organization price item. Remember only this run's plan items
+      // before removing the plans; their creator otherwise prevents removal of the fixture user.
+      const priceItems = await pg.query<{ id: string }>('select price_book_item_id as id from platform_plans where key=any($1::text[]) and price_book_item_id is not null', [planKeys]);
       await pg.query('delete from platform_staff where user_id = any($1::uuid[])', [userIds]);
       // These are disposable fixture associations only. Clear the optional catalog-to-type link
       // before resolving lawful deletion order; retain every FK and immutable monetary snapshot.
@@ -94,6 +97,7 @@ export async function cleanupRun(manifest: RunManifest, env: NodeJS.ProcessEnv =
       }
       await pg.query('delete from organizations where id = any($1::uuid[])', [organizationIds]);
       await pg.query('delete from platform_plans where key = any($1::text[])', [planKeys]);
+      await pg.query('delete from price_book_items where id=any($1::uuid[]) and created_by=any($2::uuid[])', [priceItems.rows.map(row => row.id), userIds]);
       await pg.query('commit');
     } catch (error) {
       await pg.query('rollback');

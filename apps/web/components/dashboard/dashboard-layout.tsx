@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, EyeOff, GripVertical, LayoutGrid, MoveHorizontal } from 'lucide-react';
 import { Button } from '../controls/button';
 import { useUnsavedChanges } from '../controls/use-unsaved-changes';
@@ -8,14 +8,14 @@ import { cx, FOCUS_RING } from '../class-names';
 import { Chart } from '../charts/charts';
 import type { ChartData, ChartState } from '@/lib/chart-model';
 import {
-  arrange, canonicalLayout, defaultLayout, HEIGHT_LABEL, moveWidget, resizeWidget, sameLayout, setWidgetOption, SPAN_LABEL, stepWidget, stepWidth, visibleWidgets,
+  arrange, canonicalLayout, defaultLayout, HEIGHT_LABEL, modeSpan, moveWidget, packRows, resizeWidget, sameLayout, setWidgetOption, SPAN_LABEL, stepWidget, stepWidth, visibleWidgets,
   type DashboardLayout, type WidgetDefinition, type WidgetDensity, type WidgetHeight, type WidgetPlacement, type WidgetSpan,
 } from '@/lib/dashboard-layout';
 import { SelectField } from '@/components/controls/select-field';
 
 /** What a widget draws. A chart widget is drawn here so its presentation follows the layout live; other widgets arrive rendered by the server. */
 export type DashboardWidgetContent =
-  | { kind: 'node'; node: ReactNode; densities?: Partial<Record<WidgetDensity, ReactNode>> }
+  | { kind: 'node'; node: ReactNode; sizing?: 'content'; densities?: Partial<Record<WidgetDensity, ReactNode>> }
   | { kind: 'chart'; title: string; variants: { key: string; label: string; data: ChartData }[]; state?: ChartState; footer?: ReactNode };
 
 export type SaveLayoutResult = { revision: number; error?: undefined } | { error: string; conflict?: boolean };
@@ -89,6 +89,15 @@ export function DashboardLayoutGrid({ registry, saved: initial, readable, widget
   const shown = visibleWidgets(layout, readableSet);
   const spans = arrange(registry, shown);
   const definitions = useMemo(() => new Map(registry.map(definition => [definition.id, definition])), [registry]);
+  // Overview tiles keep their content height. Panel rows share the remaining workspace height,
+  // with their natural/minimum height as the floor, including after reordering or filtering.
+  const rows = packRows(shown.map(widget => ({ id: widget.id, span: modeSpan(definitions.get(widget.id), widget.span, mode) })), mode === 'wide' ? 12 : mode === 'medium' ? 6 : 1);
+  const rowSizes: string[] = [];
+  for (const row of rows) {
+    const content = widgets[row.id];
+    const grows = content?.kind !== 'node' || content.sizing !== 'content';
+    rowSizes[row.row] = grows || rowSizes[row.row] === 'minmax(min-content, 1fr)' ? 'minmax(min-content, 1fr)' : 'auto';
+  }
   const dirty = editing && !sameLayout(draft, saved.layout);
   useUnsavedChanges(dirty);
   const hidden = layout.widgets.filter(widget => widget.hidden && readableSet.has(widget.id));
@@ -122,7 +131,7 @@ export function DashboardLayoutGrid({ registry, saved: initial, readable, widget
   const change = useCallback((next: DashboardLayout) => setDraft(next), []);
   const columnWidth = () => { const grid = containerRef.current?.querySelector<HTMLElement>('[data-dashboard-grid]'); if (!grid) return { column: 80, gap: 16 }; const gap = parseFloat(getComputedStyle(grid).columnGap) || 16; const columns = mode === 'wide' ? 12 : 6; return { column: (grid.clientWidth - gap * (columns - 1)) / columns, gap }; };
 
-  return <div ref={containerRef} className="@container/dashboard min-w-0" data-editing={editing || undefined} aria-label={label} role="region">
+  return <div ref={containerRef} data-dashboard-layout className="@container/dashboard flex min-w-0 flex-1 flex-col" data-editing={editing || undefined} aria-label={label} role="region">
     {editing ? <div role="toolbar" aria-label="Customize dashboard" className="sticky top-0 z-20 mb-4 flex flex-wrap items-center gap-2 rounded-[var(--visual-radius,0.625rem)] border border-accent bg-surface px-3 py-2 shadow-[var(--visual-overlay-shadow)]">
       <p className="mr-auto text-sm font-medium">Customizing your dashboard{mode === 'narrow' ? ' · every widget is full width on this screen' : ''}</p>
       {hidden.length ? <span className="flex flex-wrap items-center gap-1 text-xs text-muted">Hidden:{hidden.map(widget => <Button key={widget.id} type="button" tone="ghost" size="tiny" onClick={() => change(setWidgetOption(draft, registry, widget.id, { hidden: false }))}>Show {definitions.get(widget.id)?.label}</Button>)}</span> : null}
@@ -135,7 +144,7 @@ export function DashboardLayoutGrid({ registry, saved: initial, readable, widget
       {message.conflict ? <Button type="button" size="tiny" tone="secondary" onClick={() => window.location.reload()}>Reload</Button> : null}
       {message.tone === 'status' ? <Button type="button" size="tiny" tone="ghost" onClick={() => setMessage(null)}>Dismiss</Button> : null}
     </div> : null}
-    <div data-dashboard-grid className={cx('grid grid-cols-1 gap-4 @min-[40rem]/dashboard:grid-cols-6 @min-[64rem]/dashboard:grid-cols-12', editing && 'select-none')}>
+    <div data-dashboard-grid style={{ gridTemplateRows: rowSizes.join(' ') } as CSSProperties} className={cx('grid flex-1 grid-cols-1 gap-4 @min-[40rem]/dashboard:grid-cols-6 @min-[64rem]/dashboard:grid-cols-12', editing && 'select-none')}>
       {shown.map((placement, index) => <DashboardWidget key={placement.id} placement={placement} definition={definitions.get(placement.id)!} content={widgets[placement.id]}
         className={cx('col-span-1', MEDIUM[spans.medium.get(placement.id)!], WIDE[spans.wide.get(placement.id)!])}
         editing={editing} mode={mode} selected={selected === placement.id} onSelect={() => setSelected(placement.id)}
@@ -180,7 +189,7 @@ function DashboardWidget({ placement, definition, content, className, editing, m
       presentation={placement.presentation} onPresentationChange={editing ? presentation => onLayout(layout => setWidgetOption(layout, registry, placement.id, { presentation })) : undefined} /> : null}{content.footer}</div>;
   })();
   // A plain container: each widget's content names itself (a panel title or chart heading), so landmarks are not doubled.
-  return <div ref={ref} data-widget-id={placement.id} data-span={placement.span}
+  return <div ref={ref} data-widget-id={placement.id} data-span={placement.span} data-widget-height={placement.height}
     onClick={editing ? onSelect : undefined} onFocus={editing ? onSelect : undefined}
     className={cx(className, 'relative flex min-w-0 flex-col', editing && 'rounded-[var(--visual-radius,0.625rem)] outline-2 outline-offset-4', editing && (selected ? 'outline outline-accent' : 'outline outline-dashed outline-border'), drag === 'move' && 'opacity-60')}>
     {editing ? <div role="group" aria-label={`Arrange ${definition.label}`} className="mb-2 flex flex-wrap items-center gap-1.5 rounded-[var(--visual-radius,0.625rem)] bg-secondary px-2 py-1.5 text-xs">

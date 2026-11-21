@@ -83,7 +83,7 @@ export function FinanceHome({ organizationId, timezone, today, data, capabilitie
   const reportsLink = <p className="mt-2 text-right text-xs"><Link className="text-accent-text underline-offset-4 hover:underline" href={`${finance}/reports`}>Open financial reports</Link></p>;
   // Built only for widgets this viewer may read; a hidden-by-permission chart is never computed.
   const widgets: Record<string, DashboardWidgetContent> = {
-    overview: { kind: 'node', node: overview },
+    overview: { kind: 'node', node: overview, sizing: 'content' },
     attention: { kind: 'node', node: attention },
     activity: { kind: 'node', node: <FinanceActivity organizationId={organizationId} activity={data.activity} shortDate={shortDate} />, densities: { compact: <FinanceActivity organizationId={organizationId} activity={data.activity} shortDate={shortDate} compact /> } },
     'invoice-status': { kind: 'chart', title: 'Invoices by status', variants: invoiceStatusChart({ issued: data.issuedCount, unpaid: open.total, overdue: overdue.total }, finance) },
@@ -95,7 +95,7 @@ export function FinanceHome({ organizationId, timezone, today, data, capabilitie
     } : {}),
   };
   return <DashboardEditingProvider available>
-    <WorkspaceHome title="Finance" actions={<FinanceHeaderActions organizationId={organizationId} today={today} period={periodControl} firstRun={!data.started}
+    <WorkspaceHome dashboard title="Finance" actions={<FinanceHeaderActions organizationId={organizationId} today={today} period={periodControl} firstRun={!data.started}
       mayQuote={may('work_item.price') || mayManageCatalog} mayRecord={may('payment.record') && data.started} mayInvoice={may('invoice.issue') && data.started} mayCreateWork={has('work_item.create')} mayManageCatalog={mayManageCatalog} />}>
       <DashboardLayoutGrid label="Finance dashboard" registry={FINANCE_WIDGETS} saved={layout} readable={[...readable]} widgets={widgets}
         onSave={saveFinanceDashboardLayout.bind(null, organizationId)} onReset={resetFinanceDashboardLayout.bind(null, organizationId)} />
