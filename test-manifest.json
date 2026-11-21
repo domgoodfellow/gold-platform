@@ -3210,6 +3210,14 @@
       "category": "component",
       "concerns": ["work", "configuration", "security"]
     },
+    "apps/web/tests/component/work-getting-started.test.tsx": {
+      "category": "component",
+      "concerns": [
+        "work",
+        "permissions"
+      ],
+      "note": "The Work Dashboard makes a stage-less type ready in place (starter stages or a named stage) and shows others what is missing with no control."
+    },
     "apps/web/tests/component/library-menu.test.tsx": {
       "category": "component",
       "concerns": ["navigation", "ui", "accessibility"]

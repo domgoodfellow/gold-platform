@@ -9,6 +9,8 @@ import { AttentionCategories, type AttentionCategory } from '@/components/operat
 import { DashboardLayoutGrid, type DashboardWidgetContent } from '@/components/dashboard/dashboard-layout';
 import { defaultLayout } from '@/lib/dashboard-layout';
 import { NewWorkAction } from '../new-work-action';
+import { StartingStageForm } from '../starting-stage-form';
+import { Card } from '@/components/surfaces/card';
 import { formatWindow } from '@/lib/domain/scheduling/window';
 import type { WorkItem } from '@/lib/domain/work-items/work-items';
 import type { WorkOperations } from '@/lib/application/work/operations';
@@ -122,21 +124,28 @@ export function WorkHome({ organizationId, timezone, today, data: d, capabilitie
 
 /**
  * The one missing step and its action, in the overview slot: no type, a type with no starting
- * stage, or no work yet. Someone without the authority sees what is missing and who can add it.
+ * stage, or no work yet. A type with no stages is made ready here, with the same choice Work items
+ * and New work offer (the starter stages, or one the person names), so nobody is sent to settings
+ * for one stage. Someone without the authority sees what is missing and who can add it.
  */
-function GettingStarted({ organizationId, step, capabilities }: { organizationId: string; step: NonNullable<WorkSetupStep>; capabilities: readonly string[] }) {
+export function GettingStarted({ organizationId, step, capabilities }: { organizationId: string; step: NonNullable<WorkSetupStep>; capabilities: readonly string[] }) {
   const base = `/organizations/${organizationId}`;
   const configure = capabilities.includes('field.manage');
-  const [title, text, action] = step.kind === 'no-types'
-    ? ['No work types yet', 'Work types name the jobs this business does and the stages each one moves through.',
+  if (step.kind === 'no-starting-stage') {
+    return <Card as="section" aria-labelledby="work-getting-started" className="flex flex-col gap-4">
+      <h2 id="work-getting-started" className="text-base font-semibold">{step.typeName} needs a starting stage</h2>
+      {configure
+        ? <StartingStageForm organizationId={organizationId} typeId={step.typeId} typeName={step.typeName} />
+        : <p className="text-sm text-muted">Someone who manages Work adds the starting stage.</p>}
+    </Card>;
+  }
+  const [title, action] = step.kind === 'no-types'
+    ? ['No work types yet',
       configure ? <ButtonLink size="small" tone="primary" href={`${base}/work/configuration`}>Set up work types</ButtonLink> : <p className="text-sm text-muted">Someone who manages Work sets up work types.</p>]
-    : step.kind === 'no-starting-stage'
-      ? [`${step.typeName} has no starting stage`, 'Work of this type can be created once it has a first stage.',
-        configure ? <ButtonLink size="small" tone="primary" href={`${base}/work/configuration?type=${step.typeId}`}>Add a starting stage</ButtonLink> : <p className="text-sm text-muted">Someone who manages Work adds the starting stage.</p>]
-      : ['No work yet', 'Work you create appears here, with anything that needs attention.',
-        capabilities.includes('work_item.create') ? <NewWorkAction organizationId={organizationId} typeId={step.typeId} /> : <p className="text-sm text-muted">Someone who can create work adds the first job.</p>];
-  return <div data-slot="compact-empty" className="flex flex-col gap-3 rounded-[var(--visual-radius,0.625rem)] border border-border bg-surface p-5 sm:flex-row sm:items-center sm:justify-between">
-    <div className="min-w-0"><h2 className="text-base font-semibold">{title}</h2><p className="mt-1 text-sm text-muted">{text}</p></div>
+    : ['No work yet',
+      capabilities.includes('work_item.create') ? <NewWorkAction organizationId={organizationId} typeId={step.typeId} /> : <p className="text-sm text-muted">Someone who can create work adds the first job.</p>];
+  return <Card as="section" aria-labelledby="work-getting-started" className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <h2 id="work-getting-started" className="min-w-0 text-base font-semibold">{title}</h2>
     <div className="shrink-0">{action}</div>
-  </div>;
+  </Card>;
 }

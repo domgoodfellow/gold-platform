@@ -262,8 +262,10 @@ test.describe.serial('Work W1: Dashboard and Work items', () => {
       await expect(main(page)).toContainText('No work types yet');
       await expect(main(page).getByRole('link', { name: 'Set up work types' })).toHaveAttribute('href', `/organizations/${empty}/work/configuration`);
       await page.goto(`/organizations/${unstaged}/field`);
-      await expect(main(page)).toContainText('Site survey has no starting stage');
-      await expect(main(page).getByRole('link', { name: 'Add a starting stage' })).toHaveAttribute('href', `/organizations/${unstaged}/work/configuration?type=${unstagedTypeId}`);
+      await expect(main(page)).toContainText('Site survey needs a starting stage');
+      // The stage is added on the Dashboard itself, not by a trip to settings.
+      await expect(main(page).getByRole('button', { name: 'Add Booked, In progress and Done' })).toBeVisible();
+      await expect(main(page).getByRole('form', { name: 'Add a starting stage to Site survey' })).toBeVisible();
       await page.goto(`/organizations/${unscheduledOnly}/field`);
       await expect(main(page)).toContainText('No work yet');
       await expect(main(page)).not.toContainText(/resource/i);
