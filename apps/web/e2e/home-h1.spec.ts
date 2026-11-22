@@ -129,9 +129,12 @@ test('Home H1 cross-workspace reconciliation and responsive states', async ({ pa
     await main().getByRole('button',{name:'Quick actions',exact:true}).click();
     await page.getByRole('menuitem',{name:'New work',exact:true}).click();
     await expect(page).toHaveURL(/work\/new/);
-    await expect(main().getByRole('form',{name:'Create work',exact:true})).toBeVisible();
+    // New work asks for a Work type first when several are ready, then shows the form.
+    await expect(main().getByRole('form',{name:'Create work',exact:true}).or(main().getByRole('combobox',{name:'Work type',exact:true}))).toBeVisible();
     await page.goto(home);
-    await main().getByRole('button',{name:'Ask or find something...',exact:true}).click();
+    // Home has no second Search entry; the sidebar's Search row opens the same command interface.
+    await expect(main().getByRole('button',{name:'Ask or find something...',exact:true})).toHaveCount(0);
+    await page.getByRole('button',{name:'Search',exact:true}).filter({visible:true}).click();
     const palette = page.getByRole('dialog',{name:'Search and commands'});
     await expect(palette).toBeVisible();
     await palette.getByRole('button',{name:'Which Work is at risk?',exact:true}).click();
@@ -163,7 +166,7 @@ test('Home H1 cross-workspace reconciliation and responsive states', async ({ pa
     await expect(main().getByRole('region',{name:'Recent activity',exact:true})).toBeVisible();
     await changeTaskStatus(db,{organizationId:mixed,id:fixtures.mixed.ids.overdue,status:'completed'});
     await page.route(`**/organizations/${mixed}/home*`,async route=>{ if(route.request().headers()['rsc']) await new Promise(resolve=>setTimeout(resolve,800)); await route.continue(); });
-    const refresh = main().getByRole('button',{name:'Refresh Home',exact:true});
+    const refresh = main().getByRole('button',{name:/^Updated .+\. Refresh Home$/});
     await refresh.click();
     await expect(refresh).toBeDisabled();
     await expect(main().locator('[aria-busy="true"]')).toBeVisible();

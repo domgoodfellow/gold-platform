@@ -102,6 +102,7 @@ import {
   workspaceNavigation,
   type HeaderUtility,
   inPlatformScope,
+  showsSetupStatus,
   itemContains,
   type NavItem,
   type ShellSection,
@@ -109,6 +110,8 @@ import {
 import { unifiedNavigation } from '@/lib/unified-navigation';
 import type { NavigationLayout } from '@/lib/interface-design';
 import { NavigationPreviewControl } from '@/features/studio/interface/navigation-preview-control';
+import { SetupStatusControl } from '@/features/setup/setup-status';
+import type { SetupStatus } from '@/lib/application/setup/status';
 
 /** Renderers share the selected projection and decide no destination eligibility. */
 
@@ -629,7 +632,7 @@ export function LockedOrgSidebar({
  */
 export function OrganizationFrame({
   organizationId, name, role, mark, organizations, sections, utilities, settings, settingsSearch,
-  locked, email, signOutAction, agent, children, displayName = '', setupPending = false, locationAccess, hostedData = false, headerConnections, organizationActivity,
+  locked, email, signOutAction, agent, children, displayName = '', setupPending = false, setupStatus = null, locationAccess, hostedData = false, headerConnections, organizationActivity,
   navigationLayout = 'contextual',
 }: {
   /** Resolved on the server from the stored preview and this person's interface-design permission. */
@@ -640,6 +643,8 @@ export function OrganizationFrame({
   /** The shell's entitlement and permission facts, for pages whose location the resolver owns. */
   locationAccess?: SerializedLocationAccess;
   setupPending?: boolean;
+  /** Read only while the business is in SETUP; drawn as the header's setup control. */
+  setupStatus?: SetupStatus | null;
   organizationId: string;
   name: string;
   role: string;
@@ -697,6 +702,7 @@ export function OrganizationFrame({
             {hostedData ? <Badge tone="danger" className="shrink-0 font-semibold">HOSTED DATA</Badge> : null}
             {!recovery && navigationLayout === 'unified' ? <NavigationPreviewControl organizationId={organizationId} /> : null}
             {!recovery ? <CommandPalette /> : null}
+            {!recovery && setupStatus && showsSetupStatus(pathname, organizationId) ? <SetupStatusControl organizationId={organizationId} initial={setupStatus} /> : null}
           </>}
         />
       }

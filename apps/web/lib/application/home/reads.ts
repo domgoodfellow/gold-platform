@@ -24,6 +24,7 @@ const LIMIT = 5;
 const CHANNEL_LABEL: Record<string, string> = { sms: 'Text', email: 'Email', voice: 'Call', whatsapp: 'WhatsApp', chat: 'Chat', web_chat: 'Chat', website_chat: 'Chat' };
 const channelLabel = (channel: string) => CHANNEL_LABEL[channel] ?? channel.charAt(0).toUpperCase() + channel.slice(1).replaceAll('_', ' ');
 const CONVERSATION_STATUS: Record<string, string> = { open: 'Open', waiting: 'Waiting', closed: 'Closed' };
+const CASE_STATUS: Record<string, string> = { new: 'New', open: 'Open', waiting: 'Waiting' };
 const INQUIRY_STATUS: Record<string, string> = { new: 'New', in_review: 'In review' };
 const CASE_EVENT: Record<string, string> = { created: 'Case opened', status: 'Case moved', priority: 'Case priority changed', assignment: 'Case reassigned', reopened: 'Case reopened', closed: 'Case closed', resolved: 'Case resolved', escalated: 'Case escalated', note: 'Case note added', comment: 'Case note added' };
 const AGENT_STATE: Record<string, string> = { Enabled: 'On', Configured: 'Not on yet', Unavailable: 'Not available' };
@@ -40,19 +41,22 @@ function exact(result: { count: number | null; error: { message: string } | null
   if (result.error || result.count === null) throw new DomainError('The source did not return an exact count.', 'home.count_unavailable');
   return result.count;
 }
-function item(c: ReadContext, source: HomeSource, kind: string, id: string, title: string, description: string, href: string, extra: Partial<HomeAttentionItem> = {}): HomeAttentionItem {
-  return { key: `${source}:${kind === 'call-wrap-up' || kind === 'missed-call' ? 'call' : kind}:${id}`, organizationId: c.organizationId, source, category: kind, title, description, urgency: 'normal', overdue: false, record: { kind, id }, destination: { href, label: 'Open' }, ...extra };
+export function attentionItem(c: ReadContext, source: HomeSource, kind: string, id: string, title: string, description: string, href: string, extra: Partial<HomeAttentionItem> = {}): HomeAttentionItem {
+  const row: HomeAttentionItem = { key: `${source}:${kind === 'call-wrap-up' || kind === 'missed-call' ? 'call' : kind}:${id}`, organizationId: c.organizationId, source, category: kind, title, description, kind: 'task', urgency: 'normal', record: { kind, id }, destination: { href, label: 'Open' }, ...extra, overdue: false };
+  // Overdue means an explicit deadline has passed; a record's age or last activity never makes it overdue.
+  row.overdue = Boolean(extra.overdue && row.dueAt && row.dueAt < c.now);
+  return row;
 }
 function followUp(c: ReadContext, f: CrmTask) {
-  return item(c, 'CRM', 'follow-up', f.id, f.title, f.customerName, `/organizations/${c.organizationId}/crm/tasks?selected=${f.id}`, { dueAt: f.dueAt, ownerMembershipId: f.ownerMembershipId, ownerName: f.ownerName, overdue: f.dueAt < c.now, urgency: f.dueAt < c.now ? 'high' : 'normal' });
+  return attentionItem(c, 'CRM', 'follow-up', f.id, f.title, f.customerName, `/organizations/${c.organizationId}/crm/tasks?selected=${f.id}`, { dueAt: f.dueAt, ownerMembershipId: f.ownerMembershipId, ownerName: f.ownerName, overdue: f.dueAt < c.now, urgency: f.dueAt < c.now ? 'high' : 'normal' });
 }
 function workItem(c: ReadContext, w: WorkItem, category: string) {
-  return item(c, 'Work', 'work-item', w.id, w.title, `${w.status.label}${w.customer ? ` · ${w.customer.label}` : ''}`, `/organizations/${c.organizationId}/work/${w.id}`, { category, dueAt: w.window?.startsAt, ownerMembershipId: w.resources.some(r => r.id === c.resourceId) ? c.membershipId : null, ownerName: w.resources.map(r => r.label).join(', ') || 'Unassigned' });
+  return attentionItem(c, 'Work', 'work-item', w.id, w.title, w.customer?.label ?? '', `/organizations/${c.organizationId}/work/${w.id}`, { category, status: w.status.label, dueAt: w.window?.startsAt, ownerMembershipId: w.resources.some(r => r.id === c.resourceId) ? c.membershipId : null, ownerName: w.resources.map(r => r.label).join(', ') || 'Unassigned' });
 }
 function obligations(data: HomeSourceData, items: HomeAttentionItem[], c: ReadContext) {
   const day = zonedDayRange(c.date, c.timezone), end = upcomingWindow(c.date, c.timezone).endsAt;
   for (const i of items) if (i.dueAt && i.dueAt >= day.startsAt && i.dueAt < end) {
-    const row = { key: i.key, source: i.source, title: i.title, at: i.dueAt, context: i.description, owner: i.ownerName ?? 'Unassigned', href: i.destination.href };
+    const row = { key: i.key, source: i.source, title: i.title, at: i.dueAt, context: [i.status, i.description].filter(Boolean).join(' · '), owner: i.ownerName ?? 'Unassigned', href: i.destination.href };
     if (i.dueAt < day.endsAt) data.today.push(row); else data.upcoming.push(row);
   }
 }
@@ -122,6 +126,8 @@ export async function readWork(c: ReadContext): Promise<HomeSourceData> {
   const staffing = await evaluateWorkItems(c.db, { organizationId: c.organizationId, items: unscheduled.map(w => ({ workItemId: w.id, typeId: w.type.id, resourceIds: w.resources.map(resource => resource.id) })) });
   const project = (w: WorkItem, category: string) => {
     const row = workItem(c, w, category);
+    // Coverage and availability conflicts are problems; unscheduled or unassigned Work is ordinary dispatch work.
+    if (category === 'scheduling-exception') row.kind = 'problem';
     row.destination = { href: `${base}/work/dispatch?on=${c.date}&selected=${w.id}${c.query.scope === 'mine' && c.resourceId ? `&resource=${c.resourceId}` : ''}`, label: 'Resolve in Dispatch' };
     const staffingGap = staffing.get(w.id);
     if (!w.window) return { ...row, description: `${staffingGap && !staffingGap.satisfied ? `Not yet staffed - ${describeShortfall(staffingGap, RESOURCE_CLASS_LABELS)}. ` : ''}Unscheduled; availability not assessed.` };
@@ -167,7 +173,7 @@ export async function readSupportHome(c: ReadContext): Promise<HomeSourceData> {
     active().gte('resolution_due_at', day.endsAt).lt('resolution_due_at', upcomingWindow(c.date, c.timezone).endsAt).order('resolution_due_at').order('id').limit(20),
     c.db.from('support_case_events').select('id,case_id,kind,occurred_at').eq('organization_id', c.organizationId).gte('occurred_at', homePeriod(c.date, c.timezone, 'week').since).lt('occurred_at', homePeriod(c.date, c.timezone, 'week').until).order('occurred_at', { ascending: false }).order('id').limit(LIMIT),
   ]);
-  const project = (r: NonNullable<typeof all.data>[number]) => item(c, 'Support', 'case', r.id!, `${r.case_number} · ${r.title}`, r.customer_name ?? r.status ?? 'Case', `${base}/cases/${r.id}`, { dueAt: r.resolution_due_at ?? undefined, occurredAt: r.updated_at ?? undefined, ownerMembershipId: r.assigned_membership_id, ownerName: r.owner_name, overdue: !!r.resolution_due_at && r.resolution_due_at < c.now, urgency: r.priority === 'urgent' ? 'critical' : r.priority === 'high' || (r.resolution_due_at && r.resolution_due_at < c.now) || r.escalated_at ? 'high' : 'normal' });
+  const project = (r: NonNullable<typeof all.data>[number]) => attentionItem(c, 'Support', 'case', r.id!, `${r.case_number} · ${r.title}`, r.customer_name ?? '', `${base}/cases/${r.id}`, { status: r.status ? CASE_STATUS[r.status] : undefined, dueAt: r.resolution_due_at ?? undefined, occurredAt: r.updated_at ?? undefined, ownerMembershipId: r.assigned_membership_id, ownerName: r.owner_name, overdue: !!r.resolution_due_at && r.resolution_due_at < c.now, urgency: r.priority === 'urgent' ? 'critical' : r.priority === 'high' || (r.resolution_due_at && r.resolution_due_at < c.now) || r.escalated_at ? 'high' : 'normal' });
   d.attention = [...new Map(queues.flatMap(q => checked(q).map(project)).map(i => [i.key, i])).values()];
   d.priorities = checked(mine).map(project); obligations(d, [...checked(dated), ...checked(next)].map(project), c);
   d.obligationTotals = { today: exact(dated), upcoming: exact(next) };
@@ -187,13 +193,13 @@ export async function readCommunications(c: ReadContext): Promise<HomeSourceData
       c.query.scope === 'organization' && c.query.attention !== 'overdue' ? listCallPage(c.db, { organizationId: c.organizationId, filter: { needsFollowUp: true }, limit: LIMIT }) : null,
     ]);
     if (c.query.attention !== 'overdue') {
-      d.attention.push(...wrap.items.map(call => item(c, 'Communications', 'call-wrap-up', call.id, call.customerName ?? 'Completed call', 'Completed call awaiting outcome', `${base}/calls/${call.id}`, { urgency: 'high', occurredAt: call.startedAt, ownerMembershipId: call.handledBy.some(m => m.membershipId === c.membershipId) ? c.membershipId : null, ownerName: call.handledBy.map(m => m.name).join(', ') || 'Unassigned' })));
+      d.attention.push(...wrap.items.map(call => attentionItem(c, 'Communications', 'call-wrap-up', call.id, call.customerName ?? 'Completed call', 'Completed call awaiting outcome', `${base}/calls/${call.id}`, { urgency: 'high', occurredAt: call.startedAt, ownerMembershipId: call.handledBy.some(m => m.membershipId === c.membershipId) ? c.membershipId : null, ownerName: call.handledBy.map(m => m.name).join(', ') || 'Unassigned' })));
       if (wrap.total === undefined) throw new DomainError('Call count unavailable.', 'home.count_unavailable');
       d.categories.push({ key: 'call-wrap-up', label: 'Calls awaiting wrap-up', total: wrap.total, href: `${base}/calls?wrap=1${c.query.scope === 'mine' ? `&member=${c.membershipId}` : ''}` });
     }
     if (follow) {
       if (follow.total === undefined) throw new DomainError('Call count unavailable.', 'home.count_unavailable');
-      d.attention.push(...follow.items.map(call => item(c, 'Communications', 'missed-call', call.id, call.customerName ?? 'Missed inbound call', 'Missed call awaiting a recorded outcome', `${base}/calls/${call.id}`, { urgency: 'high', occurredAt: call.startedAt })));
+      d.attention.push(...follow.items.map(call => attentionItem(c, 'Communications', 'missed-call', call.id, call.customerName ?? 'Missed inbound call', 'Missed call awaiting a recorded outcome', `${base}/calls/${call.id}`, { urgency: 'high', occurredAt: call.startedAt })));
       d.categories.push({ key: 'missed-call', label: 'Missed calls awaiting outcome', total: follow.total, href: `${base}/calls?followup=1` });
     }
     if (missed) {
@@ -210,7 +216,7 @@ export async function readCommunications(c: ReadContext): Promise<HomeSourceData
       c.query.scope === 'organization' ? listInbox(c.db, { organizationId: c.organizationId, filter: { view: 'unassigned' }, limit: LIMIT }) : null,
     ]);
     if ([unread, mine, waiting, ...(unassigned ? [unassigned] : [])].some(r => r.total === undefined)) throw new DomainError('Inbox count unavailable.', 'home.count_unavailable');
-    const project = (r: typeof unread.items[number]) => item(c, 'Communications', 'conversation', r.id, r.subject ?? r.title, `${channelLabel(r.channel)} · ${CONVERSATION_STATUS[r.status] ?? 'Conversation'}${r.unread ? ' · Unread' : ''}`, `${base}/comms/inbox/${r.id}`, { occurredAt: r.lastActivityAt, ownerMembershipId: r.assignee?.membershipId, ownerName: r.assignee?.name });
+    const project = (r: typeof unread.items[number]) => attentionItem(c, 'Communications', 'conversation', r.id, r.subject ?? r.title, `${channelLabel(r.channel)}${r.unread ? ' · Unread' : ''}`, `${base}/comms/inbox/${r.id}`, { status: CONVERSATION_STATUS[r.status], occurredAt: r.lastActivityAt, ownerMembershipId: r.assignee?.membershipId, ownerName: r.assignee?.name });
     if (c.query.attention === 'all') {
       d.attention.push(...[...new Map([...unread.items, ...waiting.items, ...(unassigned?.items ?? [])].map(r => [r.id,r])).values()].map(project));
       d.categories.push({ key: 'conversation', label: c.query.scope === 'mine' ? 'My active conversations' : 'Unread active conversations', total: unread.total!, href: `${base}/comms/inbox?view=${c.query.scope === 'mine' ? 'mine' : 'unread'}` }, { key: 'conversation-open', label: 'Conversations awaiting response', total: waiting.total!, href: `${base}/comms/inbox?status=open${c.query.scope === 'mine' ? '&view=mine' : ''}` });
@@ -236,9 +242,9 @@ export async function readMarketingHome(c: ReadContext): Promise<HomeSourceData>
   d.metrics.push({ key: 'inquiries', label: 'Inquiries awaiting review', value: exact(queue), definition: 'New and In review acquisition inquiries · current', href: `${base}/leads` });
   d.performance.push({ key: 'acquired', label: 'Acquisition inquiries received', value: exact(acquired), definition: 'Inquiries captured during the selected period · not Customers', href: `${base}/performance?from=${c.period.from}&to=${shiftDate(c.period.to, -1)}` });
   if (c.query.scope === 'organization' && c.query.attention === 'all') {
-    d.attention = rows.map(r => item(c, 'Marketing', 'inquiry', r.id, r.form_name_at_capture, `${r.campaign_name_at_capture ?? 'No campaign'} · ${INQUIRY_STATUS[r.status] ?? 'Inquiry'}`, `${base}/leads?inquiry=${r.id}`, { occurredAt: r.occurred_at }));
+    d.attention = rows.map(r => attentionItem(c, 'Marketing', 'inquiry', r.id, r.form_name_at_capture, r.campaign_name_at_capture ?? 'No campaign', `${base}/leads?inquiry=${r.id}`, { kind: 'review', status: INQUIRY_STATUS[r.status], occurredAt: r.occurred_at }));
     d.categories.push({ key: 'inquiry', label: 'Inquiries awaiting review', total: exact(queue), href: `${base}/leads` });
-    d.attention.push(...checked(setup).map(r => item(c, 'Marketing', 'campaign', r.id, r.name, 'Acquisition campaign has no Form source associated', `${base}/campaigns/${r.id}`, { occurredAt: r.created_at, ownerMembershipId: r.owner_membership_id })));
+    d.attention.push(...checked(setup).map(r => attentionItem(c, 'Marketing', 'campaign', r.id, r.name, 'Acquisition campaign has no Form source associated', `${base}/campaigns/${r.id}`, { kind: 'problem', occurredAt: r.created_at, ownerMembershipId: r.owner_membership_id })));
     d.categories.push({ key: 'campaign-setup', label: 'Campaigns needing source setup', total: exact(setup), href: `${base}/campaigns?attention=setup` });
   }
   d.activity = checked(recent).map(r => ({ key: `Marketing:inquiry:${r.id}`, source: 'Marketing', title: `Inquiry received · ${r.form_name_at_capture}`, at: r.occurred_at, href: `${base}/leads?inquiry=${r.id}`, recordKey: `Marketing:inquiry:${r.id}` }));
@@ -254,7 +260,7 @@ export async function readFinanceHome(c: ReadContext): Promise<HomeSourceData> {
   ]);
   d.metrics.push({ key: 'overdue-invoices', label: 'Overdue invoices', value: overdue.total, definition: 'Unsettled invoices past an explicit due instant · current', href: `${base}/invoices?status=overdue` });
   if (c.query.scope === 'organization') {
-    d.attention = overdue.rows.map(r => item(c, 'Finance', 'invoice', r.id, `Invoice #${r.number}`, `${r.billedTo} · ${r.outstandingMinor === null ? 'Amount unavailable' : formatMoney(r.outstandingMinor, r.currency)}`, `${base}/invoices?invoice=${r.id}`, { urgency: 'high', overdue: true, dueAt: r.dueAt ?? undefined }));
+    d.attention = overdue.rows.map(r => attentionItem(c, 'Finance', 'invoice', r.id, `Invoice #${r.number}`, `${r.billedTo} · ${r.outstandingMinor === null ? 'Amount unavailable' : formatMoney(r.outstandingMinor, r.currency)}`, `${base}/invoices?invoice=${r.id}`, { urgency: 'high', overdue: true, dueAt: r.dueAt ?? undefined }));
     d.categories.push({ key: 'invoice', label: 'Overdue invoices', total: overdue.total, href: `${base}/invoices?status=overdue` });
   }
   for (const [name, rows, definition, href] of [
@@ -278,7 +284,7 @@ export async function readAutomationHome(c: ReadContext): Promise<HomeSourceData
   const runRows = checked(runs), messageRows = [...checked(failedDeliveries), ...checked(uncertainDeliveries)];
   d.metrics.push({ key: 'failed-runs', label: 'Failed Automation runs', value: exact(runs), definition: 'Execution outcome Failed · today · separate from deliveries', href: `${base}/runs?outcome=failed&when=all&from=${operationalPeriod.from}&to=${operationalPeriod.to}` });
   if (c.query.scope === 'organization' && c.query.attention !== 'overdue') {
-    d.attention = [...runRows.map(r => item(c, 'Automations', 'run', r.id, r.rule_name, 'Rule failed', `${base}/runs?run=${r.id}`, { urgency: 'high', occurredAt: r.occurred_at })), ...messageRows.map(r => item(c, 'Automations', 'delivery', r.id, r.rule_name, `${channelLabel(r.channel)} ${r.state === 'uncertain' ? 'not confirmed' : 'not delivered'}`, `${base}/runs?delivery=${r.id}`, { urgency: 'high', occurredAt: r.queued_at }))];
+    d.attention = [...runRows.map(r => attentionItem(c, 'Automations', 'run', r.id, r.rule_name, 'Rule failed', `${base}/runs?run=${r.id}`, { kind: 'problem', urgency: 'high', occurredAt: r.occurred_at })), ...messageRows.map(r => attentionItem(c, 'Automations', 'delivery', r.id, r.rule_name, `${channelLabel(r.channel)} ${r.state === 'uncertain' ? 'not confirmed' : 'not delivered'}`, `${base}/runs?delivery=${r.id}`, { kind: 'problem', urgency: 'high', occurredAt: r.queued_at }))];
     d.categories.push({ key: 'run', label: 'Failed runs', total: exact(runs), href: `${base}/runs?outcome=failed&when=all&from=${operationalPeriod.from}&to=${operationalPeriod.to}` });
     for (const [state, rows] of [['failed', failedDeliveries], ['uncertain', uncertainDeliveries]] as const) d.categories.push({ key: state === 'failed' ? 'delivery' : 'uncertain-delivery', label: state === 'failed' ? 'Messages not delivered' : 'Deliveries not confirmed', total: exact(rows), href: `${base}/runs?state=${state}&when=all&from=${operationalPeriod.from}&to=${operationalPeriod.to}&stream=deliveries` });
   }
@@ -286,7 +292,7 @@ export async function readAutomationHome(c: ReadContext): Promise<HomeSourceData
   if (exact(runs) || exact(failedDeliveries) || exact(uncertainDeliveries)) d.health.push({ key: 'automation-failures', source: 'Automations', state: 'Rules or messages failed today', detail: `${exact(runs)} rules failed · ${exact(failedDeliveries)} messages not delivered · ${exact(uncertainDeliveries)} not confirmed`, href: `${base}/runs`, warning: true });
   if (exact(rules)) {
     d.health.push({ key: 'rule-readiness', source: 'Automations', state: 'Rules with no action', detail: `${exact(rules)} switched-on rules do nothing yet`, href: `${base}/workflows?health=attention`, warning: true });
-    if (c.query.scope === 'organization' && c.query.attention === 'all') d.attention.push(...checked(rules).map(r => item(c, 'Automations', 'rule', r.id, r.name, 'Switched on, but has no action', `${base}/workflows/${r.id}`, { occurredAt: r.created_at })));
+    if (c.query.scope === 'organization' && c.query.attention === 'all') d.attention.push(...checked(rules).map(r => attentionItem(c, 'Automations', 'rule', r.id, r.name, 'Switched on, but has no action', `${base}/workflows/${r.id}`, { kind: 'problem', occurredAt: r.created_at })));
   }
   return d;
 }
@@ -302,16 +308,16 @@ export async function readAiHome(c: ReadContext): Promise<HomeSourceData> {
   const failed = checked(runs);
   const pending = checked(approvals);
   if (c.query.attention === 'all') {
-    d.attention = pending.map(r => item(c, 'AI', 'approval', r.id, 'My pending Agent approval', 'Review in the global Agent rail', `${base}/activity`, { occurredAt: r.occurred_at, ownerMembershipId: c.membershipId, ownerName: 'You' }));
+    d.attention = pending.map(r => attentionItem(c, 'AI', 'approval', r.id, 'My pending Agent approval', 'Review in the global Agent rail', `${base}/activity`, { kind: 'review', occurredAt: r.occurred_at, ownerMembershipId: c.membershipId, ownerName: 'You' }));
     d.priorities = d.attention; d.categories.push({ key: 'approval', label: 'My pending Agent approvals', total: exact(approvals), href: `${base}/activity` });
   }
   if (c.query.attention !== 'overdue') {
-    d.attention.push(...failed.map(r => item(c, 'AI', 'interaction', r.id, 'My failed Agent interaction', 'Inspect in Agent activity; no private prompt or response is shared.', `${base}/activity?outcome=failed`, { urgency: 'high', occurredAt: r.occurred_at, ownerMembershipId: c.membershipId, ownerName: 'You' })));
+    d.attention.push(...failed.map(r => attentionItem(c, 'AI', 'interaction', r.id, 'My failed Agent interaction', 'Inspect in Agent activity; no private prompt or response is shared.', `${base}/activity?outcome=failed`, { kind: 'problem', urgency: 'high', occurredAt: r.occurred_at, ownerMembershipId: c.membershipId, ownerName: 'You' })));
     d.categories.push({ key: 'interaction', label: 'My failed Agent interactions', total: exact(runs), href: `${base}/activity?outcome=failed` });
   }
   if (c.query.scope === 'organization' && c.query.attention !== 'overdue' && c.capabilities.has('message.send')) {
     const handoffs = await c.db.from('communication_threads').select('id,updated_at', { count: 'exact' }).eq('organization_id', c.organizationId).eq('state', 'handoff_requested').order('updated_at', { ascending: false }).order('id').limit(LIMIT);
-    d.attention.push(...checked(handoffs).map(r => item(c, 'AI', 'handoff', r.id, 'Website conversation needs a human', 'Requested handoff · transcript stays in Communications', `/organizations/${c.organizationId}/comms/inbox/website?thread=${r.id}`, { urgency: 'high', occurredAt: r.updated_at })));
+    d.attention.push(...checked(handoffs).map(r => attentionItem(c, 'AI', 'handoff', r.id, 'Website conversation needs a human', 'Requested handoff · transcript stays in Communications', `/organizations/${c.organizationId}/comms/inbox/website?thread=${r.id}`, { urgency: 'high', occurredAt: r.updated_at })));
     d.categories.push({ key: 'handoff', label: 'Website handoffs requested', total: exact(handoffs), href: `/organizations/${c.organizationId}/comms/inbox/website` });
   }
   if (!c.capabilities.has('organization.manage')) return d;
@@ -322,7 +328,7 @@ export async function readAiHome(c: ReadContext): Promise<HomeSourceData> {
   for (const dep of ds) {
     const readiness = deploymentReadiness(dep, states.find(a => a.id === dep.assistant_id), c.assistantEntitled, !!process.env.ASSISTANT_API_URL && (dep.surface !== 'website_chat' || !!process.env.PUBLIC_CHAT_API_SECRET));
     d.health.push({ key: `deployment:${dep.id}`, source: 'AI', state: AGENT_STATE[readiness.state] ?? readiness.state, detail: `${dep.display_name || dep.surface} · ${readiness.reason}`, href: `${base}/agents/${dep.assistant_id}?section=channels`, warning: readiness.state !== 'Enabled' });
-    if (readiness.state !== 'Enabled' && c.query.scope === 'organization' && c.query.attention !== 'overdue') d.attention.push(item(c, 'AI', 'deployment', dep.id, dep.display_name || dep.surface, readiness.reason, `${base}/agents/${dep.assistant_id}?section=channels`, { urgency: 'high', occurredAt: dep.updated_at }));
+    if (readiness.state !== 'Enabled' && c.query.scope === 'organization' && c.query.attention !== 'overdue') d.attention.push(attentionItem(c, 'AI', 'deployment', dep.id, dep.display_name || dep.surface, readiness.reason, `${base}/agents/${dep.assistant_id}?section=channels`, { kind: 'problem', status: AGENT_STATE[readiness.state] ?? readiness.state, urgency: 'high', occurredAt: dep.updated_at }));
   }
   if (exact(deployments) > ds.length) d.health.push({ key: 'deployments-more', source: 'AI', state: 'More agents than shown', detail: `${ds.length} of ${exact(deployments)} switched-on channels shown`, href: `${base}/agents`, warning: false });
   return d;
@@ -331,10 +337,14 @@ export async function readAiHome(c: ReadContext): Promise<HomeSourceData> {
 export async function readStudioHome(c: ReadContext): Promise<HomeSourceData> {
   const d = emptySource('Studio'), base = `/organizations/${c.organizationId}/studio`;
   const summary = HomeStudioSummarySchema.parse(checked(await c.db.rpc('home_studio_summary', { p_organization_id: c.organizationId })));
-  const revisions = summary.working, drafts = summary.drafts, live = summary.published;
+  const revisions = summary.working, live = summary.published;
+  // A draft still being edited is Studio's own work in progress, not something Home asks anyone to act on.
+  // Only a website revision submitted for publication review is a decision waiting for someone.
   if (c.query.scope === 'organization' && c.query.attention === 'all') {
-    d.attention = [...revisions.map(r => item(c, 'Studio', 'website-revision', r.id, `Website revision ${r.revision_number}`, r.status === 'in_review' ? 'Publication awaiting review' : 'Unpublished draft', `${base}/website`, { occurredAt: r.created_at })), ...drafts.map(r => item(c, 'Studio', 'form-draft', r.id, r.name, 'Unpublished form draft', `${base}/forms/${r.form_id}`, { occurredAt: r.created_at }))];
-    d.categories.push({ key: 'website-revision', label: summary.workingTotal === 1 ? 'Unpublished website revision' : 'Unpublished website revisions', total: summary.workingTotal, href: `${base}/website` }, { key: 'form-draft', label: 'Form drafts', total: summary.draftTotal, href: `${base}/forms` });
+    const inReview = revisions.filter(r => r.status === 'in_review');
+    d.attention = inReview.map(r => attentionItem(c, 'Studio', 'website-revision', r.id, `Website revision ${r.revision_number}`, 'Publication awaiting review', `${base}/website`, { kind: 'review', status: 'In review', occurredAt: r.created_at }));
+    // The preview is bounded; the count is exact only when it holds every unpublished revision.
+    if (summary.workingTotal <= revisions.length) d.categories.push({ key: 'website-revision', label: inReview.length === 1 ? 'Website revision awaiting review' : 'Website revisions awaiting review', total: inReview.length, href: `${base}/website` });
   }
   d.health.push({ key: 'website', source: 'Studio', state: live.length ? 'Website published' : 'No published website', detail: revisions.length ? live.length ? 'Unpublished changes are waiting.' : 'A draft is waiting; nothing is published yet.' : live.length ? 'Up to date.' : 'Nothing published yet.', href: `${base}/website`, warning: !live.length });
   d.activity = live.filter(r => r.published_at && r.published_at >= homePeriod(c.date, c.timezone, 'week').since && r.published_at < homePeriod(c.date, c.timezone, 'week').until).map(r => ({ key: `Studio:published:${r.id}`, source: 'Studio', title: `Website revision ${r.revision_number} published`, at: r.published_at!, href: `${base}/website`, recordKey: `Studio:website-revision:${r.id}` }));

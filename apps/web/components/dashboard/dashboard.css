@@ -17,6 +17,8 @@
 [data-dashboard-panels] > :is(div, aside):has(> [data-slot='operational-panel']) > * { margin-block: 0; }
 [data-widget-height='compact'] { --dashboard-panel-min-height: clamp(13rem, 22svh, 22rem); }
 [data-widget-height='tall'] { --dashboard-panel-min-height: clamp(20rem, 34svh, 34rem); }
+/* A widget declared content-sized takes the height of what it holds, with no reserved empty footprint. */
+[data-dashboard-grid] [data-widget-sizing='content'] { --dashboard-panel-min-height: 0px; }
 [data-dashboard-page] :is([data-slot='operational-panel'], [data-dashboard-panel]),
 [data-dashboard-grid] [data-slot='chart-panel'] {
   display: flex;

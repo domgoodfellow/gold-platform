@@ -32,6 +32,11 @@ Entries describe the product or operational change, not every file touched.
 
 ---
 
+## 2026-11-21
+
+- Organization Home is tighter. Setup status moved from a full-width Home banner to a compact Setup control in the organization header while the business is in setup: its badge counts the required steps left, and opening it lists them with the progress and a link to Setup. It is not shown in Platform, on account pages or on the Setup page, and disappears after launch. The header's second Search button is gone (the sidebar Search is unchanged), and the refresh time sits at the end of the date line instead of its own row.
+- Home's overview tiles share one size, fill the row, show a zero as 0, and drop the "Now" line from Contacts. Needs attention is a compact list instead of a one-column table: each row shows the record with its source, context and holder, its own status and any deadline on the right, and marks it as a task, a review or a problem. Studio drafts still being edited are no longer listed; a website revision in publication review is. Business performance appears only when it has period figures or Finance cannot be read, Recent activity sits beside it when there is room, and Home panels take the height of their content instead of reserving empty space.
+
 ## 2026-11-20
 
 - Organization dashboards use the available workspace height. Empty panels keep a usable footprint as the window grows, and empty, loading or unavailable charts keep their selected plot height. Overview tiles stay compact and long dashboards remain scrollable on smaller screens.

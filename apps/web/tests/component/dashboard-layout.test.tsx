@@ -139,3 +139,20 @@ describe('customizing a Dashboard', () => {
     expect(order()).toEqual(['overview', 'attention', 'activity', 'invoice-status']);
   });
 });
+
+describe('Dashboard row sizing', () => {
+  it('keeps content-sized widgets at their content height and lets other panel rows share the workspace', () => {
+    const widgets = { ...nodes, overview: { kind: 'node' as const, node: <p>overview content</p>, sizing: 'content' as const }, attention: { kind: 'node' as const, node: <p>attention content</p>, sizing: 'content' as const } };
+    render(<DashboardLayoutGrid label="Finance dashboard" registry={FINANCE_WIDGETS} saved={{ layout: defaultLayout(FINANCE_WIDGETS), revision: 0, customized: false }} readable={['overview', 'attention', 'activity']} widgets={widgets} />);
+    expect(document.querySelector('[data-widget-id="overview"]')).toHaveAttribute('data-widget-sizing', 'content');
+    expect(document.querySelector('[data-widget-id="attention"]')).toHaveAttribute('data-widget-sizing', 'content');
+    expect(document.querySelector('[data-widget-id="activity"]')).not.toHaveAttribute('data-widget-sizing');
+    // A content-sized panel keeps its own height even beside a taller panel in the same row.
+    expect(document.querySelector('[data-widget-id="attention"]')).toHaveClass('self-start');
+    expect(document.querySelector('[data-widget-id="activity"]')).not.toHaveClass('self-start');
+    const rows = document.querySelector<HTMLElement>('[data-dashboard-grid]')!.style.gridTemplateRows.split(' ').filter(Boolean);
+    // A row holding any growing panel grows; a row of content-sized widgets only does not.
+    expect(rows[0]).toBe('auto');
+    expect(document.querySelector<HTMLElement>('[data-dashboard-grid]')!.style.gridTemplateRows).toContain('minmax(min-content, 1fr)');
+  });
+});

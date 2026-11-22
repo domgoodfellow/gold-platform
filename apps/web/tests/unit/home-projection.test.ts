@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { homePeriod, homeQuery, prioritize, emptySource, type HomeAttentionItem, type HomeResult } from '@/lib/application/home/contracts';
 import { assignSetupHealth, isolateSource } from '@/lib/application/home/load';
+import { attentionItem, readStudioHome, type ReadContext } from '@/lib/application/home/reads';
 import { calendarDate } from '@/lib/domain/scheduling/window';
 import { counted } from '@/lib/domain/counted';
 import { parseCallParams, callFilterFromParams } from '@/features/communications/voice/call-filters';
 
-const make = (id: string, extra: Partial<HomeAttentionItem> = {}): HomeAttentionItem => ({ key: `Support:case:${id}`, organizationId: 'a', source: 'Support', category: 'case', title: id, description: '', urgency: 'normal', overdue: false, record: { kind: 'case', id }, destination: { href: '/case', label: 'Open' }, ...extra });
+const make = (id: string, extra: Partial<HomeAttentionItem> = {}): HomeAttentionItem => ({ key: `Support:case:${id}`, organizationId: 'a', source: 'Support', category: 'case', title: id, description: '', kind: 'task', urgency: 'normal', overdue: false, record: { kind: 'case', id }, destination: { href: '/case', label: 'Open' }, ...extra });
 describe('Home semantic projections', () => {
   it('distinguishes an exact zero from an unavailable count without serializing count metadata as rows', () => {
     expect(counted([], 0).exactCount).toBe(0);
@@ -62,5 +63,28 @@ describe('Home semantic projections', () => {
     expect(callFilterFromParams(params, 'America/Toronto')).toMatchObject({ since: '2026-10-01T04:00:00.000Z', until: '2026-11-01T04:00:00.000Z', needsFollowUp: true, needsWrapUp: false });
     expect(parseCallParams({ from: '2026-02-30', to: '2026-03-02' }).params).toEqual({});
     expect(calendarDate('2026-02-30')).toBeUndefined();
+  });
+});
+
+describe('Home attention classification', () => {
+  const NOW = '2026-11-21T15:00:00.000Z';
+  const context = (db: unknown = {}): ReadContext => ({ db: db as ReadContext['db'], organizationId: 'org', membershipId: 'm', resourceId: null, schedulable: true, date: '2026-11-21', timezone: 'UTC', now: NOW, query: homeQuery({}), period: homePeriod('2026-11-21', 'UTC', 'today'), features: new Set(), capabilities: new Set(['organization.manage']), assistantEntitled: false });
+  it('is overdue only when an explicit deadline has passed, never because the record is old', () => {
+    const c = context();
+    expect(attentionItem(c, 'CRM', 'follow-up', '1', 'Call', '', '/t', { overdue: true, dueAt: '2026-11-21T09:00:00.000Z' }).overdue).toBe(true);
+    expect(attentionItem(c, 'CRM', 'follow-up', '2', 'Call', '', '/t', { overdue: true, dueAt: '2026-11-22T09:00:00.000Z' }).overdue).toBe(false);
+    expect(attentionItem(c, 'Communications', 'conversation', '3', 'Old thread', '', '/c', { overdue: true, occurredAt: '2026-01-01T00:00:00.000Z' }).overdue).toBe(false);
+    expect(attentionItem(c, 'Communications', 'conversation', '3', 'Old thread', '', '/c').kind).toBe('task');
+  });
+  it('leaves Studio drafts to Studio and lists only revisions awaiting publication review, with an exact count', async () => {
+    const id = (n: number) => `00000000-0000-4000-8000-00000000000${n}`;
+    const summary = { workingTotal: 2, draftTotal: 3, working: [{ id: id(1), status: 'draft', revision_number: 5, created_at: NOW }, { id: id(2), status: 'in_review', revision_number: 4, created_at: NOW }], drafts: [{ id: id(3), form_id: id(4), name: 'Intake form', created_at: NOW }], published: [] };
+    const studio = await readStudioHome(context({ rpc: async () => ({ data: summary, error: null }) }));
+    expect(studio.attention.map(row => [row.title, row.kind, row.status])).toEqual([['Website revision 4', 'review', 'In review']]);
+    expect(studio.attention.some(row => row.category === 'form-draft')).toBe(false);
+    expect(studio.categories).toEqual([expect.objectContaining({ key: 'website-revision', label: 'Website revision awaiting review', total: 1 })]);
+    // Beyond the bounded preview the number awaiting review is unknown, so no total is claimed.
+    const bounded = await readStudioHome(context({ rpc: async () => ({ data: { ...summary, workingTotal: 9 }, error: null }) }));
+    expect(bounded.categories).toEqual([]);
   });
 });

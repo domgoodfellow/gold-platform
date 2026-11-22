@@ -133,6 +133,10 @@ describe('Global Home against canonical local data and RLS', () => {
     const outcome = await createCallOutcome(owner.db, { organizationId, name: 'Followed up', reached: false });
     const wrapped = await owner.db.rpc('record_call_outcome', { p_organization_id: organizationId, p_call_id: fixture.missed, p_outcome_id: outcome, p_note: 'Controlled owning Call wrap-up', p_duration_seconds: 0 });
     expect(wrapped.error).toBeNull();
+    // An unpublished Form draft is Studio's work in progress, never a Home attention item or total.
+    const studio = sources(await home()).find(s => s.source === 'Studio')!;
+    expect(studio.attention.some(row => row.category === 'form-draft')).toBe(false);
+    expect(studio.categories.some(c => c.key === 'form-draft')).toBe(false);
     await saveFormDraft(owner.db, { organizationId, revisionId: fixture.unpublishedForm.revisionId, definition: { title: 'Published verification', submitLabel: 'Submit', confirmation: { title: 'Received', message: 'Received.' }, fields: [{ id: 'name', type: 'short_text', label: 'Name', required: true }] } });
     await publishFormRevision(owner.db, { organizationId, revisionId: fixture.unpublishedForm.revisionId });
     const rows = sources(await home());
@@ -141,7 +145,7 @@ describe('Global Home against canonical local data and RLS', () => {
     expect(rows.find(s => s.source === 'CRM')!.performance[0].value).toBe(2);
     expect(rows.find(s => s.source === 'Finance')!.categories[0].total).toBe(1);
     expect(rows.find(s => s.source === 'Communications')!.categories.find(c => c.key === 'missed-call')!.total).toBe(0);
-    expect(rows.find(s => s.source === 'Studio')!.categories.find(c => c.key === 'form-draft')!.total).toBe(0);
+    expect(rows.find(s => s.source === 'Studio')!.attention.some(row => row.category === 'form-draft')).toBe(false);
   });
   it('reports enabled Agent configuration without asserting live provider operation', async () => {
     const p_organization_id = fixture.organizationId;

@@ -424,6 +424,19 @@ export function inPlatformScope(pathname: string): boolean {
 }
 
 /**
+ * Where the header's setup status belongs: this business's own pages. Never Platform (`/platform`)
+ * or a personal account page, both outside the business's address, and not the Setup pages, which
+ * already show it in full.
+ */
+export function showsSetupStatus(pathname: string, organizationId: string): boolean {
+  const base = `/organizations/${organizationId}`;
+  const path = pathname.split(/[?#]/)[0].replace(/\/$/, '');
+  if (path !== base && !path.startsWith(`${base}/`)) return false;
+  const rest = path.slice(base.length);
+  return rest !== '/setup' && !rest.startsWith('/setup/');
+}
+
+/**
  * A workspace Home's chosen shortcuts, taken from the projection the sidebar draws — so route,
  * authorization and (business) label are the registry's, never the page's. The Home decides only
  * which ones to show and in what order; anything this person may not use is simply absent.

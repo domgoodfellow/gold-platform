@@ -18,6 +18,7 @@ import { serializeLocationAccess } from '@/lib/route/page-location';
 import { readShellLayout } from '@/lib/route/shell-layout';
 import { readNavigationLayout } from '@/lib/route/navigation-layout';
 import { ShellLayoutProvider } from '@/components/layout/shell-layout-context';
+import { readSetupStatus } from '@/lib/application/setup/status';
 
 /** The one frame for every organization, GildOps' own Administration included, with canonical
  * server authority resolution. Each page still enforces its own access; layouts persist across
@@ -41,10 +42,13 @@ export async function OrganizationShell({
     capabilities: organization.capabilities,
     locked,
   });
-  const profile = await getPersonalProfile(db).catch(() => null);
-  const displayName = profile ? profileName(profile) : '';
-  // Setup is onboarding status, drawn on organization Home and flagged in the switcher, not in the shell's navigation.
+  // Setup is onboarding status: a header control and a switcher line while in SETUP, never shell navigation.
   const setupPending = !locked && organization.operationalState === 'setup';
+  const [profile, setupStatus] = await Promise.all([
+    getPersonalProfile(db).catch(() => null),
+    setupPending ? readSetupStatus(db, organization) : null,
+  ]);
+  const displayName = profile ? profileName(profile) : '';
   // The shell loads a bounded list of titles and one transcript — the most recent conversation.
   // Any other transcript is fetched when somebody opens it from History.
 
@@ -113,6 +117,7 @@ export async function OrganizationShell({
         organizationId={organizationId}
         displayName={displayName}
         setupPending={setupPending}
+        setupStatus={setupStatus}
         hostedData={developmentSupabaseTarget() === 'hosted'}
         name={organization.name}
         role={organization.role}

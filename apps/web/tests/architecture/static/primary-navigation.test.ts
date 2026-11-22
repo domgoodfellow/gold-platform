@@ -106,11 +106,16 @@ describe('Library', () => {
   });
 });
 
-describe('organization Home setup', () => {
-  it('computes setup only while the business is in SETUP and renders the banner there', () => {
-    const home = read('app/organizations/[organizationId]/home/page.tsx');
-    expect(home).toContain("organization.operationalState === 'setup'");
-    expect(home).toContain('computeSetupOverview');
-    expect(home).toContain('<SetupBanner');
+describe('organization setup status', () => {
+  it('reads setup only while the business is in SETUP and draws it as a header control, not a Home banner', () => {
+    const status = read('lib/application/setup/status.ts');
+    expect(status).toContain("organization.operationalState !== 'setup'");
+    expect(status).toContain('computeSetupOverview');
+    expect(read('features/shell/organization-shell.tsx')).toContain("setupPending ? readSetupStatus(db, organization) : null");
+    const shell = read(ORG_SHELL);
+    expect(shell).toContain('<SetupStatusControl');
+    // Never in Platform, on account pages or the Setup pages themselves.
+    expect(shell).toContain('showsSetupStatus(pathname, organizationId)');
+    expect(read('app/organizations/[organizationId]/home/page.tsx')).not.toMatch(/SetupBanner|computeSetupOverview/);
   });
 });

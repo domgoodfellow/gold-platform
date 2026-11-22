@@ -63,14 +63,16 @@ async function freshOrganization(): Promise<{ db: SupabaseClient; organizationId
 
 const HOME_LOAD = fileURLToPath(new URL('../../../lib/application/home/load.ts', import.meta.url));
 const HOME_READS = fileURLToPath(new URL('../../../lib/application/home/reads.ts', import.meta.url));
+const SETUP_STATUS = fileURLToPath(new URL('../../../lib/application/setup/status.ts', import.meta.url));
 
 describe('Home, with nothing recorded yet', () => {
   it('renders an intentional state for each region rather than silent zeroes', () => {
     const source = readFileSync(TODAY_FEATURE, 'utf8');
     expect(source).toContain('Nothing needs attention.');
     expect(source).toContain('Nothing assigned to you needs attention.');
-    // An empty Business performance panel is omitted rather than shown empty (docs/surfaces/home.md).
-    expect(source).toContain("relevantPerformance.length || unavailable.some(result => result.source === 'Finance') ? ['performance']");
+    // An empty Business performance panel is omitted rather than shown empty (docs/surfaces/home.md):
+    // current figures sit in the overview, so only period figures or an unknown Finance show it.
+    expect(source).toContain("periodPerformance.length || financeUnavailable ? ['performance']");
     // A source that failed is unknown, never presented as an empty queue.
     expect(source).toContain('Some sources are temporarily unavailable');
     expect(source).toContain('No matching items from the sources that loaded.');
@@ -81,13 +83,13 @@ describe('Home, structural composition (source scan)', () => {
   const source = `${readFileSync(TODAY, 'utf8')}
 ${readFileSync(TODAY_FEATURE, 'utf8')}`;
 
-  it('shows the setup status as one banner on Home, never mixed into operational attention', () => {
-    // The banner is Home's one setup affordance, and it reads the authoritative overview only while the business is in SETUP.
-    // Counts come from computeSetupOverview, so a count here can never disagree with the Setup page.
-    expect(source).toContain('computeSetupOverview');
-    expect(source).toContain('<SetupBanner');
-    expect(source).toContain('overview={overview}');
+  it('shows no setup banner on Home and never mixes setup into operational attention', () => {
+    // Setup status is the organization header's control (`SetupStatusControl`), read from
+    // computeSetupOverview while the business is in SETUP, so a count can never disagree with the Setup page.
+    expect(source).not.toContain('SetupBanner');
+    expect(source).not.toContain('computeSetupOverview');
     expect(source).not.toContain('setupNotice');
+    expect(readFileSync(SETUP_STATUS, 'utf8')).toContain('computeSetupOverview');
   });
 
   it('never claims a business with zero blockers is complete or launched', () => {

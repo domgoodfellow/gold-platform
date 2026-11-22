@@ -806,7 +806,9 @@ describe('a switch leads to its inputs', () => {
     expect(layout).toContain("!locked && organization.operationalState === 'setup'");
     expect(layout).toContain('setupPending={setupPending}');
     expect(layout).not.toContain('computeSetupOverview');
-    expect(readFileSync(fileURLToPath(new URL('../../../app/organizations/[organizationId]/home/page.tsx', import.meta.url)), 'utf8')).toContain('computeSetupOverview');
+    // The header's setup status is read only while in SETUP, through the one overview the Setup page uses.
+    expect(layout).toContain('setupPending ? readSetupStatus(db, organization) : null');
+    expect(readFileSync(fileURLToPath(new URL('../../../lib/application/setup/status.ts', import.meta.url)), 'utf8')).toContain('computeSetupOverview');
     expect(shell).not.toContain('export function SetupEntry');
     expect(shell).not.toContain('export function SetupNavLink');
     // One treatment, not several: the header badge this replaced must not come back.

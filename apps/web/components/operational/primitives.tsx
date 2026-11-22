@@ -92,11 +92,11 @@ export function MetricTile({
   const body = (
     <>
       {icon ? <IconWell icon={icon} round /> : null}
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <div className="text-xs text-muted">{label}</div>
         <div
           className={cx(
-            "text-2xl font-semibold leading-8 tracking-tight tabular-nums",
+            "text-2xl font-semibold leading-8 tracking-tight tabular-nums [overflow-wrap:anywhere]",
             emphasis && toneText[emphasis],
           )}
         >

@@ -121,7 +121,9 @@ test.describe('dashboard geometry', () => {
         const panels = surface.locator('[data-slot="operational-panel"], [data-dashboard-panel], [data-dashboard-grid] [data-slot="chart-panel"]');
         await expect(panels.first()).toBeVisible();
         await page.evaluate(() => document.fonts.ready);
-        await expect.poll(() => panels.evaluateAll(nodes => nodes.every(node => node.getBoundingClientRect().height >= 207))).toBe(true);
+        // Home panels are content-sized: no reserved empty footprint. Other dashboards keep their minimum.
+        if (route === 'home') expect(await panels.evaluateAll(nodes => nodes.every(node => getComputedStyle(node).minHeight === '0px'))).toBe(true);
+        else await expect.poll(() => panels.evaluateAll(nodes => nodes.every(node => node.getBoundingClientRect().height >= 207))).toBe(true);
         const measured = await surface.evaluate(node => {
           const main = node.closest('main')!;
           const mainStyle = getComputedStyle(main);

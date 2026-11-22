@@ -166,10 +166,11 @@ describe('the shell — one lifecycle treatment at every width, gone at LIVE', (
 });
 
 describe('Home — the operating cockpit, not a second onboarding dashboard', () => {
-  it('carries one setup banner, supplied by the page that knows the lifecycle, and no sidebar row for it', () => {
-    // Setup is onboarding status: the banner appears on Home only while the business is in SETUP,
+  it('carries no setup banner: setup status is the organization header control, and no sidebar row names it', () => {
+    // Setup is onboarding status: the header control appears only while the business is in SETUP,
     // and the Setup page keeps the checklist and launch controls. Nothing in the navigation names it.
-    expect(HOME_FEATURE).toContain('setup?: ReactNode');
-    expect(HOME_FEATURE).toContain('{setup}');
+    expect(HOME_FEATURE).not.toContain('setup?: ReactNode');
+    expect(HOME_FEATURE).not.toContain('SetupBanner');
+    expect(SHELL).toContain('<SetupStatusControl');
   });
 });

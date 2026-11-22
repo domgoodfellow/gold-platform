@@ -3,7 +3,7 @@ import { emptySource, homePeriod, homeQuery, type HomeAttentionItem, type HomeDa
 import { homePresentation } from '@/lib/application/home/presentation';
 import { upcomingWindow, shiftDate, zonedDayRange } from '@/lib/domain/scheduling/window';
 
-const item = (id: string): HomeAttentionItem => ({ key:`Work:work-item:${id}`,organizationId:'org',source:'Work',category:'work',record:{kind:'work-item',id},title:id,description:'',urgency:'high',overdue:false,destination:{href:'/work/'+id,label:'Open'} });
+const item = (id: string): HomeAttentionItem => ({ key:`Work:work-item:${id}`,organizationId:'org',source:'Work',category:'work',record:{kind:'work-item',id},title:id,description:'',kind:'task',urgency:'high',overdue:false,destination:{href:'/work/'+id,label:'Open'} });
 function data(): HomeData {
   const source=emptySource('Work');
   return { organizationId:'org',membershipId:'member',date:'2026-10-28',timezone:'America/Toronto',refreshedAt:'2026-10-28T15:00:00Z',query:homeQuery({}),period:homePeriod('2026-10-28','America/Toronto','today'),results:[{source:'Work',state:'ready',data:source}],kpis:[],quickActions:[],search:[],agentPrompts:[] };

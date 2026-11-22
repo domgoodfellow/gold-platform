@@ -75,6 +75,23 @@ test('Global Home operational queues, owning actions, Agent and responsive surfa
       await page.waitForURL(url => !url.pathname.endsWith('/login'));
     }
     await visit(); await capture(page, '01-empty-desktop');
+    // Setup is a header control while the business is in SETUP, never a banner across Home.
+    await expect(page.getByRole('region', { name: 'Organization setup' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Ask or find something...' })).toHaveCount(0);
+    const setupTrigger = page.getByRole('button', { name: /^Setup\. / });
+    await expect(setupTrigger).toBeVisible();
+    await setupTrigger.click();
+    const setupPanel = page.getByRole('dialog', { name: 'Setup', exact: true });
+    await expect(setupPanel.getByRole('link', { name: /^Review (setup|and launch)$/ })).toHaveAttribute('href', `${org}/setup`);
+    await capture(page, '01b-setup-status');
+    await page.keyboard.press('Escape');
+    await expect(setupPanel).toHaveCount(0);
+    await expect(setupTrigger).toBeFocused();
+    // The Setup page already shows the full checklist, so the header control is not repeated there.
+    await page.goto(`${org}/setup`);
+    await expect(page.getByRole('heading', { name: 'Set up your organization', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Setup\. / })).toHaveCount(0);
+    await visit();
     const crmOrg = await foundBusiness({ ownerEmail: ownerEmail, name: 'Home CRM-oriented verification', currency: 'CAD', timezone: 'America/Toronto' });
     await grantHomeVerificationPlan(crmOrg);
     const customer = await createCustomer(db, { organizationId: crmOrg, name: 'CRM relationship requiring contact' });
@@ -125,10 +142,15 @@ test('Global Home operational queues, owning actions, Agent and responsive surfa
     const destination = await attentionLink.getAttribute('href');
     expect(destination).toMatch(new RegExp(`^${org}/crm/tasks\\?selected=[0-9a-f-]{36}$`));
     const linkName = (await attentionLink.getAttribute('aria-label'))!;
-    const attentionRow = attention.getByRole('row').filter({ has: page.getByRole('link', { name: linkName, exact: true }) });
+    const attentionRow = attention.getByRole('listitem').filter({ has: page.getByRole('link', { name: linkName, exact: true }) });
     await expect(attentionRow).toContainText('Overdue');
     await expect(attentionRow).toContainText(/Due /);
     await expect(attentionRow.locator('a, button, [role=button], [tabindex]:not([tabindex="-1"])')).toHaveCount(1);
+    await expect(attentionRow.getByRole('img', { name: 'Task', exact: true })).toBeVisible();
+    await expect(attention.getByRole('table')).toHaveCount(0);
+    // A Form draft is Studio's own work in progress and is not an attention item.
+    await expect(attention.getByText('Unpublished form draft')).toHaveCount(0);
+    await expect(attention.getByText(/Form drafts/)).toHaveCount(0);
     await attentionLink.click();
     await expect(page).toHaveURL(destination!);
     await visit();

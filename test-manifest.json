@@ -3224,10 +3224,8 @@
       "concerns": ["navigation", "ui", "accessibility"]
     },
     "apps/web/tests/component/toaster.test.tsx": {"category": "component", "concerns": ["ui", "feedback"], "note": "The shared Toaster: every toast has a named close button; success closes on its own; an error toast stays until closed (Work Order 4, Part F)."},
-    "apps/web/tests/component/setup-banner.test.tsx": {
-      "category": "component",
-      "concerns": ["navigation", "setup"]
-    },
+    "apps/web/tests/component/setup-status.test.tsx": {"category": "component", "concerns": ["navigation", "setup", "accessibility"], "note": "Organization header setup status: trigger names remaining required steps, opens on request, re-reads the overview, manager and non-manager wording, unavailable retry, Escape returns focus, disappears after launch, never shown in Platform, Setup or account pages."},
+    "apps/web/tests/component/home-dashboard.test.tsx": {"category": "component", "concerns": ["home", "dashboards", "accessibility"], "note": "Home Slice 1: header without a second Search entry and with an inline refresh, uniform overview tiles keeping zeros, compact attention list with one control per row and task/review/problem kinds, Business performance shown only with period figures or unknown Finance, content-sized panels."},
     "apps/web/tests/architecture/static/primary-navigation.test.ts": {
       "category": "architecture-static",
       "concerns": ["navigation", "ui"]

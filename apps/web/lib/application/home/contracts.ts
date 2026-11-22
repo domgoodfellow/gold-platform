@@ -10,8 +10,17 @@ export function homePeriod(date: string, timezone: string, when: HomeQuery['when
   const to = when === 'month' ? shiftMonth(from, 1) : shiftDate(date, 1);
   return { from, to, since: zonedDayRange(from, timezone).startsAt, until: zonedDayRange(to, timezone).startsAt };
 }
+/**
+ * What an attention row asks of someone: ordinary work to do (`task`), a decision or approval
+ * (`review`), or something that failed, conflicts or is misconfigured (`problem`). Set by the read
+ * that owns the record, never inferred from its wording.
+ */
+export type HomeAttentionKind = 'task' | 'review' | 'problem';
 export type HomeAttentionItem = {
   key: string; organizationId: string; source: HomeSource; category: string; title: string; description: string;
+  kind: HomeAttentionKind;
+  /** The record's own state in its owning workspace (a Work stage, a Case or conversation status), when it has one. */
+  status?: string;
   urgency: 'critical' | 'high' | 'normal'; occurredAt?: string; dueAt?: string;
   ownerMembershipId?: string | null; ownerName?: string | null; overdue: boolean;
   record: { kind: string; id: string }; destination: { href: string; label: string };

@@ -89,8 +89,9 @@ export function DashboardLayoutGrid({ registry, saved: initial, readable, widget
   const shown = visibleWidgets(layout, readableSet);
   const spans = arrange(registry, shown);
   const definitions = useMemo(() => new Map(registry.map(definition => [definition.id, definition])), [registry]);
-  // Overview tiles keep their content height. Panel rows share the remaining workspace height,
-  // with their natural/minimum height as the floor, including after reordering or filtering.
+  // Content-sized widgets (overview tiles, or panels that hold only lists) keep their content height.
+  // Other panel rows share the remaining workspace height, with their natural/minimum height as the
+  // floor, including after reordering or filtering. With no growing row, rows pack at the top.
   const rows = packRows(shown.map(widget => ({ id: widget.id, span: modeSpan(definitions.get(widget.id), widget.span, mode) })), mode === 'wide' ? 12 : mode === 'medium' ? 6 : 1);
   const rowSizes: string[] = [];
   for (const row of rows) {
@@ -144,7 +145,7 @@ export function DashboardLayoutGrid({ registry, saved: initial, readable, widget
       {message.conflict ? <Button type="button" size="tiny" tone="secondary" onClick={() => window.location.reload()}>Reload</Button> : null}
       {message.tone === 'status' ? <Button type="button" size="tiny" tone="ghost" onClick={() => setMessage(null)}>Dismiss</Button> : null}
     </div> : null}
-    <div data-dashboard-grid style={{ gridTemplateRows: rowSizes.join(' ') } as CSSProperties} className={cx('grid flex-1 grid-cols-1 gap-4 @min-[40rem]/dashboard:grid-cols-6 @min-[64rem]/dashboard:grid-cols-12', editing && 'select-none')}>
+    <div data-dashboard-grid style={{ gridTemplateRows: rowSizes.join(' ') } as CSSProperties} className={cx('grid flex-1 content-start grid-cols-1 gap-4 @min-[40rem]/dashboard:grid-cols-6 @min-[64rem]/dashboard:grid-cols-12', editing && 'select-none')}>
       {shown.map((placement, index) => <DashboardWidget key={placement.id} placement={placement} definition={definitions.get(placement.id)!} content={widgets[placement.id]}
         className={cx('col-span-1', MEDIUM[spans.medium.get(placement.id)!], WIDE[spans.wide.get(placement.id)!])}
         editing={editing} mode={mode} selected={selected === placement.id} onSelect={() => setSelected(placement.id)}
@@ -189,9 +190,9 @@ function DashboardWidget({ placement, definition, content, className, editing, m
       presentation={placement.presentation} onPresentationChange={editing ? presentation => onLayout(layout => setWidgetOption(layout, registry, placement.id, { presentation })) : undefined} /> : null}{content.footer}</div>;
   })();
   // A plain container: each widget's content names itself (a panel title or chart heading), so landmarks are not doubled.
-  return <div ref={ref} data-widget-id={placement.id} data-span={placement.span} data-widget-height={placement.height}
+  return <div ref={ref} data-widget-id={placement.id} data-span={placement.span} data-widget-height={placement.height} data-widget-sizing={content?.kind === 'node' && content.sizing === 'content' ? 'content' : undefined}
     onClick={editing ? onSelect : undefined} onFocus={editing ? onSelect : undefined}
-    className={cx(className, 'relative flex min-w-0 flex-col', editing && 'rounded-[var(--visual-radius,0.625rem)] outline-2 outline-offset-4', editing && (selected ? 'outline outline-accent' : 'outline outline-dashed outline-border'), drag === 'move' && 'opacity-60')}>
+    className={cx(className, 'relative flex min-w-0 flex-col', content?.kind === 'node' && content.sizing === 'content' && 'self-start', editing && 'rounded-[var(--visual-radius,0.625rem)] outline-2 outline-offset-4', editing && (selected ? 'outline outline-accent' : 'outline outline-dashed outline-border'), drag === 'move' && 'opacity-60')}>
     {editing ? <div role="group" aria-label={`Arrange ${definition.label}`} className="mb-2 flex flex-wrap items-center gap-1.5 rounded-[var(--visual-radius,0.625rem)] bg-secondary px-2 py-1.5 text-xs">
       {mode !== 'narrow' ? <button type="button" aria-label={`Drag to move ${definition.label}`} title="Drag to move" className={cx('cursor-grab touch-none rounded p-1 hover:bg-hover active:cursor-grabbing', FOCUS_RING)}
         onPointerDown={event => { event.currentTarget.setPointerCapture(event.pointerId); setDrag('move'); }} onPointerUp={moveEnd} onPointerCancel={() => setDrag(null)}><GripVertical aria-hidden className="size-4" /></button> : null}
