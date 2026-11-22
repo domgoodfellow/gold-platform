@@ -158,7 +158,9 @@ describe('what the word rule keeps', () => {
 
   it('the deferred areas named in the exemption list, each with a reason', () => {
     expect(wordExempt('apps/web/features/ai/workbench.tsx')).toMatch(/deferred/);
-    expect(wordExempt('apps/web/app/platform/billing/page.tsx')).toMatch(/deferred/);
+    expect(wordExempt('apps/web/app/organizations/[organizationId]/administration/ai-runtime/page.tsx')).toMatch(/deferred/);
+    // Finance's GildOps screens are read like every other Finance screen.
+    expect(wordExempt('apps/web/features/finance/subscriptions/subscription-record.tsx')).toBeNull();
     expect(words('<p>Runtime deployment</p>', 'apps/web/features/ai/workbench.tsx')).toEqual([]);
     expect(wordExempt('apps/web/features/work/work-list.tsx')).toBeNull();
     for (const [, reason] of WORD_EXEMPT) expect(reason).toMatch(/\S/);

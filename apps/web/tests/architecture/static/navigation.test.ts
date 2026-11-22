@@ -55,9 +55,9 @@ function routeSegmentsOnDisk(): string[] {
     // belongs to Customers. Nothing like that exists at this level today, and the filter is
     // here so that adding one does not read as a missing navigation entry.
     .filter((entry) => !entry.name.startsWith('[') && !entry.name.startsWith('_'))
-    // `platform` is a scope, not an area: Platform Administration, available only inside GOLD's own
+    // `administration` is a context, not an area: Administration, available only inside GildOps' own
     // organization. It has its own registry (`lib/platform-navigation.ts`) and its own guard.
-    .filter((entry) => entry.name !== 'platform')
+    .filter((entry) => entry.name !== 'administration')
     .filter((entry) => existsSync(`${ROUTES}/${entry.name}/page.tsx`))
     .map((entry) => entry.name)
     .sort();
@@ -376,7 +376,7 @@ describe('the operator shell navigation', () => {
       'sales', 'customers', 'opportunity-pipeline',
       'comms', 'calls', 'comms-inbox',
       'marketing', 'marketing-campaigns', 'marketing-audiences', 'marketing-leads', 'marketing-performance', 'support', 'support-cases', 'support-queue-workbench', 'support-service-levels-view', 'support-reports', 'ai', 'ai-activity', 'ai-evaluations',
-      'finance', 'finance-catalog', 'finance-quotes', 'finance-invoices', 'finance-payments', 'finance-reports',
+      'finance', 'finance-catalog', 'finance-subscriptions', 'finance-quotes', 'finance-invoices', 'finance-payments', 'finance-costs', 'finance-economics', 'finance-reports',
       'automations', 'automation-rules', 'automation-messages', 'automation-activity',
       'field', 'work', 'schedule', 'resources', 'locations', 'assets',
       'studio', 'studio-website', 'studio-portal', 'studio-forms', 'studio-templates',

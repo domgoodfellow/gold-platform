@@ -2,11 +2,11 @@ import {randomUUID} from 'node:crypto';
 import {createClient,type SupabaseClient} from '@supabase/supabase-js';
 import {Client} from 'pg';
 import {describe,it,expect} from 'vitest';
-import {recordCommercialTerm} from '@/lib/domain/commercial/terms';
 import {setModuleEnabled} from '@/lib/domain/tenancy/modules';
 import {asPlatformStaff,foundBusiness} from '@/tests/support/founding';
 import {saveBusinessProfile,getBusinessProfile} from '@/lib/domain/tenancy/business-profile';
 import {createRoute} from '@/lib/domain/reception/routing';
+import { recordFixtureTerm } from '@/tests/support/plans';
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
 const ANON_KEY = process.env.SUPABASE_ANON_KEY ?? '';
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
@@ -111,9 +111,9 @@ describe('business foundations database boundaries',()=>{
    }finally{await pg.query('rollback');await pg.end();}
  });
  it('admits one pinned voice session and reserves the maximum against the business budget',async()=>{
-   const tenant=await newTenant('voice-budget');const staff=await asPlatformStaff();
+   const tenant=await newTenant('voice-budget');
    for(const key of ['assistant','reception']){
-     await recordCommercialTerm(staff,{organizationId:tenant.organizationId,productKey:'module:'+key,periodStart:new Date(Date.now()-60000).toISOString(),periodEnd:new Date(Date.now()+86400000).toISOString(),priceMinor:0,currency:'XXX'});
+     await recordFixtureTerm({organizationId:tenant.organizationId,productKey:'module:'+key,periodStart:new Date(Date.now()-60000).toISOString(),periodEnd:new Date(Date.now()+86400000).toISOString(),priceMinor:0,currency:'XXX'});
      await setModuleEnabled(tenant.db,{organizationId:tenant.organizationId,key,enabled:true});
    }
    const route=await createRoute(tenant.db,{organizationId:tenant.organizationId,name:'Budgeted voice',numberId:null,whenMode:'always',ringStrategy:'everyone',ringTimeoutSeconds:20,destinationType:'ai_receptionist',fallbackType:'none'});

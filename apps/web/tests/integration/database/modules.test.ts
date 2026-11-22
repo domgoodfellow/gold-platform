@@ -30,8 +30,9 @@ import {
 import { configureBusiness, type BusinessShape } from '@/lib/domain/configuration/configure';
 import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
 import { listFeaturesByRuntimeMapping } from '@/lib/domain/catalogue/catalogue';
-import { activeModuleKeys, organizationResolvedFeatureStates, recordPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
-import { createPlan, setPlanFeatureOverride } from '@/lib/domain/catalogue/plans';
+import { activeModuleKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
+import { setPlanFeatureOverride } from '@/lib/domain/catalogue/plans';
+import { assignFixturePlan, createFixturePlan } from '@/tests/support/plans';
 
 /**
  * Module enablement, and the only claim worth testing about it.
@@ -661,13 +662,13 @@ describe('the modules a configuration asks for', () => {
     // this suite asks for are entitled the way a real business gets them: a plan that includes
     // the features behind them, alongside the founding modules the plan assignment would otherwise replace.
     const staff = await asPlatformStaff();
-    const planId = await createPlan(staff, { key: `shape_${randomUUID().slice(0, 8)}`, kind: 'plan', label: 'Shape modules fixture', description: 'Controlled test', billable: false });
+    const planId = await createFixturePlan({ key: `shape_${randomUUID().slice(0, 8)}`, kind: 'plan', label: 'Shape modules fixture', description: 'Controlled test', billable: false });
     for (const key of ['billing', 'assets', 'automations', 'maintenance']) {
       for (const feature of await listFeaturesByRuntimeMapping(staff, { mappingKind: 'module_key', mappingValue: key })) {
         await setPlanFeatureOverride(staff, { planId, featureId: feature.id, included: true });
       }
     }
-    await recordPlanAssignment(staff, { organizationId: business.organizationId, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
+    await assignFixturePlan({ organizationId: business.organizationId, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
   });
 
   it('switches on what it names, and leaves what it does not name alone', async () => {

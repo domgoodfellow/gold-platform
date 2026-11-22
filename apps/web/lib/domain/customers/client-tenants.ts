@@ -25,3 +25,22 @@ export async function endClientTenantRelationship(db: Db, organizationId: string
   const { error } = await db.rpc('end_client_tenant_relationship', { p_organization_id: organizationId, p_relationship_id: relationshipId });
   if (error) throw fromDatabaseError(error, 'client_tenant.end_failed');
 }
+
+/**
+ * The customer in a seller's CRM whose business is `tenantId`, through an active client–tenant
+ * relationship (ADR-057, decision 5). Null when none links them; never guessed from a name.
+ */
+export async function customerForTenant(db: Db, input: { organizationId: string; tenantId: string }): Promise<string | null> {
+  const { data, error } = await db
+    .from('client_tenant_relationships')
+    .select('customer_id')
+    .eq('organization_id', input.organizationId)
+    .eq('tenant_organization_id', input.tenantId)
+    .is('ended_at', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw fromDatabaseError(error, 'client_tenants.customer_failed');
+  return data?.customer_id ?? null;
+}
+

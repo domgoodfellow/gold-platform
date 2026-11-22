@@ -106,6 +106,7 @@ describe('resolveAgentViewing — what the Agent may be told about where the per
 
   it('says nothing for a path that is no area', () => {
     expect(resolveAgentViewing('/platform/organizations')).toEqual({ workspace: null, recordId: null });
+    expect(resolveAgentViewing('/organizations/11111111-1111-4111-8111-111111111111/administration/organizations')).toEqual({ workspace: null, recordId: null });
     expect(resolveAgentViewing('')).toEqual({ workspace: null, recordId: null });
   });
 });

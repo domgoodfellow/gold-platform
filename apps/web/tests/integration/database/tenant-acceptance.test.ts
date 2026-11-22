@@ -9,15 +9,15 @@ import {
   disableOrganizationFeature,
   enableOrganizationFeature,
   organizationResolvedFeatureStates,
-  recordPlanAssignment,
-} from '@/lib/domain/catalogue/organization-plans';
-import { createPlan, setPlanFeatureOverride } from '@/lib/domain/catalogue/plans';
+  } from '@/lib/domain/catalogue/organization-plans';
+import { setPlanFeatureOverride } from '@/lib/domain/catalogue/plans';
 import { createCustomer, listCustomers } from '@/lib/domain/customers/customers';
 import { addMember } from '@/lib/domain/tenancy/members';
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
 import { createRole } from '@/lib/domain/tenancy/roles';
 import { workspaceConfigureItems } from '@/lib/navigation';
 import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
+import { assignFixturePlan, createFixturePlan } from '@/tests/support/plans';
 
 /**
  * Two businesses, provisioned the way a real one is, each with its own owner, branding,
@@ -144,9 +144,9 @@ describe('what a plan grants decides what is offered, and a role decides who may
   beforeAll(async () => {
     assistantFeatureIds = (await listFeaturesByRuntimeMapping(staff, { mappingKind: 'module_key', mappingValue: 'assistant' })).map((feature) => feature.id);
     expect(assistantFeatureIds.length).toBeGreaterThan(0);
-    const planId = await createPlan(staff, { key: `cs_${randomUUID().slice(0, 8)}`, kind: 'plan', label: 'Acceptance customer service', description: 'Controlled acceptance fixture', billable: false });
+    const planId = await createFixturePlan({ key: `cs_${randomUUID().slice(0, 8)}`, kind: 'plan', label: 'Acceptance customer service', description: 'Controlled acceptance fixture', billable: false });
     for (const featureId of assistantFeatureIds) await setPlanFeatureOverride(staff, { planId, featureId, included: true });
-    await recordPlanAssignment(staff, { organizationId: a.organizationId, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
+    await assignFixturePlan({ organizationId: a.organizationId, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
   }, 60_000);
 
   const assistantEntitled = async (tenantUnderTest: Tenant) => {

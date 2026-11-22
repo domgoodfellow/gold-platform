@@ -19,12 +19,12 @@ export function loadDemoContext(): DemoContext {
   return JSON.parse(readFileSync(file, 'utf8')) as DemoContext;
 }
 
-/** A canonical address in the standalone Platform control plane. */
+/** A canonical Administration address: a context of GildOps' own organization (ADR-057). */
 export function platformUrl(subpath = ''): string {
-  return `/platform${subpath ? `/${subpath}` : ''}`;
+  return `/organizations/${loadDemoContext().goldOrganizationId}/administration${subpath ? `/${subpath}` : ''}`;
 }
 
-/** GOLD's own Finance workspace — ordinary tenant Finance, like any business's. Plans & Add-ons is Platform's (`platformUrl('plans')`). */
+/** GildOps' own Finance workspace — ordinary Finance, like any business's, where GildOps' plans, subscriptions, costs and economics live. */
 export function financeUrl(subpath = ''): string {
   return `/organizations/${loadDemoContext().goldOrganizationId}/finance${subpath ? `/${subpath}` : ''}`;
 }

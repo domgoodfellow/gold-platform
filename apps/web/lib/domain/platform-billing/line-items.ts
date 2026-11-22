@@ -41,7 +41,7 @@ export async function resolveCheckoutLineItems(
 
     if (!reference) {
       throw new DomainError(
-        `${line.label} isn’t set up in the billing service yet — ask platform staff to add this price.`,
+        `${line.label} isn’t set up in the billing service yet — ask GildOps to add this price.`,
         'platform_billing.price_not_provisioned',
       );
     }

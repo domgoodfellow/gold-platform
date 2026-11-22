@@ -2,9 +2,10 @@ import type { Db } from '@/lib/db/types';
 import { fromDatabaseError } from '@/lib/domain/errors';
 
 /**
- * The platform-billing webhook's own idempotency ledger, read-only here — a staff diagnostic
- * (Phase 19: "how to inspect webhook deliveries") alongside Stripe's own dashboard, never a
- * second source of truth for subscription state.
+ * The platform-billing webhook's own idempotency ledger, read-only here: delivery health for
+ * Administration → Reliability (`platform.health`) and the deliveries behind one business's
+ * subscription in GildOps' Finance (`subscription.read`). Never a second source of truth for
+ * subscription state, and it holds no amounts.
  */
 export type PlatformBillingWebhookEvent = {
   id: string;
@@ -21,13 +22,15 @@ export type PlatformBillingWebhookEvent = {
 
 export async function listRecentPlatformBillingEvents(
   db: Db,
-  input: { limit?: number } = {},
+  input: { limit?: number; organizationId?: string } = {},
 ): Promise<PlatformBillingWebhookEvent[]> {
-  const { data, error } = await db
+  let query = db
     .from('platform_billing_webhook_events')
     .select('id, provider, event_type, environment, organization_id, received_at, provider_event_created_at, application')
     .order('received_at', { ascending: false })
     .limit(input.limit ?? 20);
+  if (input.organizationId) query = query.eq('organization_id', input.organizationId);
+  const { data, error } = await query;
   if (error) throw fromDatabaseError(error, 'platform_billing.events_list_failed');
   return (data ?? []).map((row) => ({
     id: row.id,

@@ -9,9 +9,7 @@ import { chromium, type FullConfig } from '@playwright/test';
 import type { DemoContext } from './global-setup';
 import { provisionOrganization } from '../lib/domain/platform/provision';
 import { configureBusiness } from '../lib/domain/configuration/configure';
-import { recordCommercialTerm } from '../lib/domain/commercial/terms';
-import { createPlan, grantPlanProduct } from '../lib/domain/catalogue/plans';
-import { recordPlanAssignment } from '../lib/domain/catalogue/organization-plans';
+import { grantPlanProduct } from '../lib/domain/catalogue/plans';
 import { addMember } from '../lib/domain/tenancy/members';
 import { createResource } from '../lib/domain/resources/resources';
 import { createLocation } from '../lib/domain/locations/locations';
@@ -20,6 +18,7 @@ import { createWorkItem } from '../lib/domain/work-items/work-items';
 import { createAsset } from '../lib/domain/assets/assets';
 import { BUSINESSES, DEMO_PASSWORD, demoShape } from '../scripts/demo/businesses';
 import { cleanupAbandonedRuns } from './isolated-cleanup';
+import { assignFixturePlan, createFixturePlan, recordFixtureTerm } from '../tests/support/plans';
 
 /**
  * Disposable fixtures for the navigation specs that used to need the shared demo businesses
@@ -83,15 +82,15 @@ export default async function isolatedSetup(config: FullConfig): Promise<void> {
     // A run-unique plan granting every catalogue product, as a sale would, so the shape's modules
     // are inside this business's plan when it is applied and nothing it uses is hidden.
     const planKey = `isolated_e2e_${run}`;
-    const planId = await createPlan(ownerDb, { key: planKey, kind: 'plan', label: `Isolated E2E ${run}`, description: 'Local browser fixture only', billable: false });
+    const planId = await createFixturePlan({ key: planKey, kind: 'plan', label: `Isolated E2E ${run}`, description: 'Local browser fixture only', billable: false });
     created.planKeys.push(planKey);
     record();
-    for (const { key } of (await pg.query<{ key: string }>('select key from platform_catalog_products')).rows) await grantPlanProduct(ownerDb, { planId, productKey: key });
-    await recordPlanAssignment(ownerDb, { organizationId, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
+    for (const { key } of (await pg.query<{ key: string }>("select key from platform_catalog_products where kind <> 'operator'")).rows) await grantPlanProduct(ownerDb, { planId, productKey: key });
+    await assignFixturePlan({ organizationId, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
     const shape = await demoShape(ownerDb, template);
     for (const key of shape.modules ?? []) {
       if (key === 'billing' || key === 'drafting') continue;
-      await recordCommercialTerm(ownerDb, { organizationId, productKey: `module:${key}`, periodStart: new Date().toISOString().slice(0, 10), periodEnd: '9999-12-31', priceMinor: 0, note: `Isolated E2E fixture ${run}` });
+      await recordFixtureTerm({ organizationId, productKey: `module:${key}`, periodStart: new Date().toISOString().slice(0, 10), periodEnd: '9999-12-31', priceMinor: 0, note: `Isolated E2E fixture ${run}` });
     }
     const configured = await configureBusiness(ownerDb, organizationId, shape);
     await addMember(ownerDb, { organizationId, email: colleague.email, displayName: template.member.displayName, roleId: configured.roleIds[0] });

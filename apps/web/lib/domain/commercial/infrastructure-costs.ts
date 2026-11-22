@@ -91,7 +91,7 @@ function toComponent(row: {
 const COLUMNS =
   'id, organization_id, cost_category, allocation_quality, provider_key, provider_account_id, provider_binding_id, provider_resource_id, billing_period, native_cost_micros, native_currency, reporting_cost_micros, reporting_currency, driver_basis, driver_quantity, provider_reference, source, note, recorded_at';
 
-/** Every infrastructure cost component for one organization, newest billing period first. Staff-only (RLS). */
+/** Every infrastructure cost component for one organization, newest billing period first. Needs `cost.read` (RLS). */
 export async function listOrganizationInfrastructureCosts(
   db: Db,
   input: { organizationId: string; from?: string; to?: string },
@@ -104,16 +104,16 @@ export async function listOrganizationInfrastructureCosts(
   return (data ?? []).map(toComponent);
 }
 
-/** Shared and unallocated platform costs for a period — organization_id is null by construction. */
-export async function listSharedInfrastructureCosts(
+/** Every cost component recorded for a billing-period range — attributed to a business or shared — newest first. Needs `cost.read` (RLS). */
+export async function listInfrastructureCosts(
   db: Db,
   input: { from?: string; to?: string },
 ): Promise<InfrastructureCostComponent[]> {
-  let query = db.from('platform_infrastructure_cost_components').select(COLUMNS).is('organization_id', null);
+  let query = db.from('platform_infrastructure_cost_components').select(COLUMNS);
   if (input.from) query = query.gte('billing_period', input.from);
   if (input.to) query = query.lt('billing_period', input.to);
-  const { data, error } = await query.order('billing_period', { ascending: false });
-  if (error) throw fromDatabaseError(error, 'infrastructure_costs.shared_list_failed');
+  const { data, error } = await query.order('billing_period', { ascending: false }).order('recorded_at', { ascending: false });
+  if (error) throw fromDatabaseError(error, 'infrastructure_costs.list_failed');
   return (data ?? []).map(toComponent);
 }
 
@@ -139,7 +139,7 @@ export type RecordInfrastructureCostInput = {
   note?: string;
 };
 
-/** The one door onto `platform_infrastructure_cost_components`. Needs `platform.commercial`. */
+/** The one door onto `platform_infrastructure_cost_components`. Needs `cost.manage` in GildOps' operating organization. */
 export async function recordInfrastructureCost(db: Db, input: RecordInfrastructureCostInput): Promise<string> {
   const { data, error } = await db.rpc('record_infrastructure_cost', {
     p_cost_category: input.costCategory,
@@ -164,7 +164,7 @@ export async function recordInfrastructureCost(db: Db, input: RecordInfrastructu
   } as never);
   if (error) {
     throw new DomainError(
-      error.code === '42501' ? 'This needs the commercial platform permission.' : error.message,
+      error.code === '42501' ? 'Recording a cost needs the cost-management permission in GildOps’ own business.' : error.message,
       'infrastructure_costs.record_failed',
     );
   }
@@ -193,7 +193,8 @@ export type OrganizationCostToServe = {
 };
 
 /**
- * What it cost GildOps to serve this organization in this period — staff only. Shared platform
+ * What it cost GildOps to serve this organization in this period — `cost.read` in GildOps' own
+ * organization. Shared platform
  * overhead and the unallocated residual are reported beside the attributable total, never folded
  * into it (the rule this whole work order repeats because a margin becomes a lie without it).
  */
@@ -209,7 +210,7 @@ export async function organizationCostToServe(
   });
   if (error) {
     throw new DomainError(
-      error.code === '42501' ? 'Only platform staff may read this.' : error.message,
+      error.code === '42501' ? 'This needs the cost permission in GildOps’ own business.' : error.message,
       'infrastructure_costs.cost_to_serve_failed',
     );
   }

@@ -670,11 +670,23 @@ copy, usage costs) take the operating organization as their seller through three
 status is an input to none of them, so platform authority opens no GildOps Finance record; when no
 operating organization is configured all three refuse.
 
-Three tenant permissions govern selling and its economics in any business's Finance:
-`subscription.manage` (start and change customers' subscriptions), `cost.read` (supplier costs,
-cost to serve and margins) and `cost.manage` (record supplier costs and economics assumptions).
-They were granted by forward backfill to unrestricted administrators only
-(`20261120000001`); other roles receive them explicitly from someone who holds them. `cost.read`
+Four tenant permissions govern selling and its economics in any business's Finance:
+`subscription.read` (see customers' subscriptions), `subscription.manage` (start and change them),
+`cost.read` (supplier costs, cost to serve and margins) and `cost.manage` (record supplier costs and
+economics assumptions). They were granted by forward backfill to unrestricted administrators only
+(`20261120000001`, and `subscription.read` also to every role holding `subscription.manage` in
+`20261121000001`); other roles receive them explicitly from someone who holds them.
+
+In GildOps' operating organization they are the whole authority over GildOps' money
+(`20261121000001`): every former `platform.commercial` function, policy and view now checks
+`app.platform_seller_has(...)` or its refusing form `app.require_platform_seller(...)` —
+subscriptions, agreed prices, terms, charges, credits and billing-provider state with
+`subscription.read`/`subscription.manage`, supplier rates, cost components, revenue and economics
+with `cost.read`/`cost.manage`, plan creation (`create_plan_item`) with `price.manage`. A member of
+GildOps holding every platform permission and none of these reads and changes none of it, and
+platform staff outside GildOps read nothing. A customer business keeps reading its own plan, agreed
+price and allowances, and never GildOps' costs, billing-provider references or another customer's
+records (`finance-gildops-commercial.test.ts`). `cost.read`
 and `cost.manage` are marked sensitive in the role editor. They also govern a business's own expected
 costs: the cost lines on its priced items and the time and cost per hour of its Work types' stages
 (`price_book_item_expected_costs`, `work_item_status_expected_costs`) are read only with `cost.read`
@@ -692,20 +704,17 @@ Examples of control-plane areas include:
 - organizations;
 - providers;
 - catalogue;
-- commercial/pricing;
-- billing;
 - AI runtime;
 - failures/operations.
 
 A person who can sell or operate GildOps' business should not automatically gain provider credentials or global tenant administration.
 
-The five existing capabilities are enforced at the database boundary:
+The four platform permissions are enforced at the database boundary. None reaches money: GildOps' prices, subscriptions, supplier costs and margins answer only to Finance permissions held in its operating organization (ADR-057).
 
 | Capability | Privileged operations |
 | --- | --- |
-| `platform.organizations` | Provisioning, audited support sessions, tenant connection diagnostics, resolved allowance/credit inspection, lifecycle inspection and existing-tenant association. Association also requires seller `customer.update` and receiving-tenant `organization.manage`. |
+| `platform.organizations` | Provisioning, audited support sessions, tenant connection diagnostics, resolved allowance/credit inspection, which plan a business holds and its billing-provider status (to enforce and explain service access), lifecycle inspection, designating the operating organization and existing-tenant association. Association also requires seller `customer.update` and receiving-tenant `organization.manage`. |
 | `platform.catalogue` | Product/module/feature metadata, plans' switch lists (grants, feature overrides, allowances, whether billed), connectors, connector logos and integration diagnostics. Until a dedicated development permission exists (it needs a migration extending `platform_staff_capabilities_known`), it also unlocks Studio → Interface design in GildOps' operating organization (`INTERFACE_DESIGN_CAPABILITY`, ADR-056). That tool changes only the requesting browser's sidebar layout; the shell honours the stored preview only after resolving this permission itself, and no tenant capability reaches it. |
-| `platform.commercial` | Being retired (ADR-057): cost/revenue reads, platform billing state and commercial adjustments not yet moved to GildOps' Finance. Plan prices, add-ons and billing-provider price references are GildOps' Finance under `price.manage`. |
 | `platform.providers` | Provider accounts, credential writes, bindings/resources, provider-service configuration and AI runtime assignments. |
 | `platform.health` | Operational failures and the bounded health summary, including counts and recent organization metadata. It does not grant raw rates or provider-account records. |
 
@@ -718,10 +727,10 @@ catalogue branches retain their independent scope.
 
 An accepted-proposal handoff requires `platform.organizations`, seller `customer.update`
 and accepted proposal state. It uses ungranted internal plan-writing cores, so provisioning the
-accepted terms does not require the salesperson to hold `platform.commercial`. Direct
-handoff-table INSERT is revoked. The internal GildOps bootstrap requires both organization and
-commercial authority because it designates the operating organization and grants Membership and the
-internal package. Once the organization is designated, the bootstrap leaves its current base Plan
+accepted terms does not require the salesperson to hold Finance's `subscription.manage`. Direct
+handoff-table INSERT is revoked. The internal GildOps bootstrap requires organization authority:
+designating the operating organization, and granting Membership and the internal package, is
+provisioning. Once the organization is designated, the bootstrap leaves its current base Plan
 unchanged.
 
 Human commands retain explicit execution grants, pinned empty search paths and command-level
@@ -1389,4 +1398,4 @@ Hosted Portal exchanges validate the verified hostname organization before bindi
 
 ## Inbound voice and external receptionist trust
 
-Inbound ingress verifies the carrier signature and configured account before persistence. The narrow voice machine role can resolve only a call-bound organization snapshot and cursor; it has no tenant-table reads. Business profile choices never confer access. Voice-agent sessions use a pinned Platform credential in the API runtime; signed raw-body callbacks expire after five minutes and must match organization, call and external session identity. Only the configured route human fallback is eligible for transfer; arbitrary dial strings and arbitrary tenant context are unavailable. Carrier transfer effects are claimed once and remain uncertain until carrier evidence; duplicate requests cannot repeat them. `/platform` still requires configured operating Membership and exact live platform authority.
+Inbound ingress verifies the carrier signature and configured account before persistence. The narrow voice machine role can resolve only a call-bound organization snapshot and cursor; it has no tenant-table reads. Business profile choices never confer access. Voice-agent sessions use a pinned Platform credential in the API runtime; signed raw-body callbacks expire after five minutes and must match organization, call and external session identity. Only the configured route human fallback is eligible for transfer; arbitrary dial strings and arbitrary tenant context are unavailable. Carrier transfer effects are claimed once and remain uncertain until carrier evidence; duplicate requests cannot repeat them. Administration still requires configured operating Membership and exact live platform authority.

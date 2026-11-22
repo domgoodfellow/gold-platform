@@ -3,11 +3,23 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { holdPlatformProviderTables, releasePlatformProviderTables } from '@/tests/support/exclusive';
-import { recordProviderRate, recordRetailRate } from '@/lib/domain/commercial/catalogue';
+import { recordProviderRate } from '@/lib/domain/commercial/catalogue';
 import { organizationCommercialSummary, organizationUsageDetail, recordUsageReconciliation } from '@/lib/domain/commercial/usage';
 import { createCustomer } from '@/lib/domain/customers/customers';
 import { recordCall } from '@/lib/domain/reception/calls';
-import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
+import { foundBusiness } from '@/tests/support/founding';
+import { designateGildOps } from '@/tests/support/plans';
+
+let restoreOperatingSeller: () => Promise<void> = async () => {};
+let sellerPg: Client | undefined;
+async function connectSellerPg(): Promise<Client> {
+  const client = new Client({ connectionString: process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' });
+  await client.connect();
+  return client;
+}
+afterAll(async () => {
+  try { await restoreOperatingSeller(); } finally { await sellerPg?.end(); }
+});
 
 /**
  * One economics model: meter -> usage event -> provider fulfilment and cost -> retail rate.
@@ -46,7 +58,10 @@ type Tenant = { db: SupabaseClient; organizationId: string; customerId: string }
 const createdOrganizations: string[] = [];
 
 let pg: Client;
-let staff: SupabaseClient;
+/** GildOps' Finance (ADR-057): subscriptions, prices, costs and economics take its permissions. */
+let seller: SupabaseClient;
+let sellerOrganizationId: string;
+
 let tenant: Tenant;
 let other: Tenant;
 let accountId: string;
@@ -129,7 +144,10 @@ beforeAll(async () => {
   while ((await pg.query('select 1 from public.platform_retail_rates where currency = $1 union all select 1 from public.platform_provider_rates where currency = $1 limit 1', [CURRENCY])).rowCount) {
     CURRENCY = code();
   }
-  staff = await asPlatformStaff();
+  const gildopsSeller = await designateGildOps(sellerPg ??= await connectSellerPg());
+  sellerOrganizationId = gildopsSeller.organizationId;
+  seller = gildopsSeller.db;
+  restoreOperatingSeller = gildopsSeller.restore;
   await purgeOwnRateHistory();
 
   // Retail history for voice in this run's currency: two past prices, one scheduled, and a draft
@@ -256,18 +274,6 @@ describe('provider cost components', () => {
     expect(rows.find((row) => row.provider_key === 'deepgram')?.cost_state).toBe('unknown');
   });
 
-  it('records one active number-month once when a monthly job retries', async () => {
-    const number = (await pg.query(`select id from public.phone_numbers where organization_id = $1 and e164 = $2`, [tenant.organizationId, NUMBER])).rows[0].id;
-    const month = new Date().toISOString().slice(0, 7) + '-01';
-    const first = await staff.rpc('record_phone_number_month', { p_phone_number_id: number, p_billing_period: month });
-    const second = await staff.rpc('record_phone_number_month', { p_phone_number_id: number, p_billing_period: month });
-    expect(first.error).toBeNull();
-    expect(second.error).toBeNull();
-    expect(second.data).toBe(first.data);
-    const { rows } = await pg.query(`select count(*)::int as count from public.usage_events where organization_id = $1 and meter_id = 'phone_numbers' and billing_period = $2`, [tenant.organizationId, month]);
-    expect(rows[0].count).toBe(1);
-  });
-
   it('does not expose wholesale components to an ordinary tenant', async () => {
     const result = await tenant.db.from('usage_cost_components').select('id').limit(1);
     expect(result.data ?? []).toEqual([]);
@@ -369,30 +375,23 @@ describe('retail rate resolution', () => {
     expect(none.data).toEqual([]);
   });
 
-  it('lets staff schedule a price ahead, and refuses one dated in the past or from anybody else', async () => {
-    const ahead = await recordRetailRate(staff, {
-      meterId: 'email_send',
-      currency: CURRENCY,
-      unitAmountMicros: 1_000_000,
-      source: 'usage-economics.test.ts',
-      effectiveFrom: at(3 * DAY),
+  it('lets GildOps’ Finance schedule a plan’s usage price ahead, and refuses one dated in the past or from anybody else', async () => {
+    const created = await seller.rpc('create_plan_item', { p_organization_id: sellerOrganizationId, p_kind: 'plan', p_name: `Usage price ${randomUUID().slice(0, 6)}` });
+    expect(created.error).toBeNull();
+    const price = (effectiveFrom: string) => ({
+      p_organization_id: sellerOrganizationId, p_item_id: created.data, p_meter_id: 'email_send', p_currency: CURRENCY,
+      p_unit_amount_micros: 1_000_000, p_effective_from: effectiveFrom, p_note: 'usage-economics.test.ts',
     });
-    expect(ahead).toBeTruthy();
-    expect(await retailAt('email_send', at(0))).toBeUndefined();
-    expect(Number((await retailAt('email_send', at(4 * DAY)))?.unit_amount_micros)).toBe(1_000_000);
+    const ahead = await seller.rpc('record_item_usage_price', price(at(3 * DAY)));
+    expect(ahead.error).toBeNull();
+    const { rows } = await pg.query('select plan_id is not null as on_plan, effective_from > now() as ahead from public.platform_retail_rates where id = $1', [ahead.data]);
+    expect(rows[0]).toEqual({ on_plan: true, ahead: true });
 
-    await expect(
-      recordRetailRate(staff, {
-        meterId: 'email_send', currency: CURRENCY, unitAmountMicros: 1, source: 'usage-economics.test.ts',
-        effectiveFrom: at(-DAY),
-      }),
-    ).rejects.toThrow(/past/);
+    const past = await seller.rpc('record_item_usage_price', price(at(-DAY)));
+    expect(past.error?.message).toMatch(/past/);
 
-    await expect(
-      recordRetailRate(tenant.db, {
-        meterId: 'email_send', currency: CURRENCY, unitAmountMicros: 1, source: 'usage-economics.test.ts',
-      }),
-    ).rejects.toMatchObject({ code: 'commercial.forbidden' });
+    const stranger = await tenant.db.rpc('record_item_usage_price', price(at(3 * DAY)));
+    expect(stranger.error?.code).toBe('42501');
   });
 });
 
@@ -609,7 +608,7 @@ describe('what a usage event cost and charged is written once', () => {
 
     // The provider raises its price and GOLD reprices, both from now on.
     await new Promise((resolve) => setTimeout(resolve, 20));
-    await recordProviderRate(staff, {
+    await recordProviderRate(seller, {
       providerKey: 'twilio', meterId: meter, currency: 'USD', unitAmountMicros: 999_999, source: 'usage-economics.test.ts',
     });
     await pg.query(
@@ -638,7 +637,7 @@ describe('what a usage event cost and charged is written once', () => {
   it('adds a reconciliation beside an event and leaves the event’s own cost alone', async () => {
     const id = (await pg.query(`select app.record_usage($1, 'sms_segment', 2, 'twilio', now(), null, null, null, $2, '') as id`, [tenant.organizationId, `rec-${randomUUID()}`])).rows[0].id;
     const before = (await pg.query('select provider_cost_micros, provider_rate_id from public.usage_events where id = $1', [id])).rows[0];
-    await recordUsageReconciliation(staff, {
+    await recordUsageReconciliation(seller, {
       usageEventId: id, reconciledProviderCostMicros: 123_456, providerCurrency: 'USD', source: 'usage-economics.test.ts',
     });
     const after = (await pg.query('select provider_cost_micros, provider_rate_id from public.usage_events where id = $1', [id])).rows[0];
@@ -657,7 +656,7 @@ describe('what a usage event cost and charged is written once', () => {
 
 describe('usage exists whatever its pricing state', () => {
   const detailFor = async (organizationId: string, id: string) => {
-    const detail = await organizationUsageDetail(staff, { organizationId });
+    const detail = await organizationUsageDetail(seller, { organizationId });
     const row = detail.find((entry) => entry.usageEventId === id);
     expect(row).toBeTruthy();
     return row!;
@@ -703,7 +702,7 @@ describe('usage exists whatever its pricing state', () => {
     expect(detail.awaitingReconciliation).toBe(true);
 
     // Its cost can still be reconciled, and the retail side stays empty until the business is configured.
-    await recordUsageReconciliation(staff, {
+    await recordUsageReconciliation(seller, {
       usageEventId: rows[0].id, reconciledProviderCostMicros: 250_000, providerCurrency: 'USD', source: 'usage-economics.test.ts',
     });
     const reconciled = await detailFor(stateless.organizationId, rows[0].id);
@@ -714,7 +713,7 @@ describe('usage exists whatever its pricing state', () => {
 
     // A business that cannot be priced is not stopped from working, and the summary counts what is unpriced.
     expect(await pg.query('select app.may_spend_on($1, $2, 1) as ok', [stateless.organizationId, 'voice_minutes']).then((r) => r.rows[0].ok)).toBe(true);
-    const summary = await organizationCommercialSummary(staff, { organizationId: stateless.organizationId });
+    const summary = await organizationCommercialSummary(seller, { organizationId: stateless.organizationId });
     const voice = summary.find((row) => row.meterId === 'voice_minutes');
     expect(voice?.quantity).toBe(2);
     expect(voice?.unpricedQuantity).toBe(2);
@@ -774,7 +773,7 @@ describe('usage exists whatever its pricing state', () => {
 
     const d5 = await detailFor(tenant.organizationId, awaiting);
     expect(d5.awaitingReconciliation).toBe(true);
-    await recordUsageReconciliation(staff, { usageEventId: awaiting, reconciledProviderCostMicros: 1, providerCurrency: 'USD', source: 'usage-economics.test.ts' });
+    await recordUsageReconciliation(seller, { usageEventId: awaiting, reconciledProviderCostMicros: 1, providerCurrency: 'USD', source: 'usage-economics.test.ts' });
     expect((await detailFor(tenant.organizationId, awaiting)).awaitingReconciliation).toBe(false);
   });
 
@@ -786,7 +785,7 @@ describe('usage exists whatever its pricing state', () => {
     expect(rows[0]).toEqual({ provider_cost_micros: null, provider_rate_id: null });
     expect((await detailFor(tenant.organizationId, uncosted)).providerState).toBe('uncosted');
 
-    const summary = await organizationCommercialSummary(staff, { organizationId: tenant.organizationId });
+    const summary = await organizationCommercialSummary(seller, { organizationId: tenant.organizationId });
     const tts = summary.find((row) => row.meterId === 'tts_characters');
     expect(tts?.uncostedQuantity).toBe(2);
     expect(tts?.marginMinor).toBeNull();

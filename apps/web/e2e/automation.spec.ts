@@ -8,7 +8,6 @@ import { loadDemoContext, OWNER_STORAGE_STATE } from './helpers';
 import { DEMO_PASSWORD } from '../scripts/demo/businesses';
 import { provisionOrganization } from '../lib/domain/platform/provision';
 import { setModuleEnabled } from '../lib/domain/tenancy/modules';
-import { recordCommercialTerm } from '../lib/domain/commercial/terms';
 import { createWorkItemType } from '../lib/domain/work-items/types';
 import { createWorkItemStatus } from '../lib/domain/work-items/statuses';
 import { createWorkItemTransition } from '../lib/domain/work-items/transitions';
@@ -31,6 +30,7 @@ import {
 } from '../lib/domain/automation/templates';
 import { chooseOption } from './select-field';
 import { readyEmailSender } from '../tests/support/email-sender';
+import { recordFixtureTerm } from '../tests/support/plans';
 
 config({ path: '../../.env.test' });
 test.use({ storageState: OWNER_STORAGE_STATE });
@@ -70,7 +70,7 @@ test('authors, executes and monitors rules with responsive operating surfaces', 
     key: 'automations',
     enabled: true,
   });
-  await recordCommercialTerm(staff, {
+  await recordFixtureTerm({
     organizationId,
     productKey: 'module:automations',
     periodStart: '2026-01-01',

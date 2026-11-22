@@ -314,7 +314,7 @@ The action revalidates the root layout and the editor refreshes server component
 document reload. No cookies, localStorage or runtime CSS are preference authorities.
 
 `AccountAppearance` reads under the caller's JWT and renders the semantic attributes during SSR.
-It wraps OrganizationShell, the standalone Platform shell, personal Settings' organization/fallback
+It wraps OrganizationShell (Administration included), personal Settings' organization/fallback
 frames, no-business onboarding and the signed-in invitation surface. The active-call dock sits
 inside the same scope while telephone providers remain above the shell. Dialer popouts copy the
 validated account scope and observe saved updates. PageDrawer portals remain inside the existing
@@ -706,7 +706,7 @@ The shared page-identity components own this responsibility.
 
 **Status.** This is the approved target. Migration is per route (`RESOLVED_LOCATION_ROUTES` in `lib/route/page-location.ts`). Today the CRM operating pages take their location from the resolver: CRM Home, Customers and Customer detail, Relationship pipeline, Opportunities and Opportunity detail, Tasks, shared Calendar and CRM Search; so do the Settings destinations (A6) apart from Custom fields and Secrets. The Opportunity pipeline (open decision U-17), CRM configuration (Batch 3) and every other workspace still publish their own trail through `PageLocation`. A route uses exactly one of the two, never both. On a migrated route the shell resolves the location once, and the bar, the phone's Up control and the page's `h1` read that one answer; loading and refused states keep the known ancestors.
 
-- **One location.** Every page inside the organization, Settings and Platform shells shows one location: its ancestors and the current page, resolved by `resolveLocation` (`lib/route/page-location.ts`) from the canonical registries. A page supplies only server-known record labels; it never writes its own ancestors.
+- **One location.** Every page inside the organization shell (Administration included) and Settings shows one location: its ancestors and the current page, resolved by `resolveLocation` (`lib/route/page-location.ts`) from the canonical registries. A page supplies only server-known record labels; it never writes its own ancestors.
 - **Loading and missing.** A loading page keeps its known ancestors and shows the record name only once it is known. A missing, deleted or unauthorized record shows not-found inside its nearest valid ancestors, without disclosing which it was. Record data is never invented.
 - **Links.** An ancestor is a link only when it is a real page the viewer may open. Grouping levels and redirect-only addresses (Settings, Library, Access, every workspace's Configuration level) are plain text. Sidebar visibility is not the link rule.
 - **Levels.** Query filters are not levels; a selection with its own route is. Settings presentation groups and Platform group headings are not levels. Platform starts at "Platform".
@@ -1861,7 +1861,7 @@ Moved to [docs/surfaces/settings.md](surfaces/settings.md#settings-ui).
 
 ## Platform UI
 
-Platform Administration should feel like a coherent control plane without becoming a completely separate visual application.
+Administration is a context of GildOps' organization shell (ADR-057): the same shell, header, Agent, appearance and responsive navigation as every workspace, never a separate visual application.
 
 Reuse:
 
@@ -1877,7 +1877,7 @@ Platform may use denser information presentation because its users perform admin
 
 Density is not permission to abandon hierarchy.
 
-Platform Administration has no `VisualScope`: personal Appearance (preset, density, shape) does not apply there, and shared popups (popovers including `InfoPopover`, selects, comboboxes and menus) portal to the page body instead of a scope. This is the accepted current behaviour; a shared popup still works there because each falls back to the body when no scope is present.
+Administration inherits GildOps' organization `VisualScope`, so personal Appearance and the business's brand apply there as in every workspace.
 
 ---
 

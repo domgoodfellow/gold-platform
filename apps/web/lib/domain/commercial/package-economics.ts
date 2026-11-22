@@ -400,7 +400,7 @@ export async function saveDraftScenario(db: Db, input: {
     p_addon_plan_ids: input.addonPlanIds ?? [],
     p_direct_costs: input.directCosts ?? [],
   }) as never);
-  if (error) throw new DomainError(error.code === '42501' ? 'Only platform staff may save reference scenarios.' : error.message, 'package_economics.save_draft_failed');
+  if (error) throw new DomainError(error.code === '42501' ? 'Saving a scenario needs the cost-management permission in GildOps’ own business.' : error.message, 'package_economics.save_draft_failed');
   return data as string;
 }
 

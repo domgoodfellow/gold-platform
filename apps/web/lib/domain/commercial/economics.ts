@@ -78,7 +78,7 @@ export async function listEconomicsEvents(
   });
   if (error) {
     throw new DomainError(
-      error.code === '42501' ? 'Only platform staff may see vendor costs.' : 'Something went wrong. Try again.',
+      error.code === '42501' ? 'Supplier costs need the cost permission in GildOps’ own business.' : 'Something went wrong. Try again.',
       'commercial.economics_failed',
     );
   }

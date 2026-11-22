@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { asPlatformStaff } from './founding';
-import { createPlan, grantPlanProduct } from '../../lib/domain/catalogue/plans';
-import { recordPlanAssignment } from '../../lib/domain/catalogue/organization-plans';
+import { grantPlanProduct } from '../../lib/domain/catalogue/plans';
 import type { Client } from 'pg';
 import type { Db } from '../../lib/db/types';
 import { createCustomer } from '../../lib/domain/customers/customers';
@@ -25,15 +24,16 @@ import { submitPublicFormByKey } from '../../lib/domain/forms/public-forms';
 import { createWebsite } from '../../lib/domain/public-site/public-site';
 import { createAutomationRule, addAutomationAction } from '../../lib/domain/automation/rules';
 import { todayInZone, zonedTimeToInstant, shiftDate } from '../../lib/domain/scheduling/window';
+import { assignFixturePlan, createFixturePlan } from './plans';
 
 export async function grantHomeVerificationPlan(organizationId: string) {
   if (!['127.0.0.1', 'localhost'].includes(new URL(process.env.SUPABASE_URL ?? '').hostname)) throw new Error('Home fixtures are local only');
   const staff = await asPlatformStaff();
-  const planId = await createPlan(staff, { key: `home_${randomUUID().slice(0, 8)}`, kind: 'plan', label: 'Local Home verification', description: 'Local fixture only', billable: false });
-  const products = await staff.from('platform_catalog_products').select('key');
+  const planId = await createFixturePlan({ key: `home_${randomUUID().slice(0, 8)}`, kind: 'plan', label: 'Local Home verification', description: 'Local fixture only', billable: false });
+  const products = await staff.from('platform_catalog_products').select('key').neq('kind', 'operator');
   if (products.error) throw products.error;
   for (const product of products.data) await grantPlanProduct(staff, { planId, productKey: product.key });
-  await recordPlanAssignment(staff, { organizationId, planId, periodStart: '2026-01-01', periodEnd: '9999-12-31', note: 'Local Home verification fixture' });
+  await assignFixturePlan({ organizationId, planId, periodStart: '2026-01-01', periodEnd: '9999-12-31', note: 'Local Home verification fixture' });
 }
 
 export async function seedHomeFixture(db: Db, organizationId: string, pg: Client) {

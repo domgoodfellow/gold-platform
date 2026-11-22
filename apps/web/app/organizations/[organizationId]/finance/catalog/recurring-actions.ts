@@ -14,6 +14,7 @@ import {
   type ItemSaleStatus,
 } from '@/lib/domain/pricing/recurring-items';
 import { provisionItemPrice, recordUsagePrice } from '@/lib/domain/pricing/item-provider-prices';
+import { createPlanItem } from '@/lib/domain/catalogue/plans';
 import { requireOperatingArea } from '@/lib/route/workspace-configuration';
 
 /**
@@ -47,15 +48,16 @@ function failed(error: unknown): RecurringItemState {
 export async function createRecurringItemAction(_: RecurringItemState, form: FormData): Promise<RecurringItemState> {
   try {
     const { db, organizationId } = await context(form);
-    const itemId = await createRecurringItem(db, {
-      organizationId,
-      name: String(form.get('name') ?? ''),
-      unit: String(form.get('unit') ?? ''),
-      description: String(form.get('description') ?? ''),
-    });
+    const kind = String(form.get('kind') ?? 'item');
+    const name = String(form.get('name') ?? '');
+    const description = String(form.get('description') ?? '');
+    // A GildOps plan or add-on: the database creates its plan record with it, and only in GildOps' own organization.
+    const itemId = kind === 'plan' || kind === 'addon'
+      ? await createPlanItem(db, { organizationId, kind, name, description })
+      : await createRecurringItem(db, { organizationId, name, unit: String(form.get('unit') ?? ''), description });
     refresh(organizationId);
     // The drawer opens the new item and confirms it in a toast.
-    return { error: null, success: 'Recurring item created.', itemId };
+    return { error: null, success: kind === 'plan' ? 'Plan created.' : kind === 'addon' ? 'Add-on created.' : 'Recurring item created.', itemId };
   } catch (error) {
     return failed(error);
   }

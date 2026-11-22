@@ -569,9 +569,9 @@ It confers no authority.
 
 ---
 
-### Platform runtime
+### Administration runtime
 
-Platform Administration owns `/platform/**` and a distinct composition of the shared shell. Its server guard resolves GildOps' configured operating organization through `lib/domain/platform/operating-organization.ts`, proves Membership using the billing-recovery guard and checks exact live platform capability. The URL supplies no organization authority. Old organization-scoped Platform URLs render the ordinary organization not-found surface; there are no redirect stubs. Platform pages do not enter the tenant workspace registry.
+Administration is served at `/organizations/{goldId}/administration/**`, inside the organization layout and its `OrganizationShell`, as an entered context with its own registry (`lib/platform-navigation.ts`); there is no second shell (ADR-057). Its layout runs `requirePlatformScope(organizationId)`, which proves Membership using the billing-recovery guard, that the organization is GildOps' configured operating organization (`lib/domain/platform/operating-organization.ts`) and live platform permissions; each area and page guards its own permission again. The retired `/platform` addresses do not exist and are not redirected. Administration pages do not enter the tenant workspace registry, and they import nothing that prices, sells or costs (`tests/architecture/static/finance-boundary.test.ts`).
 
 ---
 
@@ -924,9 +924,9 @@ Race-sensitive commitment is enforced transactionally/database-side rather than 
 
 ## Finance architecture
 
-Tenant Finance and GildOps platform economics are separate planes.
+Finance is the one place money is managed (ADR-057). Two money directions stay separate: what a business sells its customers, in that business's Finance, and what a business buys from GildOps, in its Settings → Plan & usage.
 
-### Tenant Finance
+### Organization Finance
 
 ```text
 Customer
@@ -936,19 +936,23 @@ Organization
 
 Owned by the Finance product/domain.
 
-The unsaved Economics & pricing planner is composed within Financial reports. Its route uses `requireOperatingArea(..., 'finance-reports')` before tenant report/catalog reads, preserving organization membership, service access, `report.read` and billing/feature gates. `features/finance/pricing-planner.tsx` holds temporary scenarios; `lib/domain/pricing/planning.ts` alone parses/validates assumptions and calculates suggestions. Recorded context comes from the existing `listInvoicedAndIncurred` reporting authority; catalog comparisons use `listPriceBookItems` under the caller's RLS. There is no write endpoint, scenario table or separate ledger. Any future publication must be separately authorized through the existing price-book update authority. Legacy `/finance/economics` remains a platform redirect.
+The unsaved Economics & pricing planner is composed within Financial reports. Its route uses `requireOperatingArea(..., 'finance-reports')` before tenant report/catalog reads, preserving organization membership, service access, `report.read` and billing/feature gates. `features/finance/pricing-planner.tsx` holds temporary scenarios; `lib/domain/pricing/planning.ts` alone parses/validates assumptions and calculates suggestions. Recorded context comes from the existing `listInvoicedAndIncurred` reporting authority; catalog comparisons use `listPriceBookItems` under the caller's RLS. There is no write endpoint, scenario table or separate ledger.
 
-### Platform commercial
+### GildOps selling GildOps
 
 ```text
-Organization
+Business served
   ↓
-GildOps
+GildOps' operating Organization (Finance)
   ↓
-Provider
+Supplier
 ```
 
-Owned by Platform Administration: provisioning, entitlement enforcement, providers, infrastructure and platform economics. Selling is not platform-owned: every Organization sells through organization Finance, and GildOps sells its platform through its operating Organization's Finance (ADR-051). The existing platform-billing tables remain in this plane, protected, until a reviewed migration.
+GildOps sells through its operating Organization's Finance with the same workspace as every business. Its plans and add-ons are recurring items of its Catalog & Pricing, created there (`create_plan_item`) and linked to the platform plan that says what each switches on. Subscriptions, Costs and Economics are Finance destinations behind the operator Product's features; their routes compose `lib/application/finance/subscriptions.ts`, `cost-to-serve.ts` and `plan-switches.ts` over the commercial domain modules (`lib/domain/catalogue`, `lib/domain/commercial`, `lib/domain/platform-billing`), whose records are keyed by the buying business with the seller derived from the operating-Organization setting (`app.platform_seller_id()`). Every door checks a Finance permission in that Organization (`app.require_platform_seller`, `app.platform_seller_has`); none checks platform authority, except Product Registry's own `platform.catalogue` on a plan's switch list.
+
+### Administration
+
+Owned by Administration: provisioning and lifecycle, entitlement enforcement, the feature registry and plan switch lists, providers, runtimes, metering in units, billing-webhook delivery health and reliability. It manages no money and imports no Finance or pricing code.
 
 Shared concepts such as money, meter or payment provider do not justify merging the ledgers.
 
@@ -1449,7 +1453,8 @@ Classification precedes route migration. A legacy URL is compatibility only, nev
 | Website/forms/templates editing | Studio operations | studio/website, studio/forms, studio/templates | retain operating surfaces |
 | Branding/public profile/domains/publication boundary | Shared organization configuration | settings/branding, public-profile, domains | retain Settings owners; Studio links out |
 | Profile/security/appearance | Personal configuration | settings/account and subroutes | retain user-owned routes |
-| Providers/catalogue/runtime/commercial authority | Platform configuration | GildOps organization/platform | retain independent platform guards |
+| Providers/catalogue/runtime authority | Administration | GildOps organization/administration | retain independent platform guards |
+| GildOps' plans, subscriptions, costs and economics | Finance | GildOps organization/finance | Finance permissions in GildOps' organization (ADR-057) |
 
 
 The migration inventory above is implemented through the existing registries. CRM stages and customer fields live under `sales/configuration`; legacy customer-field URLs redirect to CRM, while work-item field URLs redirect to the existing Work field tab. Other entity definitions retain the shared field engine and their existing entity-specific controls. The operating Relationship pipeline links to the Relationship stages editor rather than keeping an inline copy; CRM configuration is otherwise reached from CRM's own sidebar group and Home Configure menu. Finance owns price-book/payment configuration; General remains the sole currency editor. Work and Scheduling retain their existing route owners and share the Work configuration section projection.
@@ -1475,7 +1480,7 @@ Local verification uses the repository fast suite, focused database and provider
 
 ## Live inbound and receptionist execution
 
-`app/domains/communications/routing.py` remains the only preview/runtime routing decision. `app/services/communications/inbound.py` composes machine-scoped snapshot reads with that resolver and the carrier adapter. `app/services/communications/voice_agent.py` composes spend admission, pinned credential lookup, external session creation, signed callbacks and canonical restricted transfer. Vendor HTTP/XML/HMAC live under `app/providers`. The external voice-agent project owns speech/agent execution; no agent internals or tenant database credentials cross this adapter. `/platform` owns its route tree and composes the shared shell independently of organization pages.
+`app/domains/communications/routing.py` remains the only preview/runtime routing decision. `app/services/communications/inbound.py` composes machine-scoped snapshot reads with that resolver and the carrier adapter. `app/services/communications/voice_agent.py` composes spend admission, pinned credential lookup, external session creation, signed callbacks and canonical restricted transfer. Vendor HTTP/XML/HMAC live under `app/providers`. The external voice-agent project owns speech/agent execution; no agent internals or tenant database credentials cross this adapter. Administration (`/organizations/{goldId}/administration`) is a context of the organization shell with its own registry and guard.
 
 ### CRM intake composition
 

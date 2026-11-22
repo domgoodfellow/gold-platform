@@ -7,7 +7,7 @@ import { createLocation, linkCustomerLocation } from '@/lib/domain/locations/loc
 import { configureBusiness, type BusinessShape } from '@/lib/domain/configuration/configure';
 import { workTypesOf } from '@/lib/domain/configuration/shape';
 import { recordCommercialTerm } from '@/lib/domain/commercial/terms';
-import { createPlan, grantPlanModule, grantPlanProduct } from '@/lib/domain/catalogue/plans';
+import { createPlanItem, grantPlanModule, grantPlanProduct } from '@/lib/domain/catalogue/plans';
 import { recordPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
 import { provisionOrganization } from '@/lib/domain/platform/provision';
 import { bootstrapOperatingOrganization, callerOperatingOrganization } from '@/lib/domain/platform/operating-organization';
@@ -393,15 +393,15 @@ const STAFF_EMAIL = 'staff@gold.test';
 const PLATFORM_CAPABILITIES = [
   'platform.organizations',
   'platform.catalogue',
-  'platform.commercial',
   'platform.providers',
   'platform.health',
 ];
 const APP_ORIGIN = 'http://localhost:3000';
 
 /**
- * Platform staff with every platform capability, and a member of GildOps' operating organization
- * so Platform has somewhere to render. Both steps are safe to repeat.
+ * Platform staff with every platform capability, and the owner of GildOps' operating organization,
+ * so Administration has somewhere to render and GildOps' Finance records what the demo businesses
+ * subscribe to. Both steps are safe to repeat.
  *
  * The staff row goes in over a direct connection because nothing in the application may write
  * one. The operating organization goes through the same two acts `e2e/global-setup.ts` uses: a
@@ -442,24 +442,28 @@ async function ensurePlatformAdmin(pg: Client): Promise<{ staff: SupabaseClient;
 }
 
 /**
- * One deterministic, non-billable demo plan, created by platform staff through the catalogue
- * commands, or found again by its key. It grants everything except card payments: launch requires
- * a connected payment account for those, which a local demo cannot have.
+ * One deterministic, non-billable demo plan, found again by its key or created where every plan is
+ * created: as a recurring item of GildOps' Catalog & Pricing, by its owner (ADR-057). What it
+ * switches on is then filled through Product Registry's commands. It grants everything except card
+ * payments: launch requires a connected payment account for those, which a local demo cannot have.
  */
-async function ensureDemoPlan(pg: Client, staff: SupabaseClient): Promise<string> {
+async function ensureDemoPlan(pg: Client, staff: SupabaseClient, goldOrganizationId: string): Promise<string> {
   const { rows: existing } = await pg.query<{ id: string }>(
-    "select id from public.platform_plans where key = 'demo_complete'",
+    "select id from public.platform_plans where key in ('demo_complete', 'demo') order by key = 'demo_complete' desc limit 1",
   );
   if (existing[0]) return existing[0].id;
 
-  const planId = await createPlan(staff, {
-    key: 'demo_complete', kind: 'plan', label: 'Demo',
+  const itemId = await createPlanItem(staff, {
+    organizationId: goldOrganizationId, kind: 'plan', name: 'Demo',
     description: 'Local demo only: every catalogue module except card payments.', billable: false,
   });
+  const { rows: created } = await pg.query<{ id: string }>('select id from public.platform_plans where price_book_item_id = $1', [itemId]);
+  const planId = created[0].id;
   const NOT_SOLD = new Set(['payments']);
   const modules = await pg.query<{ product: string; module: string; id: string }>(
     `select p.key as product, m.key as module, m.id from public.platform_catalog_modules m
-       join public.platform_catalog_products p on p.id = m.product_id order by p.key, m.key`,
+       join public.platform_catalog_products p on p.id = m.product_id
+      where p.kind <> 'operator' order by p.key, m.key`,
   );
   const partial = new Set(modules.rows.filter((row) => NOT_SOLD.has(row.module)).map((row) => row.product));
   for (const product of new Set(modules.rows.map((row) => row.product))) {
@@ -597,8 +601,8 @@ async function main(): Promise<void> {
   try {
     // **Safe to run again.** Every step finds what an earlier run made before making anything, so
     // a second run adds nothing and ends with the same sign-in table.
-    const { staff } = await ensurePlatformAdmin(pg);
-    const planId = await ensureDemoPlan(pg, staff);
+    const { staff, goldOrganizationId } = await ensurePlatformAdmin(pg);
+    const planId = await ensureDemoPlan(pg, staff, goldOrganizationId);
 
     const stood: { business: DemoBusiness; shape: BusinessShape; organizationId: string }[] = [];
     for (const business of BUSINESSES) {

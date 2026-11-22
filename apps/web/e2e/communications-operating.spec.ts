@@ -7,9 +7,7 @@ import { loadDemoContext, OWNER_STORAGE_STATE, COLLEAGUE_STORAGE_STATE } from '.
 import { BUSINESSES, DEMO_PASSWORD } from '../scripts/demo/businesses';
 import { provisionOrganization } from '../lib/domain/platform/provision';
 import { setModuleEnabled } from '../lib/domain/tenancy/modules';
-import { createPlan, grantPlanProduct } from '../lib/domain/catalogue/plans';
-import { recordPlanAssignment } from '../lib/domain/catalogue/organization-plans';
-import { recordCommercialTerm } from '../lib/domain/commercial/terms';
+import { grantPlanProduct } from '../lib/domain/catalogue/plans';
 import { createCustomer } from '../lib/domain/customers/customers';
 import { createRoute, setRouteTargets, listRouteTargets } from '../lib/domain/reception/routing';
 import { createCallOutcome } from '../lib/domain/reception/outcomes';
@@ -20,6 +18,7 @@ import { assignPhoneNumber } from '../lib/domain/reception/numbers';
 import { listCallPage, getCallCounts } from '../lib/domain/reception/calls';
 import { todayInZone, zonedDayRange } from '../lib/domain/scheduling/window';
 import { chooseOption, selectedLabel } from './select-field';
+import { assignFixturePlan, createFixturePlan, recordFixtureTerm } from '../tests/support/plans';
 
 async function capture(page: Page, file: string) {
   await page.addStyleTag({ content: '[data-slot="sidebar-wrapper"] { height: auto !important; min-height: 100svh; overflow: visible !important; } [data-slot="sidebar-inset"] { overflow: visible !important; }' });
@@ -45,11 +44,11 @@ test.describe('Communications operating hub', () => {
     }
     const organizationId = await provisionOrganization(staff, { ownerEmail: ctx.ownerEmail, name: `Communications acceptance ${Date.now()}`, displayName: 'Communications operator', currency: 'CAD', timezone: 'America/Toronto' });
     await setModuleEnabled(owner, { organizationId, key: 'reception', enabled: true });
-    await recordCommercialTerm(staff, { organizationId, productKey: 'module:reception', periodStart: todayInZone('America/Toronto'), periodEnd: '9999-12-31', priceMinor: 0, note: 'Local Communications acceptance fixture' });
+    await recordFixtureTerm({ organizationId, productKey: 'module:reception', periodStart: todayInZone('America/Toronto'), periodEnd: '9999-12-31', priceMinor: 0, note: 'Local Communications acceptance fixture' });
     // Inbox has its own channel entitlement; voice permission is insufficient.
-    const planId = await createPlan(staff, { key: `comms_acceptance_${Date.now()}`, kind: 'plan', label: 'Local Communications acceptance', description: 'Local browser fixture only', billable: false });
+    const planId = await createFixturePlan({ key: `comms_acceptance_${Date.now()}`, kind: 'plan', label: 'Local Communications acceptance', description: 'Local browser fixture only', billable: false });
     await grantPlanProduct(staff, { planId, productKey: 'comms' });
-    await recordPlanAssignment(staff, { organizationId, planId, periodStart: todayInZone('America/Toronto'), periodEnd: '9999-12-31' });
+    await assignFixturePlan({ organizationId, planId, periodStart: todayInZone('America/Toronto'), periodEnd: '9999-12-31' });
     const base = `/organizations/${organizationId}`, home = `${base}/comms`;
     const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
     await page.setViewportSize({ width: 1440, height: 1000 });

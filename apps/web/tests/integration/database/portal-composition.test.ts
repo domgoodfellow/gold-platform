@@ -3,8 +3,7 @@ import { Client } from 'pg';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, afterAll, describe, expect, it } from 'vitest';
 import { foundBusiness, asPlatformStaff } from '@/tests/support/founding';
-import { recordPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
-import { createPlan, setPlanFeatureOverride } from '@/lib/domain/catalogue/plans';
+import { setPlanFeatureOverride } from '@/lib/domain/catalogue/plans';
 import { submitPortalForm, setPortalForm } from '@/lib/domain/portal/portal-forms';
 import { createForm, saveFormDraft, publishFormRevision } from '@/lib/domain/forms/forms';
 import { setModuleEnabled } from '@/lib/domain/tenancy/modules';
@@ -13,6 +12,7 @@ import { createPortalInvite, exchangePortalLink, revokePortalInvite, listPortalI
 import { createServiceEngagement, attachEngagementDeliverable, listEngagementDeliverables, listDeliverableOptions } from '@/lib/domain/customers/service-engagements';
 import { DEFAULT_PORTAL_CONTENT, parsePortalContent } from '@/lib/domain/portal/composition';
 import { portalEditorState, savePortalDraft, publishPortalDraft, unpublishPortal, publishedPortalContent, submitPortalDraft, portalModuleAvailability, portalHistoryBefore } from '@/lib/domain/portal/definitions';
+import { assignFixturePlan, createFixturePlan } from '@/tests/support/plans';
 
 const url = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
 const connection = process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
@@ -233,10 +233,10 @@ describe('Studio Portal composition and external identity', () => {
     const foreignCustomer=await createCustomer(foreign,{organizationId:foreignOrg,name:'Plan Portal customer'});
     const recipient=client();await exchangePortalLink(recipient,{token:await createPortalInvite(foreign,{customerId:foreignCustomer})});
     const staff=await asPlatformStaff();
-    const planId=await createPlan(staff,{key:`portal_plan_${randomUUID().replaceAll('-','')}`,kind:'plan',label:'Portal verification Plan',description:'Local independent Plan fixture',billable:false,saleStatus:'active',displayOrder:0});
+    const planId=await createFixturePlan({key:`portal_plan_${randomUUID().replaceAll('-','')}`,kind:'plan',label:'Portal verification Plan',description:'Local independent Plan fixture',billable:false,saleStatus:'active',displayOrder:0});
     const feature=(await pg.query("select id from platform_catalog_features where key='portal_auth'")).rows[0].id;
     await setPlanFeatureOverride(staff,{planId,featureId:feature,included:true});
-    const assignment=await recordPlanAssignment(staff,{organizationId:foreignOrg,planId,periodStart:'2020-01-01',periodEnd:'9999-12-31',note:'Local Portal Plan verification'});
+    const assignment=await assignFixturePlan({organizationId:foreignOrg,planId,periodStart:'2020-01-01',periodEnd:'9999-12-31',note:'Local Portal Plan verification'});
     expect((await portalModuleAvailability(foreign,foreignOrg)).publish).toBe(true);
     let current=(await portalEditorState(foreign,foreignOrg)).definition!.draft_version;
     await submitPortalDraft(foreign,foreignOrg,current);current=(await portalEditorState(foreign,foreignOrg)).definition!.draft_version;

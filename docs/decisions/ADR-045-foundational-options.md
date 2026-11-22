@@ -2,7 +2,7 @@
 
 **Recorded:** 2026-10-17
 **Status:** Accepted. Options A2, B2, C2 and D2 selected by the owner on 2026-10-17 for implementation in the stated order.
-**Superseded in part by:** ADR-046 (2026-10-19) — only Part B's flat-sidebar rendering ("Render one flat list for the business…" and the listed `docs/ui-system.md` navigation changes). The business profile itself remains accepted.
+**Superseded in part by:** ADR-046 (2026-10-19) — only Part B's flat-sidebar rendering ("Render one flat list for the business…" and the listed `docs/ui-system.md` navigation changes). The business profile itself remains accepted. ADR-057 (2026-11-21) — Part A: option A2's standalone `/platform` control plane and its distinct shell are reversed; Administration is a context of GildOps' organization shell at `/organizations/{operatingOrg}/administration`.
 
 ## A. Platform Administration address
 

@@ -36,6 +36,7 @@ export const CAPABILITIES = [
   'work_item.update',
   'invoice.issue',
   'payment.record',
+  'subscription.read',
   'subscription.manage',
   'cost.read',
   'cost.manage',
@@ -72,6 +73,7 @@ export const SENSITIVE_CAPABILITIES: ReadonlySet<Capability> = new Set<Capabilit
   'billing.manage',
   'secret.manage',
   'automation.manage',
+  'subscription.read',
   'cost.read',
   'cost.manage',
 ]);
@@ -119,6 +121,8 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   /** Split from recording payment — deciding a job is finished is whoever runs the work; writing down that money arrived is whoever opens the post. */
   'invoice.issue': 'Issue invoices, from Work or directly to a customer',
   'payment.record': 'Record a payment against an invoice',
+  /** Seeing every customer's subscription, agreed price and billing state — for GildOps' own organization, the account of every business it serves (ADR-057). */
+  'subscription.read': 'See customers’ subscriptions',
   /** Its own authority, not part of `price.manage`: setting what an item costs and committing a customer to it every month are different decisions. For GildOps' own organization, a change also switches the customer business's features on (ADR-057). */
   'subscription.manage': 'Start and change customers’ subscriptions',
   /** Its own authority, not part of `report.read`: what suppliers charge and what each customer costs to serve are confidential even from people who see revenue totals. */

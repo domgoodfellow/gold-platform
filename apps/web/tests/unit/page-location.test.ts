@@ -25,7 +25,7 @@ const everything = {
   capabilities: allCapabilities,
   schedulableWork: true,
 };
-const allPlatform = new Set<PlatformCapability>(['platform.health', 'platform.organizations', 'platform.catalogue', 'platform.providers', 'platform.commercial']);
+const allPlatform = new Set<PlatformCapability>(['platform.health', 'platform.organizations', 'platform.catalogue', 'platform.providers']);
 
 function resolved(location: PageLocation): ResolvedLocation {
   if (location.status !== 'resolved') throw new Error(`Expected a resolved location, got ${JSON.stringify(location)}`);
@@ -46,8 +46,8 @@ describe('route recognition', () => {
     expect(at(`${ORG}/work/dispatch`).id).toBe('view:dispatch');
     expect(at(`${ORG}/work/configuration`).id).toBe('target:work-configuration');
     expect(at(`${ORG}/crm/contacts/stages`).id).toBe('area:pipeline');
-    expect(at('/platform/providers/twilio').id).toBe('view:platform-twilio');
-    expect(at('/platform/integrations/new').id).toBe('create:platform-connector');
+    expect(at(`${ORG}/administration/providers/twilio`).id).toBe('view:platform-twilio');
+    expect(at(`${ORG}/administration/integrations/new`).id).toBe('create:platform-connector');
   });
 
   it('keeps Communications identity beside its Dashboard without a self-link', () => {
@@ -73,7 +73,7 @@ describe('route recognition', () => {
 
 describe('every location is a real page, and every shell page has a location', () => {
   const app = fileURLToPath(new URL('../../app/', import.meta.url));
-  const roots = { organization: join(app, 'organizations', '[organizationId]'), settings: join(app, 'organizations', '[organizationId]'), platform: join(app, 'platform'), personal: app };
+  const roots = { organization: join(app, 'organizations', '[organizationId]'), settings: join(app, 'organizations', '[organizationId]'), platform: join(app, 'organizations', '[organizationId]', 'administration'), personal: app };
 
   /**
    * The page file the router would serve for a pattern, or null. A static segment tries its own
@@ -115,19 +115,17 @@ describe('every location is a real page, and every shell page has a location', (
         else if (name === 'page.tsx') pages.push(path);
       }
     };
+    // Administration's pages sit beneath the organization root, so one walk finds them too.
     walk(roots.organization);
-    walk(roots.platform);
     walk(join(app, 'settings', 'account'));
     const uncovered = pages.filter((page) => !served.has(page)).map((page) => relative(app, page).replace(/\\/g, '/').replace(/\/page\.tsx$/, ''));
     // Catch-alls render not-found; the bare organization address is answered as a redirect directly;
     // the rest are redirect-only files with no registry entry (Phase 1 inventory, LEG). Redirect-only
     // areas (`calendar`, `fields`, `roles`, …) are recognized as redirects and so are not listed.
     const expected = [
-      'organizations/[organizationId]', 'organizations/[organizationId]/[...unmatched]', 'platform/[...unmatched]',
-      // Retired Platform addresses, kept as redirects (ADR-057).
-      'platform/plans', 'platform/plans/[planKey]', 'platform/pricing',
+      'organizations/[organizationId]', 'organizations/[organizationId]/[...unmatched]', 'organizations/[organizationId]/administration/[...unmatched]',
       ...['customers', 'follow-ups', 'opportunities', 'sales'].map((legacy) => `organizations/[organizationId]/${legacy}/[[...legacyPath]]`),
-      ...['automations/[ruleId]', 'automations/activity', 'automations/rules', 'comms/numbers', 'comms/numbers/[phoneNumberId]', 'finance/configuration', 'finance/economics', 'finance/economics/[targetOrganizationId]', 'finance/plans', 'finance/plans/[planKey]', 'insights/reports', 'integrations/[connectionId]', 'integrations/imports', 'integrations/imports/[runId]', 'integrations/imports/new', 'integrations/sources', 'integrations/sources/[resourceId]',
+      ...['automations/[ruleId]', 'automations/activity', 'automations/rules', 'comms/numbers', 'comms/numbers/[phoneNumberId]', 'finance/configuration', 'insights/reports', 'integrations/[connectionId]', 'integrations/imports', 'integrations/imports/[runId]', 'integrations/imports/new', 'integrations/sources', 'integrations/sources/[resourceId]',
         'settings/calls', 'settings/commerce', 'settings/communications', 'settings/connections/apps', 'settings/data-automation', 'settings/opportunity-stages', 'settings/organization', 'settings/people', 'settings/pricing', 'settings/sales-stages', 'settings/website'].map((path) => `organizations/[organizationId]/${path}`),
     ];
     expect(uncovered.sort()).toEqual(expected.sort());
@@ -333,18 +331,28 @@ describe('Organization Settings', () => {
   });
 });
 
-describe('Platform', () => {
-  it('starts at Platform and leaves out group headings that have no page', () => {
-    const location = at('/platform/catalog/plans/base', { records: { planKey: { state: 'ready', label: 'Base' } } });
-    expect(trail(location)).toEqual(['Platform → /platform', 'Plans → /platform/catalog/plans']);
-    expect(location.trail.map((crumb) => crumb.label)).not.toContain('Product Registry');
-    expect(location.trail.map((crumb) => crumb.label)).not.toContain('Commercial administration');
-    expect(location.trail.map((crumb) => crumb.label)).not.toContain('Administration');
+describe('Administration', () => {
+  it('starts at Administration, inside the organization, and leaves out group headings that have no page', () => {
+    const location = at(`${ORG}/administration/providers/twilio`);
+    expect(trail(location)).toEqual([`Administration → ${ORG}/administration`, `Vendors → ${ORG}/administration/providers`]);
+    expect(location.trail.map((crumb) => crumb.label)).not.toContain('Infrastructure');
   });
 
-  it('links only the Platform pages this person may open', () => {
-    const location = resolved(resolveLocation({ pathname: '/platform/catalog/plans/base', access: { platform: new Set<PlatformCapability>(['platform.catalogue']) }, records: { planKey: { state: 'ready', label: 'Base' } } }));
-    expect(trail(location)).toEqual(['Platform', 'Plans → /platform/catalog/plans']);
+  it('links only the Administration pages this person may open', () => {
+    const location = resolved(resolveLocation({ pathname: `${ORG}/administration/providers/twilio`, access: { platform: new Set<PlatformCapability>(['platform.providers']) } }));
+    expect(trail(location)).toEqual(['Administration', `Vendors → ${ORG}/administration/providers`]);
+  });
+
+  it('recognises no retired standalone Platform address', () => {
+    expect(resolveLocation({ pathname: '/platform/providers' }).status).toBe('unresolved');
+  });
+});
+
+describe('GildOps’ money in Finance', () => {
+  it('places a subscription, a cost-to-serve record and package economics beneath their Finance destinations', () => {
+    expect(trail(at(`${ORG}/finance/subscriptions/s1`, { records: { subscriberId: { state: 'ready', label: 'Acme' } } }))).toEqual([`Finance → ${ORG}/finance`, `Subscriptions → ${ORG}/finance/subscriptions`]);
+    expect(trail(at(`${ORG}/finance/economics/s1`, { records: { subscriberId: { state: 'ready', label: 'Acme' } } }))).toEqual([`Finance → ${ORG}/finance`, `Economics → ${ORG}/finance/economics`]);
+    expect(at(`${ORG}/finance/economics/packages`).id).toBe('view:finance-packages');
   });
 });
 
@@ -394,7 +402,6 @@ describe('the migration boundary', () => {
     for (const path of ['/settings/access/roles/r1', '/settings/connections/c1', '/settings/connections/apps/slack', '/settings/secrets', '/settings/custom-fields']) {
       expect(adoptsResolvedLocation(`${ORG}${path}`), path).toBe(false);
     }
-    expect(adoptsResolvedLocation('/platform/plans')).toBe(false);
     expect(adoptsResolvedLocation(`${ORG}/nonsense`)).toBe(false);
   });
 

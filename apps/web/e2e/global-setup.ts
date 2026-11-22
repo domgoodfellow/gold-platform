@@ -19,11 +19,11 @@ import { listWorkItems } from '../lib/domain/work-items/work-items';
 import { listBookableTypes } from '../lib/domain/booking/booking';
 import { setTypeBookable } from '../lib/domain/work-items/types';
 import { listUsableModules, setModuleEnabled } from '../lib/domain/tenancy/modules';
-import { recordCommercialTerm } from '../lib/domain/commercial/terms';
 import { provisionOrganization } from '../lib/domain/platform/provision';
 import { bootstrapOperatingOrganization, callerOperatingOrganization } from '../lib/domain/platform/operating-organization';
 import { listCalls, recordCall } from '../lib/domain/reception/calls';
 import { createCallOutcome, listCallOutcomes } from '../lib/domain/reception/outcomes';
+import { recordFixtureTerm } from '../tests/support/plans';
 
 /**
  * Sets up exactly what the smoke suite needs on top of `pnpm demo`, and nothing else.
@@ -130,7 +130,7 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
         `e2e/global-setup: could not sign in as platform staff to record a commercial term for reception (${voiceStaffSignIn.error.message})`,
       );
     }
-    await recordCommercialTerm(voiceStaffDb, {
+    await recordFixtureTerm({
       organizationId,
       productKey: 'module:reception',
       periodStart: new Date().toISOString().slice(0, 10),
@@ -182,7 +182,7 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
         `e2e/global-setup: could not sign in as platform staff to record a commercial term for portal (${staffSignIn.error.message})`,
       );
     }
-    await recordCommercialTerm(staffDb, {
+    await recordFixtureTerm({
       organizationId,
       productKey: 'module:portal',
       periodStart: new Date().toISOString().slice(0, 10),

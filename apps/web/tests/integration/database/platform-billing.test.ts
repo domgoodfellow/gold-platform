@@ -2,8 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { createPlan, getPlan, recordPlanPrice } from '@/lib/domain/catalogue/plans';
-import { recordPlanAgreement, recordPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
+import { getPlan } from '@/lib/domain/catalogue/plans';
+import { recordPlanAgreement } from '@/lib/domain/catalogue/organization-plans';
 import { createRole } from '@/lib/domain/tenancy/roles';
 import { addMember } from '@/lib/domain/tenancy/members';
 import { ensurePlatformBillingCustomer, getPlatformBillingCustomer } from '@/lib/domain/platform-billing/customers';
@@ -19,6 +19,7 @@ import { setAsideOperatingOrganization } from '@/tests/support/operating-organiz
 import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
 import { applySubscriptionEvent } from '@/tests/support/subscription-events';
 import { BILLING_PROVISIONER_API, provisionerFinalize, withBillingProvisionerApi } from '@/tests/support/billing-provisioner';
+import { assignFixturePlan, createFixturePlan, priceFixturePlan } from '@/tests/support/plans';
 
 /**
  * GOLD charging the organization for its own subscription — the opposite money direction from
@@ -205,7 +206,7 @@ async function beginReviewedCheckout(
 
 /** Checkout now purchases only the Plan currently assigned to the business (work order C §3). */
 async function assignPlan(organizationId: string, planId: string): Promise<void> {
-  await recordPlanAssignment(staff, {
+  await assignFixturePlan({
     organizationId,
     planId,
     periodStart: new Date().toISOString().slice(0, 10),
@@ -220,7 +221,7 @@ async function seedProvisionedPlan(
   saleStatus: 'active' | 'unlisted' | 'archived' = 'active',
 ): Promise<{ planKey: string; planId: string; priceId: string }> {
   const key = `plan_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
-  const planId = await createPlan(staff, {
+  const planId = await createFixturePlan({
     key,
     kind: 'plan',
     label: `Plan ${key}`,
@@ -228,7 +229,7 @@ async function seedProvisionedPlan(
     billable: true,
     saleStatus,
   });
-  const priceId = await recordPlanPrice(staff, {
+  const priceId = await priceFixturePlan({
     planId,
     currency,
     amountMinor: 9_900,
@@ -251,8 +252,8 @@ async function seedProvisionedAddon(
   currency = 'CAD',
 ): Promise<{ planId: string; priceId: string }> {
   const key = `addon_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
-  const planId = await createPlan(staff, { key, kind: 'addon', label: `Addon ${key}`, description: '', billable: true });
-  const priceId = await recordPlanPrice(staff, { planId, currency, amountMinor: 1_500, billingInterval });
+  const planId = await createFixturePlan({ key, kind: 'addon', label: `Addon ${key}`, description: '', billable: true });
+  const priceId = await priceFixturePlan({ planId, currency, amountMinor: 1_500, billingInterval });
 
   const fetchSpy = mockStripeFetch({
     '/v1/products': { id: `prod_${randomUUID().slice(0, 8)}` },
@@ -266,14 +267,14 @@ async function seedProvisionedAddon(
 
 describe('provisioning a Plan price with the billing provider', () => {
   it('is idempotent — a second provisioning attempt returns the same reference rather than creating a second Product/Price', async () => {
-    const planId = await createPlan(staff, {
+    const planId = await createFixturePlan({
       key: `plan_${randomUUID().replace(/-/g, '').slice(0, 12)}`,
       kind: 'plan',
       label: 'Idempotent Plan',
       description: '',
       billable: true,
     });
-    const priceId = await recordPlanPrice(staff, { planId, currency: 'CAD', amountMinor: 5_000, billingInterval: 'month' });
+    const priceId = await priceFixturePlan({ planId, currency: 'CAD', amountMinor: 5_000, billingInterval: 'month' });
 
     // Fresh per call rather than a literal counter — a leftover row from an earlier run of this
     // suite (no `db:reset` in between) must never collide with this run's own fixture on the
@@ -300,14 +301,14 @@ describe('provisioning a Plan price with the billing provider', () => {
   });
 
   it('is staff-only — a tenant cannot provision a price directly through the door', async () => {
-    const planId = await createPlan(staff, {
+    const planId = await createFixturePlan({
       key: `plan_${randomUUID().replace(/-/g, '').slice(0, 12)}`,
       kind: 'plan',
       label: 'Staff Only Plan',
       description: '',
       billable: true,
     });
-    const priceId = await recordPlanPrice(staff, { planId, currency: 'CAD', amountMinor: 5_000, billingInterval: 'month' });
+    const priceId = await priceFixturePlan({ planId, currency: 'CAD', amountMinor: 5_000, billingInterval: 'month' });
 
     const { error } = await tenant.db.rpc('record_plan_provider_price', {
       p_plan_price_id: priceId,
@@ -729,8 +730,8 @@ describe('starting a subscription (Checkout)', () => {
   it('refuses a Plan the browser names that has no provisioned price', async () => {
     const org = await newTenant('checkout-unprovisioned');
     const key = `unprovisioned_${randomUUID().replace(/-/g, '').slice(0, 10)}`;
-    const planId = await createPlan(staff, { key, kind: 'plan', label: 'Unprovisioned', description: '', billable: true });
-    await recordPlanPrice(staff, { planId, currency: 'CAD', amountMinor: 1_000, billingInterval: 'month' });
+    const planId = await createFixturePlan({ key, kind: 'plan', label: 'Unprovisioned', description: '', billable: true });
+    await priceFixturePlan({ planId, currency: 'CAD', amountMinor: 1_000, billingInterval: 'month' });
     await assignPlan(org.organizationId, planId);
     void (await getPlan(staff, key)); // sanity: the plan itself resolves — only its provider price is missing
 
@@ -858,7 +859,7 @@ describe('multi-line checkout and negotiated prices', () => {
   it('provisions and resolves an organization-specific negotiated price, never the Plan’s own standard one', async () => {
     const org = await newTenant('checkout-agreement');
     const agreementPlanKey = `agreement_${randomUUID().replace(/-/g, '').slice(0, 10)}`;
-    const planId = await createPlan(staff, {
+    const planId = await createFixturePlan({
       key: agreementPlanKey,
       kind: 'plan',
       label: 'Agreement Plan',
@@ -868,19 +869,19 @@ describe('multi-line checkout and negotiated prices', () => {
     await assignPlan(org.organizationId, planId);
     // No standard price at all -- only a negotiated one for this organization.
     // Effective a minute ago, not "now": the database's clock and this process's are not the same clock, and an agreement dated a few hundred milliseconds ahead of the database is not yet in force when the checkout reads it.
-    await recordPlanAgreement(staff, { organizationId: org.organizationId, planId, currency: 'CAD', amountMinor: 42_000, effectiveFrom: new Date(Date.now() - 60_000).toISOString() });
+    await recordPlanAgreement(seller.db, { organizationId: org.organizationId, planId, currency: 'CAD', amountMinor: 42_000, effectiveFrom: new Date(Date.now() - 60_000).toISOString() });
 
     const fetchSpy = mockStripeFetch({
       '/v1/products': { id: `prod_agreement_${randomUUID().slice(0, 8)}` },
       '/v1/prices': { id: `price_agreement_${randomUUID().slice(0, 8)}` },
     });
-    const provisioned = await provisionAgreementPlanPrice(staff, { organizationId: org.organizationId, planId, billingInterval: 'month' });
+    const provisioned = await provisionAgreementPlanPrice(seller.db, { organizationId: org.organizationId, planId, billingInterval: 'month' });
     fetchSpy.mockRestore();
     expect(provisioned.priceReference).toMatch(/^price_agreement_/);
 
     // Idempotent: a second provisioning call reads the row back rather than asking again.
     const { spy, calls } = spyOnStripeCalls();
-    const second = await provisionAgreementPlanPrice(staff, { organizationId: org.organizationId, planId, billingInterval: 'month' });
+    const second = await provisionAgreementPlanPrice(seller.db, { organizationId: org.organizationId, planId, billingInterval: 'month' });
     expect(second.priceReference).toBe(provisioned.priceReference);
     expect(calls).toEqual([]);
     spy.mockRestore();
@@ -979,7 +980,7 @@ describe('the reviewed quote is stale-safe', () => {
     await assignPlan(org.organizationId, planId);
     const reviewed = await buildOrganizationPurchaseQuote(org.db, { organizationId: org.organizationId });
 
-    await recordPlanPrice(staff, { planId, currency: 'CAD', amountMinor: 12_900, billingInterval: 'month' });
+    await priceFixturePlan({ planId, currency: 'CAD', amountMinor: 12_900, billingInterval: 'month' });
 
     const { spy, calls } = spyOnStripeCalls();
     await expect(
@@ -995,7 +996,7 @@ describe('the reviewed quote is stale-safe', () => {
     await assignPlan(org.organizationId, planId);
     const reviewed = await buildOrganizationPurchaseQuote(org.db, { organizationId: org.organizationId });
 
-    await recordPlanAgreement(staff, { organizationId: org.organizationId, planId, currency: 'CAD', amountMinor: 7_000, effectiveFrom: earlyToday(1) });
+    await recordPlanAgreement(seller.db, { organizationId: org.organizationId, planId, currency: 'CAD', amountMinor: 7_000, effectiveFrom: earlyToday(1) });
     const now = await buildOrganizationPurchaseQuote(org.db, { organizationId: org.organizationId });
     expect(now.reviewVersion).not.toBe(reviewed.reviewVersion);
 
@@ -1086,7 +1087,7 @@ describe('the reviewed quote is stale-safe', () => {
 });
 
 describe('every quote price names its exact source record', () => {
-  it('identifies a standard price by platform_plan_prices.id and an agreement price by organization_plan_agreements.id', async () => {
+  it('identifies a standard price by price_book_item_prices.id and an agreement price by organization_plan_agreements.id', async () => {
     const standardOrg = await newTenant('provenance-standard');
     const { planId, priceId } = await seedProvisionedPlan();
     await assignPlan(standardOrg.organizationId, planId);
@@ -1095,7 +1096,7 @@ describe('every quote price names its exact source record', () => {
 
     const agreementOrg = await newTenant('provenance-agreement');
     await assignPlan(agreementOrg.organizationId, planId);
-    const agreementId = await recordPlanAgreement(staff, {
+    const agreementId = await recordPlanAgreement(seller.db, {
       organizationId: agreementOrg.organizationId, planId, currency: 'CAD', amountMinor: 5_500, effectiveFrom: earlyToday(1),
     });
     const agreementQuote = await buildOrganizationPurchaseQuote(agreementOrg.db, { organizationId: agreementOrg.organizationId });
@@ -1111,15 +1112,15 @@ describe('a negotiated provider price belongs to its own agreement', () => {
   it('gives a later agreement its own provider price and never rewrites the earlier one', async () => {
     const org = await newTenant('agreement-history');
     const key = `history_${randomUUID().replace(/-/g, '').slice(0, 10)}`;
-    const planId = await createPlan(staff, { key, kind: 'plan', label: 'History Plan', description: '', billable: true });
+    const planId = await createFixturePlan({ key, kind: 'plan', label: 'History Plan', description: '', billable: true });
     await assignPlan(org.organizationId, planId);
 
-    const agreementA = await recordPlanAgreement(staff, { organizationId: org.organizationId, planId, currency: 'CAD', amountMinor: 40_000, effectiveFrom: earlyToday(1) });
+    const agreementA = await recordPlanAgreement(seller.db, { organizationId: org.organizationId, planId, currency: 'CAD', amountMinor: 40_000, effectiveFrom: earlyToday(1) });
     let stripe = mockStripeFetch({
       '/v1/products': { id: `prod_a_${randomUUID().slice(0, 8)}` },
       '/v1/prices': { id: `price_a_${randomUUID().slice(0, 8)}` },
     });
-    const providerA = await provisionAgreementPlanPrice(staff, { organizationId: org.organizationId, planId, billingInterval: 'month' });
+    const providerA = await provisionAgreementPlanPrice(seller.db, { organizationId: org.organizationId, planId, billingInterval: 'month' });
     stripe.mockRestore();
 
     // Checkout under agreement A, kept as the historical purchase intent.
@@ -1129,13 +1130,13 @@ describe('a negotiated provider price belongs to its own agreement', () => {
     checkoutA.spy.mockRestore();
 
     // A later agreement for the same Plan.
-    const agreementB = await recordPlanAgreement(staff, { organizationId: org.organizationId, planId, currency: 'CAD', amountMinor: 38_000, effectiveFrom: earlyToday(2) });
+    const agreementB = await recordPlanAgreement(seller.db, { organizationId: org.organizationId, planId, currency: 'CAD', amountMinor: 38_000, effectiveFrom: earlyToday(2) });
     expect(agreementB).not.toBe(agreementA);
     stripe = mockStripeFetch({
       '/v1/products': { id: `prod_b_${randomUUID().slice(0, 8)}` },
       '/v1/prices': { id: `price_b_${randomUUID().slice(0, 8)}` },
     });
-    const providerB = await provisionAgreementPlanPrice(staff, { organizationId: org.organizationId, planId, billingInterval: 'month' });
+    const providerB = await provisionAgreementPlanPrice(seller.db, { organizationId: org.organizationId, planId, billingInterval: 'month' });
     stripe.mockRestore();
 
     expect(providerB.priceReference).not.toBe(providerA.priceReference);
@@ -1152,7 +1153,7 @@ describe('a negotiated provider price belongs to its own agreement', () => {
     ]);
 
     // Recording A again is a no-op returning A's mapping, never a rewrite.
-    const rerecorded = await staff.rpc('record_agreement_provider_price', {
+    const rerecorded = await seller.db.rpc('record_agreement_provider_price', {
       p_agreement_id: agreementA, p_environment: 'sandbox', p_billing_interval: 'month',
       p_product_reference: 'prod_other', p_price_reference: 'price_other',
     });
@@ -1209,14 +1210,14 @@ describe('a one-time fee is charged once', () => {
     // The purchase completes: the fee is composed as a charge and frozen (the canonical history).
     const start = new Date();
     const end = new Date(start.getTime() + 24 * 3600 * 1000);
-    const composed = await staff.rpc('compose_organization_charges', {
+    const composed = await seller.db.rpc('compose_organization_charges', {
       p_organization_id: org.organizationId, p_billing_period_start: start.toISOString(), p_billing_period_end: end.toISOString(),
     });
     expect(composed.error).toBeNull();
     // Composed but not yet finalized is still owed, not purchased.
     const unfrozen = await buildOrganizationPurchaseQuote(org.db, { organizationId: org.organizationId });
     expect(unfrozen.dueNow.map((line) => line.sourceId)).toEqual([setupId]);
-    const finalized = await staff.rpc('finalize_organization_charges', {
+    const finalized = await seller.db.rpc('finalize_organization_charges', {
       p_organization_id: org.organizationId, p_billing_period_start: start.toISOString(), p_billing_period_end: end.toISOString(),
     });
     expect(finalized.error).toBeNull();
@@ -1254,8 +1255,8 @@ describe('a one-time fee is charged once', () => {
     const start = new Date();
     const end = new Date(start.getTime() + 24 * 3600 * 1000);
     const args = { p_billing_period_start: start.toISOString(), p_billing_period_end: end.toISOString() };
-    await staff.rpc('compose_organization_charges', { p_organization_id: paid.organizationId, ...args });
-    await staff.rpc('finalize_organization_charges', { p_organization_id: paid.organizationId, ...args });
+    await seller.db.rpc('compose_organization_charges', { p_organization_id: paid.organizationId, ...args });
+    await seller.db.rpc('finalize_organization_charges', { p_organization_id: paid.organizationId, ...args });
 
     expect((await buildOrganizationPurchaseQuote(paid.db, { organizationId: paid.organizationId })).dueNow).toEqual([]);
     expect((await buildOrganizationPurchaseQuote(unpaid.db, { organizationId: unpaid.organizationId })).dueNow).toHaveLength(1);

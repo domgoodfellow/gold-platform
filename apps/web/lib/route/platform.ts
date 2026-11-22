@@ -14,16 +14,17 @@ import type { Organization } from '@/lib/domain/tenancy/organizations';
 import { platformDestinationsFor, platformHref } from '@/lib/platform-navigation';
 import { requireOrganizationForBillingRecovery } from '@/lib/route/organization';
 
-/** The standalone control plane resolves the configured operating organization on the server.
- * Membership, operating identity and exact live Platform capabilities remain independent proofs.
- * Billing recovery keeps this scope reachable when the operating business itself is locked.
+/**
+ * Administration's scope guard. Administration is a context of GildOps' own organization
+ * (`/organizations/{goldId}/administration/**`), so the organization in the address must be the
+ * configured operating organization, the caller must be a member of it, and they must hold at
+ * least one live platform permission — three independent proofs. The organization shell around
+ * it already resolved membership (with billing recovery, so a locked GildOps can still be run).
  */
 export const requirePlatformScope = cache(
   async (
-    requestedOrganizationId?: string,
+    organizationId: string,
   ): Promise<{ db: Db; organization: Organization; permissions: ReadonlySet<PlatformCapability> }> => {
-    const organizationId=requestedOrganizationId??await callerOperatingOrganizationId();
-    if(!organizationId)notFound();
     const { db, organization } = await requireOrganizationForBillingRecovery(organizationId);
     if (!(await isOperatingOrganization(db, { organizationId }))) notFound();
 
@@ -33,9 +34,11 @@ export const requirePlatformScope = cache(
   },
 );
 
-export async function platformParams<T>(params:Promise<T>):Promise<T & {organizationId:string}> {
-  const scope=await requirePlatformScope();
-  return {...await params,organizationId:scope.organization.id};
+/** An Administration page's route parameters, after the scope guard has run for its organization. */
+export async function platformParams<T extends { organizationId: string }>(params: Promise<T>): Promise<T> {
+  const resolved = await params;
+  await requirePlatformScope(resolved.organizationId);
+  return resolved;
 }
 
 /**
@@ -70,19 +73,19 @@ export async function callerOperatingOrganizationId(): Promise<string | null> {
   return (await callerOperatingOrganization(await getDb()))?.id ?? null;
 }
 
-/** The caller's own Platform address. See `callerOperatingOrganizationId`. */
+/** The caller's own Administration address. See `callerOperatingOrganizationId`. */
 export async function callerPlatformHref(path = ''): Promise<string | null> {
   const operatingId = await callerOperatingOrganizationId();
   return operatingId ? platformHref(operatingId, path) : null;
 }
 
 /**
- * Drop every cached Platform page. A platform write can change any of them (a plan's price shows on
- * the catalogue, billing and an organization's commercial page), and naming each would be a list to
- * keep in step with the routes.
+ * Drop every cached Administration page. A platform write can change several of them (a product's
+ * state shows on the catalogue, a plan's switch list and an organization's record), and naming each
+ * would be a list to keep in step with the routes.
  */
 export function revalidatePlatform(): void {
-  revalidatePath('/platform', 'layout');
+  revalidatePath('/organizations/[organizationId]/administration', 'layout');
 }
 
 /**
@@ -97,9 +100,9 @@ export function revalidatePlatform(): void {
  *     the caller chose;
  *   the permission, read live from the caller's own `platform_staff` row.
  *
- * **UI visibility is not an authorization boundary.** Every canonical commercial mutation calls
- * this before it writes, and the function behind it checks `app.require_platform_capability`
- * again — the screen hiding a control is courtesy, these two are the boundary.
+ * **UI visibility is not an authorization boundary.** Every Administration mutation calls this
+ * before it writes, and the function behind it checks `app.require_platform_capability` again —
+ * the screen hiding a control is courtesy, these two are the boundary.
  */
 export async function requirePlatformCapability(required: PlatformCapability): Promise<string> {
   const goldId = await callerOperatingOrganizationId();

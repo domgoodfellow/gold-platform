@@ -52,10 +52,10 @@ export async function OrganizationShell({
   // The shell loads a bounded list of titles and one transcript — the most recent conversation.
   // Any other transcript is fetched when somebody opens it from History.
 
-  // Platform is a route scope inside this same organization (`/organizations/{goldId}/platform/**`),
-  // never a second organization: the Agent stays the one built for this business throughout,
-  // including on a Platform page, rather than forking by pathname into a second implementation with
-  // a wider, cross-tenant answering scope it does not have.
+  // Administration is a route scope inside this same organization
+  // (`/organizations/{goldId}/administration/**`), never a second organization: the Agent stays the
+  // one built for this business throughout, including on an Administration page, rather than
+  // forking by pathname into a second implementation with a wider, cross-tenant answering scope.
 
   // `requireOrganization` already proved a session exists; this is a second, deliberately
   // separate read of the same session for the one extra fact the shell shows (actor attribution's minimal

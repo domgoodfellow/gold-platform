@@ -9,8 +9,9 @@ import { setAsideOperatingOrganization } from '@/tests/support/operating-organiz
 /**
  * GildOps prices its plans in its own Finance (ADR-057). Only members of GildOps' operating
  * organization who set prices may change them; platform authority alone changes nothing; another
- * business sells its own recurring items but cannot reach GildOps' billing provider; Product
- * Registry keeps what a plan switches on under the catalogue permission.
+ * business sells its own recurring items but cannot reach GildOps' billing provider. A plan is
+ * created only there, as a recurring item (`create_plan_item`); Product Registry keeps what it
+ * switches on under the catalogue permission.
  */
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
@@ -48,7 +49,7 @@ async function person(label: string, options: { staff?: string[] } = {}): Promis
   return { db, userId: created.data.user.id, email };
 }
 
-const ALL_PLATFORM = ['platform.organizations', 'platform.catalogue', 'platform.commercial', 'platform.providers', 'platform.health'];
+const ALL_PLATFORM = ['platform.organizations', 'platform.catalogue', 'platform.providers', 'platform.health'];
 
 beforeAll(async () => {
   if (!ANON_KEY || !SERVICE_ROLE_KEY) throw new Error('SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY must be set.');
@@ -70,14 +71,13 @@ beforeAll(async () => {
   await pg.query('insert into public.memberships (organization_id, user_id, role_id, created_by) values ($1, $2, $3, $4)', [gildops, bookkeeper.userId, role.rows[0].id, operator.userId]);
   staffOutsider = await person('staff-outsider', { staff: ALL_PLATFORM });
 
-  planKey = `rec_${randomUUID().slice(0, 8)}`;
-  const created = await operator.db.rpc('create_plan', { p_key: planKey, p_kind: 'plan', p_label: 'Dialer test', p_description: '', p_billable: true, p_sale_status: 'active', p_display_order: 0 });
+  const created = await operator.db.rpc('create_plan_item', { p_organization_id: gildops, p_kind: 'plan', p_name: `Dialer test ${randomUUID().slice(0, 6)}` });
   if (created.error) throw created.error;
-  planItem = (await pg.query<{ id: string }>('select price_book_item_id as id from public.platform_plans where key = $1', [planKey])).rows[0].id;
-  const addonKey = `rec_${randomUUID().slice(0, 8)}`;
-  const addon = await operator.db.rpc('create_plan', { p_key: addonKey, p_kind: 'addon', p_label: 'Extra caller test', p_description: '', p_billable: true, p_sale_status: 'active', p_display_order: 0 });
+  planItem = created.data as string;
+  planKey = (await pg.query<{ key: string }>('select key from public.platform_plans where price_book_item_id = $1', [planItem])).rows[0].key;
+  const addon = await operator.db.rpc('create_plan_item', { p_organization_id: gildops, p_kind: 'addon', p_name: `Extra caller test ${randomUUID().slice(0, 6)}` });
   if (addon.error) throw addon.error;
-  addonItem = (await pg.query<{ id: string }>('select price_book_item_id as id from public.platform_plans where key = $1', [addonKey])).rows[0].id;
+  addonItem = addon.data as string;
   const own = await otherOwner.db.rpc('create_recurring_price_book_item', { p_organization_id: other, p_name: 'Monthly care', p_unit: 'month' });
   if (own.error) throw own.error;
   otherItem = own.data as string;
@@ -124,10 +124,11 @@ describe('pricing GildOps’ plan items', () => {
   });
 
   it('renames the plan when its item is renamed in Finance', async () => {
-    const { error } = await operator.db.from('price_book_items').update({ name: 'Dialer', description: 'Calls in the browser', sale_status: 'unlisted' }).eq('id', planItem);
+    const name = `Dialer ${randomUUID().slice(0, 6)}`;
+    const { error } = await operator.db.from('price_book_items').update({ name, description: 'Calls in the browser', sale_status: 'unlisted' }).eq('id', planItem);
     expect(error).toBeNull();
     const { rows } = await pg.query('select label, description, sale_status from public.platform_plans where key = $1', [planKey]);
-    expect(rows[0]).toEqual({ label: 'Dialer', description: 'Calls in the browser', sale_status: 'unlisted' });
+    expect(rows[0]).toEqual({ label: name, description: 'Calls in the browser', sale_status: 'unlisted' });
   });
 
   it('tells GildOps’ members what the item switches on, and nobody else', async () => {
@@ -177,19 +178,46 @@ describe('what other businesses read', () => {
   });
 });
 
-describe('Product Registry keeps what a plan switches on', () => {
-  it('lets catalogue staff create a plan, whose item appears in GildOps’ Finance', async () => {
-    const curator = await person('catalogue-curator', { staff: ['platform.catalogue'] });
-    const key = `rec_${randomUUID().slice(0, 8)}`;
-    const { error } = await curator.db.rpc('create_plan', { p_key: key, p_kind: 'plan', p_label: 'Curated', p_description: '', p_billable: true, p_sale_status: 'active', p_display_order: 0 });
+describe('a plan is created once, in GildOps’ Finance', () => {
+  it('creates a plan as a recurring item of GildOps, with an empty switch list, not yet offered', async () => {
+    const { data, error } = await operator.db.rpc('create_plan_item', { p_organization_id: gildops, p_kind: 'plan', p_name: `Growth ${randomUUID().slice(0, 6)}` });
     expect(error).toBeNull();
-    const { rows } = await pg.query('select i.organization_id, i.pricing_model from public.platform_plans p join public.price_book_items i on i.id = p.price_book_item_id where p.key = $1', [key]);
-    expect(rows[0]).toEqual({ organization_id: gildops, pricing_model: 'recurring' });
+    const { rows } = await pg.query(
+      `select i.organization_id, i.pricing_model, i.sale_status, p.kind, p.label = i.name as same_name,
+              (select count(*)::int from public.platform_plan_product_grants g where g.plan_id = p.id) as grants
+         from public.platform_plans p join public.price_book_items i on i.id = p.price_book_item_id where i.id = $1`,
+      [data],
+    );
+    expect(rows[0]).toEqual({ organization_id: gildops, pricing_model: 'recurring', sale_status: 'unlisted', kind: 'plan', same_name: true, grants: 0 });
   });
 
-  it('refuses staff with only the commercial permission', async () => {
-    const seller = await person('commercial-only', { staff: ['platform.commercial'] });
-    const { error } = await seller.db.rpc('create_plan', { p_key: `rec_${randomUUID().slice(0, 8)}`, p_kind: 'plan', p_label: 'Nope', p_description: '', p_billable: true, p_sale_status: 'active', p_display_order: 0 });
-    expect(error?.code).toBe('42501');
+  it('refuses a GildOps member without the pricing permission', async () => {
+    expect((await bookkeeper.db.rpc('create_plan_item', { p_organization_id: gildops, p_kind: 'plan', p_name: 'Nope' })).error?.code).toBe('42501');
+  });
+
+  it('refuses platform staff who are not GildOps members, whatever platform permissions they hold', async () => {
+    expect((await staffOutsider.db.rpc('create_plan_item', { p_organization_id: gildops, p_kind: 'plan', p_name: 'Nope' })).error?.code).toBe('42501');
+  });
+
+  it('refuses another business, even in its own name: only GildOps sells GildOps plans', async () => {
+    expect((await otherOwner.db.rpc('create_plan_item', { p_organization_id: other, p_kind: 'plan', p_name: 'Nope' })).error?.code).toBe('42501');
+  });
+
+  it('keeps no second door: the old Product Registry creation function is gone', async () => {
+    const { rows } = await pg.query("select count(*)::int as n from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'create_plan'");
+    expect(rows[0].n).toBe(0);
+  });
+});
+
+describe('Product Registry keeps what a plan switches on', () => {
+  it('lets catalogue staff change the switch list of a plan GildOps’ Finance created', async () => {
+    const curator = await person('catalogue-curator', { staff: ['platform.catalogue'] });
+    const planId = (await pg.query<{ id: string }>('select id from public.platform_plans where key = $1', [planKey])).rows[0].id;
+    expect((await curator.db.rpc('grant_plan_product', { p_plan_id: planId, p_product_key: 'sales' })).error).toBeNull();
+  });
+
+  it('refuses a GildOps member who sets prices but holds no catalogue permission', async () => {
+    const planId = (await pg.query<{ id: string }>('select id from public.platform_plans where key = $1', [planKey])).rows[0].id;
+    expect((await bookkeeper.db.rpc('grant_plan_product', { p_plan_id: planId, p_product_key: 'field' })).error?.code).toBe('42501');
   });
 });

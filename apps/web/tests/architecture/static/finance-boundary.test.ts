@@ -3,20 +3,21 @@ import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { AREAS, WORKSPACES } from '@/lib/navigation';
-import { PLATFORM_DESTINATIONS } from '@/lib/platform-navigation';
+import { PLATFORM_DESTINATIONS, PLATFORM_GROUPS } from '@/lib/platform-navigation';
+import { PLATFORM_CAPABILITIES } from '@/lib/domain/platform/permissions';
 
 /**
- * Three financial views stay separate: Finance is each organization's own selling (customer to
- * business, ADR-051); what a business buys from GildOps is Settings → Plan & usage; GildOps'
- * private provider economics, and during transition the existing platform-billing records, are
- * Platform. Finance reaching into either of the others is how Finance Home once became a Plan and
- * subscription dashboard, so this test reads the imports rather than the words. Moving GildOps'
- * selling into its operating Organization's Finance means building it on Finance's own
- * capabilities, never importing these planes.
+ * One financial authority (ADR-057, completed). Finance is the only place money is managed: every
+ * business's own selling, and GildOps' — its plans, subscriptions, supplier costs and economics —
+ * in GildOps' own organization's Finance, under Finance permissions. Administration runs the
+ * platform and manages no money; platform authority opens no Finance. What a business buys from
+ * GildOps stays Settings → Plan & usage. This test reads routes, registries and imports rather than
+ * labels, so a second financial application cannot come back under a new name.
  */
 
 const WEB = fileURLToPath(new URL('../../..', import.meta.url));
 const FINANCE_ROUTES = join(WEB, 'app/organizations/[organizationId]/finance');
+const ADMINISTRATION_ROUTES = join(WEB, 'app/organizations/[organizationId]/administration');
 const rel = (path: string) => relative(WEB, path).split(sep).join('/');
 
 function walk(dir: string): string[] {
@@ -29,97 +30,91 @@ function walk(dir: string): string[] {
 
 const code = (path: string) => readFileSync(path, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
-/** Everything Finance owns: its routes (bookmark redirects aside), its feature UI and its application projections. */
-const FINANCE_FILES = [
-  ...walk(FINANCE_ROUTES).filter((file) => !/redirect\(/.test(code(file))),
-  ...walk(join(WEB, 'features/finance')),
-  ...walk(join(WEB, 'lib/application/finance')),
+const FINANCE_FILES = [...walk(FINANCE_ROUTES), ...walk(join(WEB, 'features/finance')), ...walk(join(WEB, 'lib/application/finance'))];
+const ADMINISTRATION_FILES = [...walk(ADMINISTRATION_ROUTES), ...walk(join(WEB, 'features/platform')), ...walk(join(WEB, 'lib/application/platform'))];
+
+/** What prices, sells, costs or accounts for money. Administration imports none of it. */
+const MONEY = [
+  /@\/lib\/domain\/commercial\/(economics|charges|infrastructure-costs|package-economics|terms)'/,
+  /@\/lib\/domain\/pricing\//,
+  /@\/lib\/domain\/billing\//,
+  /@\/lib\/application\/finance\//,
+  /@\/features\/finance\//,
+  /\b(listProviderRates|listProviderCostRates|listRetailRates|recordPlanAssignment|recordPlanAgreement|recordCommercialTerm|listPlanPrices|organizationPlanPrice)\(/,
 ];
 
-/** Domain areas that belong to what a business buys from GildOps, or to GildOps' own control plane. */
-const COMMERCIAL_PLANE = [
-  /@\/lib\/domain\/catalogue\//,
-  /@\/lib\/domain\/commercial\//,
-  /@\/lib\/domain\/platform-billing\//,
-  /@\/lib\/domain\/platform\//,
-  /@\/lib\/adapters\/platform-billing/,
-  /@\/lib\/route\/platform/,
-  /@\/lib\/domain\/tenancy\/gold-internal/,
-  /@\/lib\/application\/platform\//,
-  /@\/features\/platform\//,
-];
-
-describe('Finance is tenant Financial Operations', () => {
-  it('guards planning before tenant reads and offers no persistence or publication path', () => {
-    const route = code(join(FINANCE_ROUTES, 'reports/page.tsx'));
-    expect(route).toMatch(/requireOperatingArea\(organizationId, 'finance-reports'\)/);
-    expect(route.indexOf("requireOperatingArea(organizationId, 'finance-reports')")).toBeLessThan(route.indexOf('listPriceBookItems(db'));
-    const planner = code(join(WEB, 'features/finance/pricing-planner.tsx'));
-    const calculation = code(join(WEB, 'lib/domain/pricing/planning.ts'));
-    expect(planner + calculation).not.toMatch(/\.from\(|\.rpc\(|updatePriceBookItem|localStorage|sessionStorage|use server/);
-    expect(calculation).not.toMatch(/import .* from/);
-  });
+describe('Finance is the one place money is managed', () => {
   it('has routes, features and projections to inspect', () => {
-    expect(FINANCE_FILES.length).toBeGreaterThan(8);
+    expect(FINANCE_FILES.length).toBeGreaterThan(20);
   });
 
-  it('imports nothing from the commercial plane or the platform control plane', () => {
-    const offenders = FINANCE_FILES.flatMap((file) =>
-      COMMERCIAL_PLANE.filter((pattern) => pattern.test(code(file))).map((pattern) => `${rel(file)} imports ${pattern}`),
-    );
-    expect(offenders).toEqual([]);
+  it('registers GildOps’ subscriptions, costs and economics as Finance destinations, each behind its own Finance permission', () => {
+    expect(WORKSPACES.find((workspace) => workspace.key === 'finance')?.home).toBe('finance');
+    const owned = AREAS.filter((area) => area.workspace === 'finance' && area.sidebar !== false).map((area) => area.segment);
+    expect(owned).toEqual(['finance', 'finance-catalog', 'finance-subscriptions', 'finance-quotes', 'finance-invoices', 'finance-payments', 'finance-costs', 'finance-economics', 'finance-reports']);
+    const area = (segment: string) => AREAS.find((candidate) => candidate.segment === segment)!;
+    expect(area('finance-subscriptions')).toMatchObject({ route: 'finance/subscriptions', relevantCapabilities: ['subscription.read'], featureKeys: ['subscriptions'] });
+    expect(area('finance-costs')).toMatchObject({ route: 'finance/costs', relevantCapabilities: ['cost.read'], featureKeys: ['supplier_costs'] });
+    expect(area('finance-economics')).toMatchObject({ route: 'finance/economics', relevantCapabilities: ['cost.read'], featureKeys: ['cost_to_serve', 'package_economics'] });
+    expect(area('finance-reports').relevantCapabilities).toEqual(['report.read']);
   });
 
-  it('has no special branch for GildOps own organization', () => {
-    const offenders = FINANCE_FILES.filter((file) => /isGoldInternal|platformPermissions|platform\.commercial/.test(code(file)));
+  it('has a working page behind every GildOps money destination and record, never a redirect', () => {
+    for (const path of ['subscriptions/page.tsx', 'subscriptions/[subscriberId]/page.tsx', 'costs/page.tsx', 'economics/page.tsx', 'economics/[subscriberId]/page.tsx', 'economics/packages/page.tsx']) {
+      const source = code(join(FINANCE_ROUTES, path));
+      expect(source, path).toMatch(/requireOperatingArea\(organizationId, 'finance-(subscriptions|costs|economics)'\)/);
+      expect(source, path).not.toMatch(/^\s*redirect\(`\/platform/m);
+    }
+    expect(existsSync(join(FINANCE_ROUTES, 'plans'))).toBe(false);
+  });
+
+  it('authorizes every Finance write with a Finance permission in the business the form names', () => {
+    const doors: [string, RegExp][] = [
+      ['subscriptions/actions.ts', /capabilities\.includes\('subscription\.manage'\)/],
+      ['costs/actions.ts', /capabilities\.includes\('cost\.manage'\)/],
+      ['economics/packages/actions.ts', /capabilities\.includes\('cost\.manage'\)/],
+      ['catalog/recurring-actions.ts', /capabilities\.includes\('price\.manage'\)/],
+    ];
+    for (const [path, permission] of doors) {
+      const source = code(join(FINANCE_ROUTES, path));
+      expect(source, path).toMatch(/requireOperatingArea\(/);
+      expect(source, path).toMatch(permission);
+    }
+  });
+
+  it('never lets platform authority stand in for a Finance permission', () => {
+    const offenders = FINANCE_FILES.filter((file) => {
+      const source = code(file).replace(/^import [^;]+;$/gm, '');
+      // The one platform check Finance makes is Product Registry's own, on a plan's switch list.
+      const foreign = source.replace(/requirePlatformCapability\('platform\.catalogue'\)/g, '');
+      return /requirePlatformCapability|requirePlatformArea|requirePlatformScope|platform\.commercial|isGoldInternal/.test(foreign);
+    });
     expect(offenders.map(rel)).toEqual([]);
   });
 
-  it('answers from the canonical financial authorities, and writes none of its own', () => {
-    const projections = walk(join(WEB, 'lib/application/finance'));
-    const source = projections.map(code).join('\n');
-    expect(source).toMatch(/@\/lib\/domain\/billing\/invoices/);
-    expect(source).toMatch(/@\/lib\/domain\/pricing\/prices/);
-    expect(source).toMatch(/@\/lib\/domain\/reporting\/financials/);
-    // A second total would be a second price calculation; standing and totals are the domain's.
-    expect(source).not.toMatch(/\.from\(['"]/);
-    expect(source).not.toMatch(/unitAmountMinor\s*\*/);
-  });
-
-  it('keeps Finance workspace ownership in the registry: Dashboard, Catalog & Pricing, Quotes, Invoices, Payments and Financial reports, with payment configuration behind Configure', () => {
-    expect(WORKSPACES.find((workspace) => workspace.key === 'finance')?.home).toBe('finance');
-    const owned = AREAS.filter((area) => area.workspace === 'finance' && area.sidebar !== false).map((area) => area.segment);
-    expect(owned).toEqual(['finance', 'finance-catalog', 'finance-quotes', 'finance-invoices', 'finance-payments', 'finance-reports']);
-    expect(AREAS.find((area) => area.segment === 'finance-reports')?.relevantCapabilities).toEqual(['report.read']);
-    const pricing = AREAS.find((area) => area.segment === 'pricing');
-    expect(pricing?.workspace).toBe('finance');
-    expect(pricing?.sidebar).toBe(false);
+  it('imports no Administration screen or route', () => {
+    const offenders = FINANCE_FILES.filter((file) => /@\/features\/platform\/|@\/app\/organizations\/\[organizationId\]\/administration|@\/lib\/application\/platform\//.test(code(file)));
+    expect(offenders.map(rel)).toEqual([]);
   });
 });
 
-describe("GildOps' plans are recurring items of its own Finance (ADR-057)", () => {
-  it('leaves Platform only what a plan switches on, under Product Registry', () => {
-    expect(PLATFORM_DESTINATIONS.find((destination) => destination.key === 'plans')).toMatchObject({ path: 'catalog/plans', requires: 'platform.catalogue', under: 'product-registry' });
-    expect(PLATFORM_DESTINATIONS.find((destination) => destination.key === 'pricing')).toBeUndefined();
-    const registry = [
-      ...walk(join(WEB, 'app/platform/catalog/plans')),
-      ...walk(join(WEB, 'features/platform/plans')),
-      join(WEB, 'lib/application/platform/plan-switches.ts'),
-    ];
-    const pricing = registry.filter((file) => /@\/lib\/domain\/pricing\/|price_book_item_prices|record_item_price|platform-billing/.test(code(file)));
-    expect(pricing.map(rel)).toEqual([]);
+describe('a plan has one commercial authority and one creation path', () => {
+  it('is created only in GildOps’ Catalog & Pricing, as a recurring item', () => {
+    const callers = [...walk(join(WEB, 'app')), ...walk(join(WEB, 'features')), ...walk(join(WEB, 'lib'))]
+      .filter((file) => /\bcreatePlanItem\(|'create_plan_item'/.test(code(file)))
+      .map(rel)
+      .sort();
+    expect(callers).toEqual(['app/organizations/[organizationId]/finance/catalog/recurring-actions.ts', 'lib/domain/catalogue/plans.ts']);
+    const anywhere = [...walk(join(WEB, 'app')), ...walk(join(WEB, 'features')), ...walk(join(WEB, 'lib'))].filter((file) => /'create_plan'|\bcreatePlan\(/.test(code(file)));
+    expect(anywhere.map(rel)).toEqual([]);
   });
 
-  it('keeps the retired Platform and Finance plan addresses as redirects that end in Product Registry or Finance', () => {
-    for (const path of ['app/platform/plans/page.tsx', 'app/platform/plans/[planKey]/page.tsx', 'app/platform/pricing/page.tsx']) {
-      const source = code(join(WEB, path));
-      expect(source, path).toMatch(/redirect\(/);
-      expect(source, path).not.toMatch(/getDb|@\/lib\/domain|@\/features\//);
-      expect(source, path).toMatch(/\/platform\/catalog\/plans|\/finance\/catalog/);
-    }
-    for (const file of walk(join(FINANCE_ROUTES, 'plans'))) {
-      expect(code(file), rel(file)).toMatch(/redirect\(`\/organizations\/\$\{organizationId\}\/finance\/catalog/);
-    }
+  it('edits what a plan switches on from the plan’s own Finance record, proving the Finance area and Product Registry authority together', () => {
+    const actions = code(join(FINANCE_ROUTES, 'catalog/plan-switch-actions.ts'));
+    expect(actions).toMatch(/requireOperatingArea\(organizationId, 'finance-catalog'\)/);
+    expect(actions).toMatch(/requirePlatformCapability\('platform\.catalogue'\)/);
+    expect(actions).toMatch(/plan\.priceBookItemId !== itemId/);
+    expect(existsSync(join(ADMINISTRATION_ROUTES, 'catalog/plans'))).toBe(false);
   });
 
   it('reads a recurring item only after the catalog area and the recurring-items feature are proven', () => {
@@ -131,22 +126,26 @@ describe("GildOps' plans are recurring items of its own Finance (ADR-057)", () =
   });
 });
 
-describe("During transition, GildOps' portfolio economics stays in Platform (ADR-051)", () => {
-  it('is a registered Platform destination behind the commercial permission', () => {
-    expect(PLATFORM_DESTINATIONS.find((destination) => destination.key === 'portfolio-economics')?.requires).toBe('platform.commercial');
+describe('Administration runs the platform and manages no money', () => {
+  it('has no financial group or destination', () => {
+    expect(PLATFORM_GROUPS.map((group) => group.key)).toEqual(['product-registry', 'integration-registry', 'infrastructure', 'reliability']);
+    const financial = PLATFORM_DESTINATIONS.filter((destination) => /plan|pric|billing$|vendor-rate|economics|usage|subscription|cost|commercial/.test(`${destination.key} ${destination.path}`));
+    expect(financial).toEqual([]);
   });
 
-  it('is served from /platform, and what remains under /finance for it is only a redirect', () => {
-    expect(existsSync(join(WEB, 'app/platform/economics/page.tsx'))).toBe(true);
-    const leftovers = walk(join(FINANCE_ROUTES, 'economics'));
-    expect(leftovers.length).toBeGreaterThan(0);
-    for (const file of leftovers) {
-      expect(code(file), `${rel(file)} must only redirect`).toMatch(/redirect\(/);
-      expect(code(file), `${rel(file)} must not read data`).not.toMatch(/getDb|requireOrganization|\.from\(/);
+  it('has no route for plans, prices, billing, usage economics, supplier rates or portfolio economics', () => {
+    for (const path of ['catalog/plans', 'plans', 'pricing', 'billing', 'usage', 'vendor-rates', 'package-economics', 'economics', 'organizations/[targetOrganizationId]/commercial']) {
+      expect(existsSync(join(ADMINISTRATION_ROUTES, path)), path).toBe(false);
     }
+    expect(existsSync(join(WEB, 'app/platform'))).toBe(false);
   });
 
-  it('has no feature or projection left under Finance', () => {
-    expect(existsSync(join(WEB, 'lib/application/finance/economics-overview.ts'))).toBe(false);
+  it('imports nothing that prices, sells or costs', () => {
+    const offenders = ADMINISTRATION_FILES.flatMap((file) => MONEY.filter((pattern) => pattern.test(code(file))).map((pattern) => `${rel(file)} ${pattern}`));
+    expect(offenders).toEqual([]);
+  });
+
+  it('has no platform permission over money', () => {
+    expect([...PLATFORM_CAPABILITIES].sort()).toEqual(['platform.catalogue', 'platform.health', 'platform.organizations', 'platform.providers']);
   });
 });

@@ -151,52 +151,50 @@ const RPC_CAPABILITIES: Record<string, string> = {
   "platform_ai_runtime_assignment_overview": "platform.providers",
   "record_ai_runtime_assignment": "platform.providers",
   "sync_phone_number": "platform.providers",
-  "record_provider_rate": "platform.commercial",
-  "record_product_price": "platform.commercial",
-  "record_usage_reconciliation": "platform.commercial",
-  "create_plan": "platform.catalogue",
-  "update_plan": "platform.commercial",
   "update_plan_switches": "platform.catalogue",
   "set_plan_quota": "platform.catalogue",
   "remove_plan_quota": "platform.catalogue",
-  "record_plan_price": "platform.commercial",
-  "record_plan_provider_price": "platform.commercial",
-  "record_retail_rate": "platform.commercial",
-  "organization_commercial_summary": "platform.commercial",
-  "record_plan_margin_policy": "platform.commercial",
-  "record_phone_number_month": "platform.commercial",
-  "record_provider_cost_rate": "platform.commercial",
-  "attach_plan_addon": "platform.commercial",
-  "detach_plan_addon": "platform.commercial",
-  "platform_usage_cost_components": "platform.commercial",
   "set_plan_allowance": "platform.catalogue",
-  "record_plan_utilization_assumption": "platform.commercial",
-  "set_meter_cost_model_component": "platform.commercial",
-  "record_commercial_retail_rate": "platform.commercial",
-  "save_commercial_draft_scenario": "platform.commercial",
-  "organization_usage_detail": "platform.commercial",
-  "platform_usage_economics": "platform.commercial",
-  "organization_cost_to_serve": "platform.commercial",
-  "organization_revenue_summary": "platform.commercial",
-  "platform_revenue_portfolio": "platform.commercial",
-  "record_commercial_term": "platform.commercial",
-  "record_plan_assignment": "platform.commercial",
-  "record_plan_agreement": "platform.commercial",
-  "record_plan_quota_override": "platform.commercial",
-  "record_organization_plan_agreement": "platform.commercial",
-  "compose_organization_charges": "platform.commercial",
-  "finalize_organization_charges": "platform.commercial",
-  "record_infrastructure_cost": "platform.commercial",
-  "record_commercial_adjustment": "platform.commercial",
-  "record_agreement_provider_price": "platform.commercial",
   "provision_organization": "platform.organizations",
   "hand_off_accepted_proposal": "platform.organizations",
   "platform_health_summary": "platform.health"
 };
+
+/**
+ * GildOps' commercial doors (ADR-057): each answers to a Finance permission held in GildOps'
+ * operating organization, and to no platform permission. `platform.commercial` no longer exists.
+ */
+const FINANCE_DOORS: Record<string, string> = {
+  "compose_organization_charges": "subscription.manage",
+  "finalize_organization_charges": "subscription.manage",
+  "organization_commercial_summary": "cost.read",
+  "organization_cost_to_serve": "cost.read",
+  "organization_revenue_summary": "cost.read",
+  "organization_usage_detail": "cost.read",
+  "platform_revenue_portfolio": "cost.read",
+  "platform_usage_cost_components": "cost.read",
+  "platform_usage_economics": "cost.read",
+  "record_agreement_provider_price": "subscription.manage",
+  "record_commercial_adjustment": "subscription.manage",
+  "record_commercial_term": "subscription.manage",
+  "record_infrastructure_cost": "cost.manage",
+  "record_organization_plan_agreement": "subscription.manage",
+  "record_plan_assignment": "subscription.manage",
+  "record_plan_margin_policy": "cost.manage",
+  "record_plan_quota_override": "subscription.manage",
+  "record_plan_utilization_assumption": "cost.manage",
+  "record_provider_cost_rate": "cost.manage",
+  "record_provider_rate": "cost.manage",
+  "record_usage_reconciliation": "cost.manage",
+  "save_commercial_draft_scenario": "cost.manage",
+  "set_meter_cost_model_component": "cost.manage"
+};
+
 describe('granular platform authority at the database boundary', () => {
   let pg: Client;
   const actors = new Map<string, { db: SupabaseClient; userId: string }>();
   const args = new Map<string, Record<string, null>>();
+  const financeArgs = new Map<string, Record<string, null>>();
   let organizationId: string;
   let owner: { db: SupabaseClient; userId: string };
 
@@ -220,6 +218,11 @@ describe('granular platform authority at the database boundary', () => {
     );
     expect(rows).toHaveLength(Object.keys(RPC_CAPABILITIES).length);
     for (const row of rows) args.set(row.proname, Object.fromEntries((row.names ?? []).map((name) => [name, null])));
+    const finance = await pg.query<{ proname: string; names: string[] }>(
+      'select proname, proargnames[1:pronargs] as names from pg_proc where pronamespace = $1::regnamespace and proname = any($2)',
+      ['public', Object.keys(FINANCE_DOORS)],
+    );
+    for (const row of finance.rows) financeArgs.set(row.proname, Object.fromEntries((row.names ?? []).map((name) => [name, null])));
     owner = await signedInUser('rpc-tenant-owner');
     const { data } = await owner.db.auth.getUser();
     organizationId = await foundBusiness({ ownerEmail: data.user!.email!, name: 'P0 tenant ' + randomUUID(), currency: 'CAD' });
@@ -322,24 +325,45 @@ describe('granular platform authority at the database boundary', () => {
     expect((await actor.db.rpc('end_support_session', { p_id: opened.data })).error).toBeNull();
   });
 
-  it('permits catalogue-only plan switch changes without commercial authority (ADR-057)', async () => {
+  it('permits catalogue-only plan switch changes, and no catalogue authority creates a plan (ADR-057)', async () => {
     const db = actors.get('platform.catalogue')!.db;
-    const plan = await db.rpc('create_plan', {
-      p_key: 'p0_' + randomUUID().replaceAll('-', ''), p_kind: 'plan', p_label: 'P0 test package',
-      p_description: '', p_billable: false, p_sale_status: 'active', p_display_order: 0,
-    });
-    expect(plan.error).toBeNull();
+    const { rows } = await pg.query<{ id: string }>(
+      `insert into public.platform_plans (key, kind, label, billable) values ($1, 'plan', 'P0 test package', false) returning id`,
+      ['p0_' + randomUUID().replaceAll('-', '')],
+    );
     const catalogModule = await pg.query('select id from public.platform_catalog_modules limit 1');
     expect(catalogModule.rows).toHaveLength(1);
-    const granted = await db.rpc('grant_plan_module', { p_plan_id: plan.data, p_module_id: catalogModule.rows[0].id });
-    expect(granted.error).toBeNull();
+    expect((await db.rpc('grant_plan_module', { p_plan_id: rows[0].id, p_module_id: catalogModule.rows[0].id })).error).toBeNull();
+    const created = await db.rpc('create_plan_item', { p_organization_id: organizationId, p_kind: 'plan', p_name: 'Nope' });
+    expect(created.error?.code).toBe('42501');
   });
 
-  it('requires commercial authority in addition to organization authority for the internal bootstrap', async () => {
-    const result = await actors.get('platform.organizations')!.db.rpc('bootstrap_gold_internal_workspace', {
-      p_organization_id: organizationId, p_role: 'Admin', p_capabilities: ['organization.manage'],
-    });
-    expect(result.error?.code).toBe('42501');
+  it('lets organization authority alone run the internal bootstrap: designating GildOps is provisioning', async () => {
+    const { rows } = await pg.query('select prosrc from pg_proc where proname = $1', ['bootstrap_gold_internal_workspace']);
+    expect(rows[0].prosrc).toContain("app.require_platform_capability('platform.organizations')");
+    expect(rows[0].prosrc).not.toContain('platform.commercial');
+  });
+
+  it('refuses every former commercial door to every platform permission', async () => {
+    for (const capability of [...PLATFORM_CAPABILITIES, 'empty', 'outsider']) {
+      for (const name of Object.keys(FINANCE_DOORS)) {
+        const result = await actors.get(capability)!.db.rpc(name, financeArgs.get(name)!);
+        expect(result.error?.code, `${capability} must not execute ${name}`).toBe('42501');
+      }
+    }
+  });
+
+  it('checks each former commercial door against its Finance permission in GildOps’ organization', async () => {
+    const { rows } = await pg.query<{ proname: string; prosrc: string }>(
+      'select proname, prosrc from pg_proc where pronamespace = $1::regnamespace and proname = any($2)',
+      ['public', Object.keys(FINANCE_DOORS)],
+    );
+    expect(rows).toHaveLength(Object.keys(FINANCE_DOORS).length);
+    for (const row of rows) {
+      expect(row.prosrc, row.proname).toContain(`'${FINANCE_DOORS[row.proname]}'`);
+      expect(row.prosrc, row.proname).toMatch(/app\.(require_platform_seller|platform_seller_has)\(/);
+      expect(row.prosrc, row.proname).not.toContain('platform.commercial');
+    }
   });
 
   it('denies direct handoff insertion and anonymous execution of platform commands', async () => {

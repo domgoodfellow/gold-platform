@@ -10,7 +10,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: [...MARKETING_PATHS, '/book/'],
       disallow: [
         '/organizations/',
-        '/platform/',
         '/portal', '/portal/',
         '/auth/',
         '/reset-password',

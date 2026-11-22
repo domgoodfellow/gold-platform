@@ -100,8 +100,8 @@ describe('who owns which failure', () => {
   });
 
   it('Platform keeps Platform context: a catch-all and a boundary inside its layout segment', () => {
-    expect(exists('app/platform/[...unmatched]/page.tsx')).toBe(true);
-    const boundary = read('app/platform/not-found.tsx');
+    expect(exists('app/organizations/[organizationId]/administration/[...unmatched]/page.tsx')).toBe(true);
+    const boundary = read('app/organizations/[organizationId]/administration/not-found.tsx');
     expect(boundary).toContain('FallbackPage');
     expect(boundary).toContain('platformHref(');
     expect(code(boundary)).not.toMatch(/SiteShell|WorkspaceShell/);
@@ -119,7 +119,7 @@ describe('who owns which failure', () => {
     for (const file of [
       'app/organizations/not-found.tsx',
       'app/organizations/[organizationId]/not-found.tsx',
-      'app/platform/not-found.tsx',
+      'app/organizations/[organizationId]/administration/not-found.tsx',
       'app/settings/not-found.tsx',
       'features/account/organization-not-found.tsx',
     ]) {
@@ -130,7 +130,7 @@ describe('who owns which failure', () => {
   it('every catch-all only throws notFound() — it never renders content or reads data of its own', () => {
     for (const file of [
       'app/organizations/[organizationId]/[...unmatched]/page.tsx',
-      'app/platform/[...unmatched]/page.tsx',
+      'app/organizations/[organizationId]/administration/[...unmatched]/page.tsx',
       'app/settings/[[...unmatched]]/page.tsx',
     ]) {
       const source = code(read(file));
@@ -164,11 +164,11 @@ describe('phone navigation uses the one projected sidebar', () => {
     expect(org).not.toMatch(/platformStaff=|isGoldInternal=/);
   });
 
-  it('reads the Platform sub-scope from the path: GOLD’s organization, then /platform and beneath', () => {
+  it('reads the Administration sub-scope from the path: GildOps’ organization, then /administration and beneath', () => {
     const gold = '11111111-1111-4111-8111-111111111111';
     expect(inPlatformScope(platformHref(gold))).toBe(true);
     expect(inPlatformScope(platformHref(gold, 'providers'))).toBe(true);
-    expect(inPlatformScope('/platform/providers')).toBe(true);
+    expect(inPlatformScope('/platform/providers')).toBe(false);
     expect(inPlatformScope(`/platformer`)).toBe(false);
     expect(inPlatformScope(`/organizations/${gold}/home`)).toBe(false);
   });

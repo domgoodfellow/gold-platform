@@ -6,7 +6,6 @@ import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { signOut } from '@/lib/domain/identity/credentials';
 import { requireActor } from '@/lib/domain/tenancy/actor';
-import { isPlatformStaff } from '@/lib/domain/platform/tenants';
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
 import { callerOperatingOrganization } from '@/lib/domain/platform/operating-organization';
 import { organizationHomeHref } from '@/lib/navigation';
@@ -44,29 +43,18 @@ export default async function OrganizationsPage() {
     throw error;
   }
 
-  // Platform authority and organization membership are two independent facts about one
-  // identity — a staff member's memberships are never taken away, held elsewhere, or
-  // hidden by this read. What this page decides is only which of an identity's true contexts it
-  // lands in *by default*: a real membership of GildOps' operating organization is preferred; staff
-  // without it still default to the bootstrap-required Platform route; everyone else enters the
-  // business they last worked in, else their first. `resolveOrganizationsLanding` remains pure so
-  // `landing.test.ts` can exercise every combination with no session and no database.
-  const [staff, organizations] = await Promise.all([isPlatformStaff(db), listMyOrganizations(db)]);
-  const preferredOrganization = await callerOperatingOrganization(db);
+  // Which of an identity's real memberships this page lands in by default: GildOps' operating
+  // organization first for its members, else the business last worked in, else the first.
+  // Platform authority is not an input; Administration is a context of GildOps' organization.
+  // `resolveOrganizationsLanding` remains pure so `landing.test.ts` can exercise every combination
+  // with no session and no database.
+  const [organizations, preferredOrganization] = await Promise.all([listMyOrganizations(db), callerOperatingOrganization(db)]);
   const landing = resolveOrganizationsLanding({
     organizations,
-    staff,
     preferredOrganizationId: preferredOrganization?.id,
     lastOrganizationId: await readLastOrganizationId(),
   });
 
-  // Staff who hold no membership of GildOps' operating organization have no canonical Platform
-  // address to be sent to, so they meet the legacy entry, which says why. It cannot loop with that entry, which sends a
-  // non-staff caller here: that fires on `!staff`, this only on `staff`, and one answer cannot
-  // satisfy both.
-  if (landing.kind === 'platform') {
-    redirect('/platform');
-  }
   if (landing.kind === 'enter') {
     redirect(await firstReviewHref(db, landing) ?? organizationHomeHref(landing.organizationId, landing.operationalState));
   }

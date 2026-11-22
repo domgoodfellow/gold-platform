@@ -185,23 +185,23 @@ tenant-payment webhook or the other way round.
 
 Everything below is sandbox/test-mode only. Do not repeat any of it in live mode without
 explicitly deciding GOLD's real commercial pricing first (this code deliberately invents no final
-prices — see `apps/web/app/(platform)/platform/catalog/plans`).
+prices — plans are created and priced in GildOps' own Finance → Catalog & Pricing).
 
 ### 1. Create a sandbox Product and a recurring Price
 
 1. In the Stripe Dashboard, switch to **Test mode** (top-right toggle).
 2. Open **Product catalog** (left navigation) → **Add product**.
-3. Name it after a GOLD Plan you have already created at `/platform/catalog/plans` in this app
+3. Name it after a GildOps plan you have already created in GildOps' Finance → Catalog & Pricing
    (e.g. "Starter") — the name is cosmetic on Stripe's side; what actually links the two is the
    Price reference GOLD stores, not the Product name.
 4. Under **Pricing**, choose **Recurring**, pick **Monthly** or **Yearly**, enter the amount and
    currency, and save. Stripe shows the created Price's id, `price_...` — you do not need to copy
    it by hand: the next step does that for you.
 5. **Do this from inside GOLD's own admin, not by copying the id manually where avoidable.** Open
-   `/platform/catalog/plans/<planKey>` → **Pricing** tab → **Provision in Stripe (sandbox)**
+   the plan's item in GildOps' Finance → Catalog & Pricing → **Prices** → **Prepare for checkout**
    next to the recorded price. This calls the Stripe API itself (idempotently, keyed to that
    Plan/price) and records the resulting Product/Price references in
-   `platform_plan_provider_prices`. If you created the Product/Price by hand in the Dashboard
+   `price_book_item_provider_prices`. If you created the Product/Price by hand in the Dashboard
    first, provisioning here still creates its own Product/Price (Phase 4's chosen approach: GOLD
    provisions via the API, matching this admin action) — the Dashboard walkthrough above is for
    understanding what "Provision in Stripe" is doing under the hood, not a step you also have to

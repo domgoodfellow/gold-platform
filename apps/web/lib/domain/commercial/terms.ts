@@ -27,7 +27,7 @@ export type ModuleCommercialState = {
   periodEnd: string | null;
 };
 
-/** What a business bought — visible to the business itself, and to platform staff for any tenant. */
+/** What a business bought — visible to the business itself, and to GildOps' Finance for every business it serves. */
 export async function listOrganizationTerms(
   db: Db,
   input: { organizationId: string },
@@ -99,7 +99,7 @@ export async function recordCommercialTerm(db: Db, input: RecordTermInput): Prom
 
   if (error) {
     if (error.code === '42501') {
-      throw new DomainError('Only platform staff may record a term.', 'commercial.forbidden');
+      throw new DomainError('Recording a term needs the subscription permission in GildOps’ own business.', 'commercial.forbidden');
     }
     if (error.code === '23P01') {
       throw new DomainError(

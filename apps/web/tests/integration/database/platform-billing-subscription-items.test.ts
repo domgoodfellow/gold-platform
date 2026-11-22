@@ -4,8 +4,6 @@ import { resolve } from 'node:path';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { createPlan, recordPlanPrice } from '@/lib/domain/catalogue/plans';
-import { recordPlanAgreement, recordPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
 import { beginPlatformBillingCheckout } from '@/lib/domain/platform-billing/checkout';
 import { loadPlanUsage } from '@/lib/application/settings/plan-usage';
 import { buildOrganizationPurchaseQuote } from '@/lib/domain/platform-billing/quote';
@@ -15,6 +13,7 @@ import { getOrganizationServiceAccess } from '@/lib/domain/platform-billing/serv
 import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
 import { applySubscriptionEvent, type TestSubscriptionEvent } from '@/tests/support/subscription-events';
 import { BILLING_PROVISIONER_API, withBillingProvisionerApi } from '@/tests/support/billing-provisioner';
+import { agreeFixturePrice, assignFixturePlan, createFixturePlan, mapFixtureAgreementPrice, mapFixturePlanPrice, priceFixturePlan } from '@/tests/support/plans';
 
 /**
  * C3: a provider subscription is its items, correlated to the checkout that bought it, and an
@@ -84,34 +83,26 @@ async function seedCustomer(tenant: Tenant): Promise<string> {
 /** A Plan or Add-on whose standard price is mapped to a provider price, without any provider call. */
 async function standardPlan(kind: 'plan' | 'addon', interval: 'month' | 'one_time' = 'month') {
   const key = `${kind}_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
-  const planId = await createPlan(staff, { key, kind, label: `${kind} ${key.slice(-6)}`, description: '', billable: true });
-  const planPriceId = await recordPlanPrice(staff, { planId, currency: 'CAD', amountMinor: 5_000, billingInterval: interval });
+  const planId = await createFixturePlan({ key, kind, label: `${kind} ${key.slice(-6)}`, description: '', billable: true });
+  const planPriceId = await priceFixturePlan({ planId, currency: 'CAD', amountMinor: 5_000, billingInterval: interval });
   const priceReference = `price_${randomUUID().slice(0, 10)}`;
-  const mapped = await staff.rpc('record_plan_provider_price', {
-    p_plan_price_id: planPriceId, p_environment: 'sandbox', p_product_reference: `prod_${randomUUID().slice(0, 8)}`,
-    p_price_reference: priceReference,
-  });
-  expect(mapped.error).toBeNull();
+  await mapFixturePlanPrice({ planPriceId, environment: 'sandbox', productReference: `prod_${randomUUID().slice(0, 8)}`, priceReference });
   return { key, planId, planPriceId, priceReference };
 }
 
 /** A negotiated price for one organization, mapped to its own provider price. */
 async function agreementPlan(tenant: Tenant, kind: 'plan' | 'addon' = 'plan') {
   const key = `agr_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
-  const planId = await createPlan(staff, { key, kind, label: `agreement ${key.slice(-6)}`, description: '', billable: true });
-  await recordPlanAssignment(staff, {
+  const planId = await createFixturePlan({ key, kind, label: `agreement ${key.slice(-6)}`, description: '', billable: true });
+  await assignFixturePlan({
     organizationId: tenant.organizationId, planId, periodStart: new Date().toISOString().slice(0, 10), periodEnd: '9999-12-31',
   });
-  const agreementId = await recordPlanAgreement(staff, {
+  const agreementId = await agreeFixturePrice({
     organizationId: tenant.organizationId, planId, currency: 'CAD', amountMinor: 42_000,
     effectiveFrom: new Date(Date.now() - 60_000).toISOString(),
   });
   const priceReference = `price_agr_${randomUUID().slice(0, 10)}`;
-  const mapped = await staff.rpc('record_agreement_provider_price', {
-    p_agreement_id: agreementId, p_environment: 'sandbox', p_billing_interval: 'month',
-    p_product_reference: `prod_${randomUUID().slice(0, 8)}`, p_price_reference: priceReference,
-  });
-  expect(mapped.error).toBeNull();
+  await mapFixtureAgreementPrice({ agreementId, environment: 'sandbox', billingInterval: 'month', productReference: `prod_${randomUUID().slice(0, 8)}`, priceReference });
   return { key, planId, agreementId, priceReference };
 }
 
@@ -167,7 +158,7 @@ describe('a checkout puts its own id on the subscription it creates, and the web
     const addon = await standardPlan('addon');
     const oneTime = await standardPlan('addon', 'one_time');
     for (const plan of [base, addon, oneTime]) {
-      await recordPlanAssignment(staff, {
+      await assignFixturePlan({
         organizationId: org.organizationId, planId: plan.planId,
         periodStart: new Date().toISOString().slice(0, 10), periodEnd: '9999-12-31',
       });
@@ -266,8 +257,8 @@ describe('the Plan & usage screen offers checkout whenever the authoritative quo
 
   it('does not offer a package the quote cannot buy, and says why', async () => {
     const org = await newTenant('c3-blocked');
-    const planId = await createPlan(staff, { key: `plan_${randomUUID().replace(/-/g, '').slice(0, 12)}`, kind: 'plan', label: 'Unpriced', description: '', billable: true });
-    await recordPlanAssignment(staff, { organizationId: org.organizationId, planId, periodStart: new Date().toISOString().slice(0, 10), periodEnd: '9999-12-31' });
+    const planId = await createFixturePlan({ key: `plan_${randomUUID().replace(/-/g, '').slice(0, 12)}`, kind: 'plan', label: 'Unpriced', description: '', billable: true });
+    await assignFixturePlan({ organizationId: org.organizationId, planId, periodStart: new Date().toISOString().slice(0, 10), periodEnd: '9999-12-31' });
     const model = await loadPlanUsage(org.db, asBillingManager(org));
     expect(model.canSubscribe).toBe(false);
     expect(model.quote?.blockers[0]?.code).toBe('no_plan_price');
@@ -279,7 +270,7 @@ describe('the Plan & usage screen offers checkout whenever the authoritative quo
     const base = await standardPlan('plan');
     const addon = await standardPlan('addon');
     for (const plan of [base, addon]) {
-      await recordPlanAssignment(staff, { organizationId: org.organizationId, planId: plan.planId, periodStart: new Date().toISOString().slice(0, 10), periodEnd: '9999-12-31' });
+      await assignFixturePlan({ organizationId: org.organizationId, planId: plan.planId, periodStart: new Date().toISOString().slice(0, 10), periodEnd: '9999-12-31' });
     }
     const providerItems = [
       { itemReference: 'si_base', priceReference: base.priceReference },
@@ -612,8 +603,8 @@ describe('service access still reads the subscription status and nothing else', 
   it('is unchanged by item count, reconciliation or checkout correlation', async () => {
     const org = await newTenant('c3-access');
     const customer = await seedCustomer(org);
-    const planId = await createPlan(staff, { key: `plan_${randomUUID().replace(/-/g, '').slice(0, 12)}`, kind: 'plan', label: 'Access', description: '', billable: true });
-    await recordPlanAssignment(staff, { organizationId: org.organizationId, planId, periodStart: '2000-01-01', periodEnd: '9999-12-31' });
+    const planId = await createFixturePlan({ key: `plan_${randomUUID().replace(/-/g, '').slice(0, 12)}`, kind: 'plan', label: 'Access', description: '', billable: true });
+    await assignFixturePlan({ organizationId: org.organizationId, planId, periodStart: '2000-01-01', periodEnd: '9999-12-31' });
 
     // Mismatching, legacy-unlinked, multi-item: still serviceable while the provider says active.
     await applySubscriptionEvent(pg, event(customer, 'sub_x', {
@@ -642,10 +633,10 @@ describe('the provider cache has one writer', () => {
     await applySubscriptionEvent(pg, event(customer, 'sub_r', { checkoutCorrelation: session, items: [{ itemReference: 'si_1', priceReference: base.priceReference }] }));
     const [row] = await items(org);
 
-    // Reads: own business and staff only.
+    // Reads: the business itself, and GildOps' Finance — never platform authority alone (ADR-057).
     expect((await org.db.from('organization_platform_subscription_items').select('id')).data).toHaveLength(1);
     expect((await stranger.db.from('organization_platform_subscription_items').select('id').eq('organization_id', org.organizationId)).data).toEqual([]);
-    expect((await staff.from('organization_platform_subscription_items').select('id').eq('organization_id', org.organizationId)).data).toHaveLength(1);
+    expect((await staff.from('organization_platform_subscription_items').select('id').eq('organization_id', org.organizationId)).data).toEqual([]);
 
     // Writes: nobody holds a grant, so each is refused as `permission denied`, not merely filtered.
     for (const client of [org.db, staff]) {

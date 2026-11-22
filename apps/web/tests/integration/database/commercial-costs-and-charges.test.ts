@@ -4,8 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createPlan, setPlanQuota } from '@/lib/domain/catalogue/plans';
-import { recordPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
+import { setPlanQuota } from '@/lib/domain/catalogue/plans';
 import { organizationAllowanceStates } from '@/lib/domain/commercial/allowances';
 import {
   composeOrganizationCharges,
@@ -19,6 +18,19 @@ import { listOrganizationInfrastructureCosts, organizationCostToServe, recordInf
 import { uploadDocument } from '@/lib/domain/documents/documents';
 import { createCustomer } from '@/lib/domain/customers/customers';
 import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
+import { assignFixturePlan, createFixturePlan } from '@/tests/support/plans';
+import { designateGildOps } from '@/tests/support/plans';
+
+let restoreOperatingSeller: () => Promise<void> = async () => {};
+let sellerPg: Client | undefined;
+async function connectSellerPg(): Promise<Client> {
+  const client = new Client({ connectionString: process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' });
+  await client.connect();
+  return client;
+}
+afterAll(async () => {
+  try { await restoreOperatingSeller(); } finally { await sellerPg?.end(); }
+});
 
 /**
  * Work Order B: GildOps' own cost side (infrastructure allocation), the customer charge model,
@@ -52,6 +64,9 @@ type Tenant = { db: SupabaseClient; organizationId: string; userId: string; cust
 
 let pg: Client;
 let staff: SupabaseClient;
+/** GildOps' Finance (ADR-057): subscriptions, prices, costs and economics take its permissions. */
+let seller: SupabaseClient;
+
 let basePlanId: string;
 let addonPlanId: string;
 let oneTimeAddonPlanId: string;
@@ -87,7 +102,7 @@ function fileOfSize(name: string, bytes: number): File {
 }
 
 async function assign(organizationId: string, planId: string, periodStart?: string) {
-  return recordPlanAssignment(staff, {
+  return assignFixturePlan({
     organizationId, planId,
     periodStart: periodStart ?? new Date().toISOString().slice(0, 10),
     periodEnd: '9999-12-31', note: 'commercial-costs-and-charges.test.ts',
@@ -99,14 +114,17 @@ beforeAll(async () => {
   pg = new Client({ connectionString: CONNECTION });
   await pg.connect();
   staff = await asPlatformStaff();
+  const gildopsSeller = await designateGildOps(sellerPg ??= await connectSellerPg());
+  seller = gildopsSeller.db;
+  restoreOperatingSeller = gildopsSeller.restore;
 
-  basePlanId = await createPlan(staff, {
+  basePlanId = await createFixturePlan({
     key: `cc_base_${RUN}`, kind: 'plan', label: 'CC Base', description: 'x', billable: true, saleStatus: 'unlisted',
   });
-  addonPlanId = await createPlan(staff, {
+  addonPlanId = await createFixturePlan({
     key: `cc_addon_${RUN}`, kind: 'addon', label: 'CC Extra Storage', description: 'x', billable: true, saleStatus: 'unlisted',
   });
-  oneTimeAddonPlanId = await createPlan(staff, {
+  oneTimeAddonPlanId = await createFixturePlan({
     key: `cc_setup_${RUN}`, kind: 'addon', label: 'CC Setup Service', description: 'x', billable: true, saleStatus: 'unlisted',
   });
 
@@ -126,17 +144,17 @@ beforeAll(async () => {
   // ago" from whatever today happens to be could easily land after one of them.
   const ANCHOR = '2025-01-01T00:00:00Z';
   await pg.query(
-    `insert into public.platform_plan_prices (plan_id,currency,amount_minor,billing_interval,effective_from,approval_state,source,captured_at)
+    `insert into public.price_book_item_prices (plan_id,currency,amount_minor,billing_interval,effective_from,approval_state,source,captured_at)
      values ($1,$2,5000,'month',$3,'approved','cc.test.ts',$3)`,
     [basePlanId, CURRENCY, ANCHOR],
   );
   await pg.query(
-    `insert into public.platform_plan_prices (plan_id,currency,amount_minor,billing_interval,effective_from,approval_state,source,captured_at)
+    `insert into public.price_book_item_prices (plan_id,currency,amount_minor,billing_interval,effective_from,approval_state,source,captured_at)
      values ($1,$2,50,'month',$3,'approved','cc.test.ts',$3)`,
     [addonPlanId, CURRENCY, ANCHOR],
   );
   await pg.query(
-    `insert into public.platform_plan_prices (plan_id,currency,amount_minor,billing_interval,effective_from,approval_state,source,captured_at)
+    `insert into public.price_book_item_prices (plan_id,currency,amount_minor,billing_interval,effective_from,approval_state,source,captured_at)
      values ($1,$2,2500,'one_time',$3,'approved','cc.test.ts',$3)`,
     [oneTimeAddonPlanId, CURRENCY, ANCHOR],
   );
@@ -154,7 +172,7 @@ afterAll(async () => {
   try {
     await pg.query(`delete from public.organization_charge_components where source_domain in ('catalogue.plan_assignment','catalogue.addon_assignment','commercial.usage','commercial.adjustment') and description like '%'`);
     await pg.query(`delete from public.platform_infrastructure_cost_components where source = 'cc.test.ts'`);
-    await pg.query(`delete from public.platform_plan_prices where source = 'cc.test.ts'`);
+    await pg.query(`delete from public.price_book_item_prices where source = 'cc.test.ts'`);
     // The retail rate row is left in place -- usage_events this run wrote still reference it
     // (the same reason a rate is appended, never rewritten: the preserved-history rule), and it is scoped to a
     // throwaway random currency nothing else will ever query by.
@@ -267,30 +285,30 @@ describe('storage', () => {
 describe('infrastructure allocation', () => {
   it('classifies a direct organization resource cost', async () => {
     const org = await foundTenant('infra-direct');
-    const id = await recordInfrastructureCost(staff, {
+    const id = await recordInfrastructureCost(seller, {
       costCategory: 'resource_direct', allocationQuality: 'direct', organizationId: org.organizationId,
       providerKey: 'twilio', billingPeriod: '2026-01-01', nativeCostMicros: 1_150_000, nativeCurrency: 'USD',
       reportingCostMicros: 1_150_000, reportingCurrency: 'USD', source: 'cc.test.ts',
     });
     expect(id).toBeTruthy();
-    const rows = await listOrganizationInfrastructureCosts(staff, { organizationId: org.organizationId });
+    const rows = await listOrganizationInfrastructureCosts(seller, { organizationId: org.organizationId });
     expect(rows).toHaveLength(1);
     expect([rows[0].costCategory, rows[0].allocationQuality]).toEqual(['resource_direct', 'direct']);
   });
 
   it('tells measured, estimated, shared and unallocated apart, and refuses to mismatch category and quality', async () => {
     const org = await foundTenant('infra-quality');
-    await recordInfrastructureCost(staff, {
+    await recordInfrastructureCost(seller, {
       costCategory: 'infrastructure_attributable', allocationQuality: 'measured', organizationId: org.organizationId,
       providerKey: 'supabase', billingPeriod: '2026-01-01', nativeCostMicros: 400_000, nativeCurrency: 'USD',
       reportingCostMicros: 400_000, reportingCurrency: 'USD', driverBasis: 'byte_days', driverQuantity: 1_000_000, source: 'cc.test.ts',
     });
-    await recordInfrastructureCost(staff, {
+    await recordInfrastructureCost(seller, {
       costCategory: 'infrastructure_attributable', allocationQuality: 'estimated', organizationId: org.organizationId,
       providerKey: 'vercel', billingPeriod: '2026-01-01', nativeCostMicros: 100_000, nativeCurrency: 'USD',
       reportingCostMicros: 100_000, reportingCurrency: 'USD', source: 'cc.test.ts',
     });
-    const rows = await listOrganizationInfrastructureCosts(staff, { organizationId: org.organizationId });
+    const rows = await listOrganizationInfrastructureCosts(seller, { organizationId: org.organizationId });
     expect(rows.map((r) => r.allocationQuality).sort()).toEqual(['estimated', 'measured']);
 
     // A shared cost naming an organization, or an organization-scoped quality naming none, both refuse.
@@ -316,7 +334,7 @@ describe('infrastructure allocation', () => {
       `insert into public.platform_infrastructure_cost_components (organization_id,cost_category,allocation_quality,billing_period,native_cost_micros,native_currency,reporting_cost_micros,reporting_currency,source)
        values (null,'infrastructure_attributable','unallocated','2026-01-01',3000000,'USD',3000000,'USD','cc.test.ts')`,
     );
-    const cost = await organizationCostToServe(staff, {
+    const cost = await organizationCostToServe(seller, {
       organizationId: org.organizationId, periodStart: '2026-01-01T00:00:00Z', periodEnd: '2026-02-01T00:00:00Z', reportingCurrency: 'USD',
     });
     expect(cost.attributableKnownCogsMicros).toBe(0);
@@ -327,13 +345,13 @@ describe('infrastructure allocation', () => {
   it('reports unknown as unknown, never zero, and a currency mismatch as not known', async () => {
     const org = await foundTenant('infra-unknown');
     // Recorded cost is real, but only in USD -- asking in CAD must not silently read as $0 known.
-    await recordInfrastructureCost(staff, {
+    await recordInfrastructureCost(seller, {
       costCategory: 'manual_direct', allocationQuality: 'direct', organizationId: org.organizationId,
       billingPeriod: '2026-01-01', nativeCostMicros: 500_000, nativeCurrency: 'USD',
       reportingCostMicros: 500_000, reportingCurrency: 'USD', source: 'cc.test.ts',
     });
-    const inUsd = await organizationCostToServe(staff, { organizationId: org.organizationId, periodStart: '2026-01-01T00:00:00Z', periodEnd: '2026-02-01T00:00:00Z', reportingCurrency: 'USD' });
-    const inCad = await organizationCostToServe(staff, { organizationId: org.organizationId, periodStart: '2026-01-01T00:00:00Z', periodEnd: '2026-02-01T00:00:00Z', reportingCurrency: 'CAD' });
+    const inUsd = await organizationCostToServe(seller, { organizationId: org.organizationId, periodStart: '2026-01-01T00:00:00Z', periodEnd: '2026-02-01T00:00:00Z', reportingCurrency: 'USD' });
+    const inCad = await organizationCostToServe(seller, { organizationId: org.organizationId, periodStart: '2026-01-01T00:00:00Z', periodEnd: '2026-02-01T00:00:00Z', reportingCurrency: 'CAD' });
     expect(inUsd.manualDirectCogsMicros).toBe(500_000);
     expect(inUsd.costCoverage).toBe(1);
     expect(inCad.manualDirectCogsMicros).toBe(0);
@@ -347,11 +365,11 @@ describe('charges', () => {
     await assign(org.organizationId, basePlanId, '2026-01-01');
     const start = '2026-03-01T00:00:00Z';
     const end = '2026-04-01T00:00:00Z';
-    const first = await composeOrganizationCharges(staff, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
-    const second = await composeOrganizationCharges(staff, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
+    const first = await composeOrganizationCharges(seller, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
+    const second = await composeOrganizationCharges(seller, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
     expect(first.find((r) => r.kind === 'base_plan')?.written).toBe(true);
     expect(second.find((r) => r.kind === 'base_plan')?.written).toBe(true);
-    const components = await listOrganizationCharges(staff, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
+    const components = await listOrganizationCharges(seller, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
     expect(components.filter((c) => c.componentType === 'base_plan')).toHaveLength(1);
     expect(components[0].amountMinor).toBe(5000);
   });
@@ -363,15 +381,15 @@ describe('charges', () => {
     // Assigned inside the billing period itself — a one-time service composes only in the
     // period its assignment began.
     await assign(org.organizationId, oneTimeAddonPlanId, '2026-03-05');
-    await recordCommercialAdjustment(staff, { organizationId: org.organizationId, direction: 'credit', amountMinor: 500, currency: CURRENCY, reason: 'Goodwill credit', effectiveAt: '2026-03-15T00:00:00Z' });
+    await recordCommercialAdjustment(seller, { organizationId: org.organizationId, direction: 'credit', amountMinor: 500, currency: CURRENCY, reason: 'Goodwill credit', effectiveAt: '2026-03-15T00:00:00Z' });
 
     const start = '2026-03-01T00:00:00Z';
     const end = '2026-04-01T00:00:00Z';
     // Usage within the period: no voice allowance on this Plan, so the whole quantity is overage.
     await pg.query(`select app.record_usage($1,'voice_minutes',10,'twilio','2026-03-10T00:00:00Z',null,null,null,$2,'cc.test.ts')`, [org.organizationId, `u-${randomUUID()}`]);
 
-    await composeOrganizationCharges(staff, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
-    const components = await listOrganizationCharges(staff, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
+    await composeOrganizationCharges(seller, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
+    const components = await listOrganizationCharges(seller, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
     const byType = Object.fromEntries(components.map((c) => [c.componentType, c]));
     expect(byType.base_plan.amountMinor).toBe(5000);
     expect(byType.addon.amountMinor).toBe(50);
@@ -379,7 +397,7 @@ describe('charges', () => {
     expect(byType.usage_overage.amountMinor).toBeGreaterThan(0);
     expect(byType.credit_adjustment.amountMinor).toBe(500);
 
-    const revenue = await organizationRevenueSummary(staff, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end, reportingCurrency: CURRENCY });
+    const revenue = await organizationRevenueSummary(seller, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end, reportingCurrency: CURRENCY });
     expect(revenue.customerObligationMinor).toBe(
       byType.base_plan.amountMinor + byType.addon.amountMinor + byType.one_time_service.amountMinor + byType.usage_overage.amountMinor - 500,
     );
@@ -391,16 +409,16 @@ describe('charges', () => {
     const end = '2026-04-01T00:00:00Z';
     // Two base Plan assignments both intersect the period: unresolved without a proration rule.
     await assign(org.organizationId, basePlanId, '2026-01-01');
-    const other = await createPlan(staff, { key: `cc_other_${RUN}`, kind: 'plan', label: 'Other', description: 'x', billable: true, saleStatus: 'unlisted' });
+    const other = await createFixturePlan({ key: `cc_other_${RUN}`, kind: 'plan', label: 'Other', description: 'x', billable: true, saleStatus: 'unlisted' });
     await pg.query(
       `update public.organization_plan_assignments set period_end = '2026-03-15' where organization_id=$1 and plan_id=$2`,
       [org.organizationId, basePlanId],
     );
     await assign(org.organizationId, other, '2026-03-15');
 
-    const result = await composeOrganizationCharges(staff, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
+    const result = await composeOrganizationCharges(seller, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
     expect(result.find((r) => r.kind === 'base_plan')?.prorationRequired).toBe(true);
-    const components = await listOrganizationCharges(staff, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
+    const components = await listOrganizationCharges(seller, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
     expect(components.find((c) => c.componentType === 'base_plan')).toBeUndefined();
   });
 
@@ -409,22 +427,22 @@ describe('charges', () => {
     await assign(org.organizationId, basePlanId, '2026-01-01');
     const start = '2026-05-01T00:00:00Z';
     const end = '2026-06-01T00:00:00Z';
-    await composeOrganizationCharges(staff, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
-    await composeOrganizationCharges(staff, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
-    const before = await listOrganizationCharges(staff, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
+    await composeOrganizationCharges(seller, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
+    await composeOrganizationCharges(seller, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
+    const before = await listOrganizationCharges(seller, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
     expect(before).toHaveLength(1);
     const originalAmount = before[0].amountMinor;
 
-    const finalizedCount = await finalizeOrganizationCharges(staff, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
+    const finalizedCount = await finalizeOrganizationCharges(seller, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
     expect(finalizedCount).toBe(1);
 
     await pg.query(
-      `insert into public.platform_plan_prices (plan_id,currency,amount_minor,billing_interval,effective_from,approval_state,source,captured_at)
+      `insert into public.price_book_item_prices (plan_id,currency,amount_minor,billing_interval,effective_from,approval_state,source,captured_at)
        values ($1,$2,999999,'month',$3,'approved','cc.test.ts',$3)`,
       [basePlanId, CURRENCY, new Date(Date.now() - DAY).toISOString()],
     );
-    await composeOrganizationCharges(staff, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
-    const after = await listOrganizationCharges(staff, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
+    await composeOrganizationCharges(seller, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
+    const after = await listOrganizationCharges(seller, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
     expect(after).toHaveLength(1);
     expect(after[0].amountMinor).toBe(originalAmount);
     expect(after[0].finalizedAt).not.toBeNull();
@@ -437,7 +455,7 @@ describe('economic separation', () => {
     await assign(org.organizationId, basePlanId, '2026-01-01');
     const start = '2026-07-01T00:00:00Z';
     const end = '2026-08-01T00:00:00Z';
-    await composeOrganizationCharges(staff, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
+    await composeOrganizationCharges(seller, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
 
     const ownCharges = await listOrganizationCharges(org.db, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
     expect(ownCharges.length).toBeGreaterThan(0);
@@ -456,7 +474,7 @@ describe('economic separation', () => {
     await assign(a.organizationId, basePlanId, '2026-01-01');
     const start = '2026-07-01T00:00:00Z';
     const end = '2026-08-01T00:00:00Z';
-    await composeOrganizationCharges(staff, { organizationId: a.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
+    await composeOrganizationCharges(seller, { organizationId: a.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
     const seenByB = await listOrganizationCharges(b.db, { organizationId: a.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
     expect(seenByB).toEqual([]);
   });
@@ -466,16 +484,16 @@ describe('economic separation', () => {
     await assign(org.organizationId, basePlanId, '2026-01-01');
     const start = '2026-08-01T00:00:00Z';
     const end = '2026-09-01T00:00:00Z';
-    await composeOrganizationCharges(staff, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
-    await finalizeOrganizationCharges(staff, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
-    const before = await listOrganizationCharges(staff, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
+    await composeOrganizationCharges(seller, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
+    await finalizeOrganizationCharges(seller, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
+    const before = await listOrganizationCharges(seller, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
 
-    await recordInfrastructureCost(staff, {
+    await recordInfrastructureCost(seller, {
       costCategory: 'manual_direct', allocationQuality: 'direct', organizationId: org.organizationId,
       billingPeriod: '2026-08-01', nativeCostMicros: 777_000, nativeCurrency: CURRENCY,
       reportingCostMicros: 777_000, reportingCurrency: CURRENCY, source: 'cc.test.ts',
     });
-    const after = await listOrganizationCharges(staff, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
+    const after = await listOrganizationCharges(seller, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
     expect(after.map((c) => c.amountMinor)).toEqual(before.map((c) => c.amountMinor));
   });
 
@@ -484,8 +502,8 @@ describe('economic separation', () => {
     await assign(org.organizationId, basePlanId, '2026-01-01');
     const start = '2026-09-01T00:00:00Z';
     const end = '2026-10-01T00:00:00Z';
-    await composeOrganizationCharges(staff, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
-    const portfolio = await platformRevenuePortfolio(staff, { billingPeriodStart: start, billingPeriodEnd: end, reportingCurrency: CURRENCY });
+    await composeOrganizationCharges(seller, { organizationId: org.organizationId, billingPeriodStart: start, billingPeriodEnd: end });
+    const portfolio = await platformRevenuePortfolio(seller, { billingPeriodStart: start, billingPeriodEnd: end, reportingCurrency: CURRENCY });
     expect(portfolio.some((row) => row.organizationId === org.organizationId)).toBe(true);
     await expect(
       platformRevenuePortfolio(org.db, { billingPeriodStart: start, billingPeriodEnd: end }),

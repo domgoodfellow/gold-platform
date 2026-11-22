@@ -161,33 +161,34 @@ describe('Administration inside GildOps', () => {
     expect(entry()!.href).toBe(platformHref(ORG));
     expect(topLevelSections(gildops)).toEqual(gildops);
   });
-  it('opens the agreed Administration groups, with Commercial administration among them', () => {
-    expect(entry()!.destinations?.map((item) => item.label)).toEqual(['Overview', 'Organizations', 'Product Registry', 'Integration Registry', 'Infrastructure', 'Reliability', 'Commercial administration']);
-    const commercial = entry()!.destinations!.find((item) => item.key === 'platform-group-commercial')!;
-    // Plans and Pricing left: GildOps sells through its own Finance; Product Registry keeps the switch lists (ADR-057).
-    expect(commercial.children?.map((item) => item.key)).toEqual(['platform-usage-economics', 'platform-vendor-rates', 'platform-package-economics', 'platform-portfolio-economics', 'platform-billing']);
+  it('opens the agreed Administration groups, none of which manages money (ADR-057)', () => {
+    expect(entry()!.destinations?.map((item) => item.label)).toEqual(['Overview', 'Organizations', 'Product Registry', 'Integration Registry', 'Infrastructure', 'Reliability']);
     const registry = entry()!.destinations!.find((item) => item.key === 'platform-group-product-registry')!;
-    expect(registry.children?.map((item) => item.key)).toEqual(['platform-products', 'platform-meters', 'platform-plans']);
+    // Plans are created and priced in GildOps' Finance, where their switch list is edited too.
+    expect(registry.children?.map((item) => item.key)).toEqual(['platform-products', 'platform-meters']);
+    const reliability = entry()!.destinations!.find((item) => item.key === 'platform-group-reliability')!;
+    expect(reliability.children?.map((item) => item.key)).toEqual(['platform-failures', 'platform-billing-deliveries']);
   });
-  it('links AI to AI Runtime and never links Finance to Commercial administration', () => {
-    // Finance is the tenant's own ledger; GildOps' commercial control is reached from Administration only (ADR-051).
+  it('offers no Administration destination for plans, prices, subscriptions, costs or economics', () => {
+    const hrefs = entry()!.destinations!.flatMap(function walk(item): string[] { return [item.href, ...(item.children ?? []).flatMap(walk)]; });
+    for (const word of ['plans', 'pricing', 'billing/', 'usage', 'vendor-rates', 'economics', 'subscriptions', 'costs']) {
+      expect(hrefs.filter((href) => href.split('/administration')[1]?.includes(word)), word).toEqual([]);
+    }
+  });
+  it('links AI to AI answering and links Finance to no Administration page', () => {
     expect(row('workspace-finance')?.administration).toBeUndefined();
     expect(row('workspace-ai')?.administration).toEqual({ key: 'platform-link-ai-runtime', label: 'AI answering', href: platformHref(ORG, 'ai-runtime'), section: 'workspaces' });
-    expect(projectedItems(workspaceNavigation(gildops, `/organizations/${ORG}/finance`)!.sections).map((item) => item.key)).not.toContain('platform-link-commercial');
-    expect(workspaceNavigation(gildops, platformHref(ORG, 'catalog/plans/base'))?.workspace.key).toBe('administration');
+    expect(workspaceNavigation(gildops, platformHref(ORG, 'catalog/products/module:billing'))?.workspace.key).toBe('administration');
     expect(workspaceNavigation(gildops, platformHref(ORG, 'ai-runtime'))?.workspace.key).toBe('administration');
   });
   it('adds nothing without a platform permission', () => {
     expect(withAdministration(project(), ORG, new Set())).toEqual(project());
   });
-  it('offers commercial-only staff an Administration row and no Finance link', () => {
-    const commercial = withAdministration(project(), ORG, new Set(['platform.commercial']));
-    expect(row('workspace-finance', commercial)?.administration).toBeUndefined();
-    expect(entry(commercial)?.contextOnly).toBeUndefined();
-    expect(projectedItems(topLevelSections(commercial)).map((item) => item.key)).toContain('administration');
-    const context = workspaceNavigation(commercial, platformHref(ORG, 'billing'))!;
+  it('serves Administration beneath GildOps’ own organization, inside its shell', () => {
+    expect(platformHref(ORG)).toBe(`/organizations/${ORG}/administration`);
+    const context = workspaceNavigation(gildops, platformHref(ORG, 'billing-deliveries'))!;
     expect(context.workspace.key).toBe('administration');
-    expect(activeItemKey(context.sections, platformHref(ORG, 'billing'))).toBe('platform-billing');
+    expect(activeItemKey(context.sections, platformHref(ORG, 'billing-deliveries'))).toBe('platform-billing-deliveries');
   });
   it('offers provider-only staff Infrastructure and their AI link, never Commercial', () => {
     const providers = withAdministration(project(), ORG, new Set(['platform.providers']));
@@ -196,11 +197,6 @@ describe('Administration inside GildOps', () => {
     expect(entry(providers)!.href).toBe(platformHref(ORG, 'providers'));
     expect(row('workspace-finance', providers)?.administration).toBeUndefined();
     expect(row('workspace-ai', providers)?.administration?.key).toBe('platform-link-ai-runtime');
-  });
-  it('draws the Administration row for commercial authority when no Finance is in the shell to link from', () => {
-    const noFinance = withAdministration(project().map((section) => ({ ...section, items: section.items.filter((item) => item.key !== 'workspace-finance') })), ORG, new Set(['platform.commercial']));
-    expect(entry(noFinance)?.contextOnly).toBeUndefined();
-    expect(entry(noFinance)?.destinations?.map((item) => item.label)).toEqual(['Commercial administration']);
   });
   it.each(PLATFORM_CAPABILITIES)('partial %s authority offers only its own destinations', (permission) => {
     const partial = withAdministration(project(), ORG, new Set([permission]));
@@ -236,8 +232,8 @@ describe('Administration breadcrumbs', () => {
   it('lead with Administration, never the workspace that links in', () => {
     expect(platformAncestry(ORG, 'providers')).toEqual([{ label: 'Administration', href: platformHref(ORG) }, { label: 'Infrastructure' }]);
     expect(platformAncestry(ORG, 'organizations')).toEqual([{ label: 'Administration', href: platformHref(ORG) }]);
-    expect(platformAncestry(ORG, 'billing')).toEqual([{ label: 'Administration', href: platformHref(ORG) }, { label: 'Commercial administration' }]);
-    expect(platformAncestry(ORG, 'plans')).toEqual([{ label: 'Administration', href: platformHref(ORG) }, { label: 'Product Registry' }]);
+    expect(platformAncestry(ORG, 'billing-deliveries')).toEqual([{ label: 'Administration', href: platformHref(ORG) }, { label: 'Reliability' }]);
+    expect(platformAncestry(ORG, 'meters')).toEqual([{ label: 'Administration', href: platformHref(ORG) }, { label: 'Product Registry' }]);
   });
 });
 
@@ -248,14 +244,13 @@ describe('platform routes and their permission', () => {
     expect(platformRouteRequires('failures')).toBe('platform.health');
     expect(platformRouteRequires('organizations')).toBe('platform.organizations');
     expect(platformRouteRequires('organizations/abc/providers')).toBe('platform.organizations');
-    // A plan's switch list is the catalogue's; its prices are GildOps' Finance (ADR-057).
-    expect(platformRouteRequires('catalog/plans/base')).toBe('platform.catalogue');
-    expect(platformRouteRequires('economics/abc')).toBe('platform.commercial');
+    expect(platformRouteRequires('catalog/products/module:billing')).toBe('platform.catalogue');
     expect(platformRouteRequires('integrations/new')).toBe('platform.catalogue');
-    // Retired addresses are nobody's destination: they redirect under the overview's permission.
-    expect(platformRouteRequires('pricing')).toBe('platform.health');
-    expect(platformRouteRequires('plans/base')).toBe('platform.health');
-    expect(platformRouteRequires('billing')).toBe('platform.commercial');
+    expect(platformRouteRequires('billing-deliveries')).toBe('platform.health');
+    // Retired financial addresses are nobody's destination: they fall to the overview's permission and have no page.
+    for (const retired of ['pricing', 'plans/base', 'billing', 'economics/abc', 'vendor-rates', 'usage', 'package-economics']) {
+      expect(platformRouteRequires(retired), retired).toBe('platform.health');
+    }
     expect(platformRouteRequires('providers/twilio/configure')).toBe('platform.providers');
   });
 
@@ -263,12 +258,14 @@ describe('platform routes and their permission', () => {
     expect(platformRouteRequires('something-new')).toBe('platform.health');
   });
 
-  it('spells every Platform address under the organization the operator is working in, and recognises only those', () => {
+  it('spells every Administration address under the organization the operator is working in, and recognises only those', () => {
     const gold = '11111111-1111-4111-8111-111111111111';
-    expect(platformHref(gold)).toBe(`/platform`);
-    expect(platformHref(gold, 'catalog/plans')).toBe(`/platform/catalog/plans`);
-    expect(inPlatformScope(platformHref(gold, 'billing'))).toBe(true);
-    expect(inPlatformScope('/platform/billing')).toBe(true);
+    expect(platformHref(gold)).toBe(`/organizations/${gold}/administration`);
+    expect(platformHref(gold, 'catalog/meters')).toBe(`/organizations/${gold}/administration/catalog/meters`);
+    expect(inPlatformScope(platformHref(gold, 'failures'))).toBe(true);
+    // The retired standalone root is no Administration address at all.
+    expect(inPlatformScope('/platform/billing')).toBe(false);
+    expect(inPlatformScope(`/organizations/${gold}/finance`)).toBe(false);
   });
 
   it('every permission reaches at least one destination, so none is a permission that opens nothing', () => {
@@ -412,11 +409,16 @@ describe('responsive page-location projection', () => {
     expect(location.groups.flatMap((group) => group.items).every((item) => item.href.startsWith(platformHref(ORG)))).toBe(true);
     expect(location.groups.flatMap((group) => group.items).some((item) => item.key === 'workspace-field')).toBe(false);
   });
-  it('keeps commercial pages in an Administration dropdown, never Finance', () => {
-    const gildops = { organizationId: ORG, sections: withAdministration(project(), ORG, new Set(['platform.commercial'])) };
-    const location = pageNavigation(gildops, platformHref(ORG, 'billing'), []);
-    expect(location.groups.map((group) => group.label)).toEqual(['Commercial administration']);
-    expect(location.activeKey).toBe('platform-billing');
+  it('keeps GildOps’ money pages in Finance, offered by the operator features and Finance permissions alone', () => {
+    const finance = projectedItems(project()).find((item) => item.key === 'workspace-finance')!;
+    const labels = (finance.destinations ?? []).map((item) => item.label);
+    expect(labels).toEqual(expect.arrayContaining(['Catalog & Pricing', 'Subscriptions', 'Costs', 'Economics']));
+    const withoutOperator = project(ALL_CAPABILITIES, { featureAvailability: new Set([...everyFeature()].filter((key) => !['subscriptions', 'supplier_costs', 'cost_to_serve', 'package_economics'].includes(key))) });
+    const plain = projectedItems(withoutOperator).find((item) => item.key === 'workspace-finance');
+    expect((plain?.destinations ?? []).map((item) => item.label)).not.toEqual(expect.arrayContaining(['Subscriptions']));
+    const noCosts = projectedItems(project(ALL_CAPABILITIES.filter((capability) => !['cost.read', 'subscription.read'].includes(capability)))).find((item) => item.key === 'workspace-finance')!;
+    expect((noCosts.destinations ?? []).map((item) => item.label)).not.toContain('Costs');
+    expect((noCosts.destinations ?? []).map((item) => item.label)).not.toContain('Subscriptions');
   });
 });
 

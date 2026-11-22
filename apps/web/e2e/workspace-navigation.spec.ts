@@ -10,11 +10,11 @@ import { expect, test, type Page } from '@playwright/test';
 import type { Database } from '../lib/db/types';
 import { provisionOrganization } from '../lib/domain/platform/provision';
 import { setModuleEnabled } from '../lib/domain/tenancy/modules';
-import { createPlan, grantPlanProduct } from '../lib/domain/catalogue/plans';
-import { recordPlanAssignment } from '../lib/domain/catalogue/organization-plans';
+import { grantPlanProduct } from '../lib/domain/catalogue/plans';
 import { createRole } from '../lib/domain/tenancy/roles';
 import { addMember } from '../lib/domain/tenancy/members';
 import { chooseOption, optionTexts, selectFieldValue } from './select-field';
+import { assignFixturePlan, createFixturePlan } from '../tests/support/plans';
 
 /**
  * Rendered evidence for explicit Dashboard navigation (ADR-049): inside an entered
@@ -73,7 +73,7 @@ test.beforeAll(async () => {
   // A business without calling and pipeline: Communications is not part of it.
   const noCalling = await provisionOrganization(db, { ownerEmail: owner.email, name: 'Navigation no-calling business', currency: 'CAD', timezone: 'America/Toronto', displayName: 'Jane Doe' });
   organizations.push(full, noCalling);
-  const planId = await createPlan(db, { key: planKey, kind: 'plan', label: 'Local workspace navigation', description: 'Local browser fixture only', billable: false });
+  const planId = await createFixturePlan({ key: planKey, kind: 'plan', label: 'Local workspace navigation', description: 'Local browser fixture only', billable: false });
   for (const productKey of ['comms', 'sales', 'workspace', 'automations', 'finance', 'studio', 'agents', 'field', 'service']) await grantPlanProduct(db, { planId, productKey });
   await setModuleEnabled(db, { organizationId: full, key: 'reception', enabled: true });
   await pg.query("insert into organization_commercial_terms(organization_id,product_key,period_start,period_end,quantity,price_minor,currency,recorded_by,note) values($1,'module:reception','2020-01-01','9999-12-31',1,0,'CAD',$2,'Local workspace navigation fixture')", [full, madeOwner.data.user.id]);
@@ -81,7 +81,7 @@ test.beforeAll(async () => {
     await setModuleEnabled(db, {organizationId:full,key,enabled:true});
     await pg.query("insert into organization_commercial_terms(organization_id,product_key,period_start,period_end,quantity,price_minor,currency,recorded_by,note) values($1,$2,'2020-01-01','9999-12-31',1,0,'CAD',$3,'Local GuildOps fixture') on conflict do nothing",[full,`module:${key}`,madeOwner.data.user.id]);
   }
-  await recordPlanAssignment(db, { organizationId: full, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
+  await assignFixturePlan({ organizationId: full, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
   // A member who may configure calling but not operate it.
   const roleId = await createRole(db, { organizationId: full, name: `Navigation configure ${randomUUID().slice(0, 8)}`, capabilities: ['field.manage'] });
   await addMember(db, { organizationId: full, email: configurer.email, roleId, displayName: 'Configuration member' });

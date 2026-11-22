@@ -17,9 +17,9 @@ import { setResourceWorkingHours } from '../lib/domain/scheduling/resource-avail
 import { getEffectiveBookingPolicy, type BookingPolicy } from '../lib/domain/booking/policy';
 import { createWorkItem } from '../lib/domain/work-items/work-items';
 import { scheduleWorkItem } from '../lib/domain/scheduling/schedule';
-import { recordCommercialTerm } from '../lib/domain/commercial/terms';
-import { asPlatformStaff, foundBusiness } from '../tests/support/founding';
+import { foundBusiness } from '../tests/support/founding';
 import { chooseOption, selectFieldValue } from './select-field';
+import { recordFixtureTerm } from '../tests/support/plans';
 
 /**
  * Booking policy in a real browser: what a visitor is offered under notice, same-day, horizon and
@@ -153,7 +153,7 @@ test.beforeAll(async () => {
   await updateOrganization(o, { id: organizationId, name: org!.name, timezone: 'UTC', currency: 'EUR', bufferMinutes: 0, slug });
   await setModuleEnabled(o, { organizationId, key: 'booking', enabled: true });
   // Switched on *and* paid for, so the operator's own screens show the booking controls.
-  await recordCommercialTerm(await asPlatformStaff(), {
+  await recordFixtureTerm({
     organizationId,
     productKey: 'module:booking',
     periodStart: new Date().toISOString().slice(0, 10),

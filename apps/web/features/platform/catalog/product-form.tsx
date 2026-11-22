@@ -4,7 +4,7 @@ import { useActionState } from 'react';
 import { Button } from '@/components/controls/button';
 import { ErrorText, FieldLabel, Hint, TextInput } from '@/components/controls/inputs';
 import type { Product } from '@/lib/domain/commercial/catalogue';
-import { updateProductAction, type ProductState } from '@/app/platform/catalog/products/actions';
+import { updateProductAction, type ProductState } from '@/app/organizations/[organizationId]/administration/catalog/products/actions';
 import { SelectField } from '@/components/controls/select-field';
 
 const PRODUCT_INITIAL: ProductState = { error: null, updated: false };

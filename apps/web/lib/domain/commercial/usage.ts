@@ -154,7 +154,7 @@ export async function organizationCommercialSummary(
 
   if (error) {
     if (error.code === '42501' || error.code === 'PGRST202' || error.code === '42883') {
-      throw new DomainError('Only platform staff may read this.', 'commercial.forbidden');
+      throw new DomainError('This needs the cost permission in GildOps’ own business.', 'commercial.forbidden');
     }
     throw fromDatabaseError(error, 'commercial.summary_failed');
   }
@@ -223,7 +223,7 @@ export async function organizationUsageDetail(
 
   if (error) {
     if (error.code === '42501' || error.code === 'PGRST202' || error.code === '42883') {
-      throw new DomainError('Only platform staff may read this.', 'commercial.forbidden');
+      throw new DomainError('This needs the cost permission in GildOps’ own business.', 'commercial.forbidden');
     }
     throw fromDatabaseError(error, 'commercial.usage_detail_failed');
   }
@@ -293,7 +293,7 @@ export async function recordUsageReconciliation(
 
   if (error) {
     if (error.code === '42501') {
-      throw new DomainError('Only platform staff may record a reconciliation.', 'commercial.forbidden');
+      throw new DomainError('Recording a reconciliation needs the cost-management permission in GildOps’ own business.', 'commercial.forbidden');
     }
     if (error.code === '23503') {
       throw new DomainError('No such usage event.', 'commercial.usage_event_missing');

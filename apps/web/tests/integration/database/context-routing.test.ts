@@ -13,18 +13,15 @@ import { foundBusiness } from '@/tests/support/founding';
 
 /**
  * The one-identity rule's routing claim end to end: platform authority and organization membership are two
- * independent facts about one identity, read together rather than either being hidden by the
- * other. `landing.test.ts` proves `resolveOrganizationsLanding` itself against every combination,
- * pure; this suite proves the two facts it is fed — `isPlatformStaff` and `listMyOrganizations` —
- * actually combine that way against real RLS, for identities built the way the product builds
- * them (`provisionOrganization`, `addMember`), not by hand.
+ * independent facts about one identity. `landing.test.ts` proves `resolveOrganizationsLanding`
+ * itself, pure; this suite proves the membership it is fed is read against real RLS, for identities
+ * built the way the product builds them (`provisionOrganization`, `addMember`), not by hand.
  *
- * The locked product decision: platform staff default into the GOLD operating workspace when initialized, regardless of
- * how many businesses they also belong to. Membership itself is untouched by this — `mixed one`
- * and `mixed multi` below both prove their real membership rows still exist and are still read —
- * only the *default landing* changed. Reaching another business later is the context switcher's
- * job (`context-switcher.tsx`), which links straight to each, and Administration is reached from
- * GildOps' own navigation; no request shows a directory instead.
+ * Administration is a context of GildOps' operating organization (ADR-057), so platform authority
+ * adds no landing of its own: staff land where their memberships say, exactly as anybody else.
+ * Membership itself is untouched — `mixed one` and `mixed multi` below prove their real membership
+ * rows still exist and are still read. Reaching another business later is the context switcher's
+ * job (`context-switcher.tsx`); no request shows a directory instead.
  */
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
@@ -156,24 +153,19 @@ describe('who lands where, once platform authority and organization membership a
     const organizations = await listMyOrganizations(tenantOnly.db);
     expect(organizations).toHaveLength(1);
 
-    const landing = resolveOrganizationsLanding({
-      organizations,
-      staff: false,
-    });
+    const landing = resolveOrganizationsLanding({ organizations });
     expect(landing.kind).toBe('enter');
   });
 
-  it('platform-only, zero organizations → /platform', async () => {
+  it('platform-only, zero organizations → founds a business, like anybody with none', async () => {
     expect(await isPlatformStaff(platformOnly.db)).toBe(true);
     const organizations = await listMyOrganizations(platformOnly.db);
     expect(organizations).toHaveLength(0);
 
-    expect(resolveOrganizationsLanding({ organizations, staff: true })).toEqual({
-      kind: 'platform',
-    });
+    expect(resolveOrganizationsLanding({ organizations })).toEqual({ kind: 'onboarding' });
   });
 
-  it('mixed platform + tenant, one organization → /platform by default, membership untouched', async () => {
+  it('mixed platform + tenant, one organization → enters it, membership untouched', async () => {
     expect(await isPlatformStaff(mixedOne.db)).toBe(true);
     const organizations = await listMyOrganizations(mixedOne.db);
     // The membership itself is real and still read — this identity is not blocked from the
@@ -181,23 +173,19 @@ describe('who lands where, once platform authority and organization membership a
     expect(organizations).toHaveLength(1);
     expect(organizations[0].id).toBe(mixedOneOrgId);
 
-    expect(resolveOrganizationsLanding({ organizations, staff: true })).toEqual({
-      kind: 'platform',
-    });
+    expect(resolveOrganizationsLanding({ organizations })).toMatchObject({ kind: 'enter', organizationId: mixedOneOrgId });
   });
 
-  it('mixed, multiple organizations → /platform by default, every membership still read', async () => {
+  it('mixed, multiple organizations → enters one of them, every membership still read', async () => {
     expect(await isPlatformStaff(mixedMulti.db)).toBe(true);
     const organizations = await listMyOrganizations(mixedMulti.db);
     expect(organizations).toHaveLength(2);
 
-    expect(resolveOrganizationsLanding({ organizations, staff: true })).toEqual({
-      kind: 'platform',
-    });
+    expect(resolveOrganizationsLanding({ organizations })).toMatchObject({ kind: 'enter' });
   });
 
   it('a tenant-only identity is refused platform authority, live', async () => {
-    // What makes `/platform`'s own guard (below) honest rather than decorative: the fact it
+    // What makes Administration's own guard (below) honest rather than decorative: the fact it
     // reads is real and reads false for a real tenant-only account.
     expect(await isPlatformStaff(tenantOnly.db)).toBe(false);
   });
@@ -205,19 +193,18 @@ describe('who lands where, once platform authority and organization membership a
 
 /**
  * The regression itself, as a source guard: `organizations/page.tsx` must decide through the one
- * pure function every combination above is checked against, not through its own inline
- * `isPlatformStaff` short-circuit again — which is exactly how a caller with platform authority
- * and a real organization stopped being able to reach it. And `/platform`'s own layout must keep
- * refusing a non-staff caller outright, since that is the other half of the loop that must not
- * reopen.
+ * pure function every combination above is checked against, not through an inline
+ * `isPlatformStaff` short-circuit — which is exactly how a caller with platform authority and a
+ * real organization stopped being able to reach it. And Administration's own layout must keep
+ * refusing a caller without platform authority outright.
  */
 describe('the routing decision stays where it can be tested', () => {
   const organizationsPage = readFileSync(
     fileURLToPath(new URL('../../../app/organizations/page.tsx', import.meta.url)),
     'utf8',
   );
-  const platformLayout = readFileSync(
-    fileURLToPath(new URL('../../../app/platform/layout.tsx', import.meta.url)),
+  const administrationLayout = readFileSync(
+    fileURLToPath(new URL('../../../app/organizations/[organizationId]/administration/layout.tsx', import.meta.url)),
     'utf8',
   );
 
@@ -225,14 +212,14 @@ describe('the routing decision stays where it can be tested', () => {
     expect(organizationsPage).toContain('resolveOrganizationsLanding');
   });
 
-  it('/organizations no longer redirects to /platform before organizations are read', () => {
-    // The exact shape of the regression: `isPlatformStaff` used as the sole condition, ahead of
-    // `listMyOrganizations`, sending every staff member away regardless of membership.
-    expect(organizationsPage).not.toMatch(/if\s*\(\s*await isPlatformStaff\(db\)\s*\)\s*\{\s*redirect\('\/platform'\)/);
+  it('/organizations takes no platform authority into its landing', () => {
+    // The shape of the old regression: `isPlatformStaff` deciding the landing ahead of membership.
+    expect(organizationsPage).not.toContain('isPlatformStaff');
+    expect(organizationsPage).not.toContain("'/platform'");
   });
 
-  it('/platform still refuses a caller with no platform authority', () => {
-    expect(platformLayout).toContain('await requirePlatformScope()');
+  it('Administration still refuses a caller with no platform authority', () => {
+    expect(administrationLayout).toContain('await requirePlatformScope(organizationId)');
     const guard = readFileSync(new URL('../../../lib/route/platform.ts', import.meta.url), 'utf8');
     expect(guard).toContain('await requireOrganizationForBillingRecovery(organizationId)');
     expect(guard).toContain('await isOperatingOrganization(db, { organizationId })');

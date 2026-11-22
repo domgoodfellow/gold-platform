@@ -19,9 +19,9 @@ describe('hiding a navigation item is never the security boundary', () => {
   it('every platform area refuses, on the server, a person whose staff row does not name it', () => {
     // One layout per area, calling the guard with the permission the registry assigns that path.
     const segments = [...new Set(PLATFORM_DESTINATIONS.map((destination) => destination.path.split('/')[0]).filter(Boolean))];
-    expect(segments.sort()).toEqual(['ai-runtime', 'billing', 'catalog', 'economics', 'failures', 'integrations', 'organizations', 'package-economics', 'providers', 'usage', 'vendor-rates']);
+    expect(segments.sort()).toEqual(['ai-runtime', 'billing-deliveries', 'catalog', 'failures', 'integrations', 'organizations', 'providers']);
     for (const segment of segments) {
-      const layout = `app/platform/${segment}/layout.tsx`;
+      const layout = `app/organizations/[organizationId]/administration/${segment}/layout.tsx`;
       expect(existsSync(`${WEB}/${layout}`), `${segment} has no guard layout`).toBe(true);
       expect(read(layout), layout).toContain(`requirePlatformArea(organizationId, '${platformRouteRequires(segment)}')`);
     }
@@ -30,7 +30,7 @@ describe('hiding a navigation item is never the security boundary', () => {
   it('every platform page asks for its own area, with the permission the registry assigns its path', () => {
     // A layout is not re-rendered on every client navigation and renders beside its page, so the page
     // guards itself exactly as an organization page does. The catch-all only throws notFound().
-    const root = `${WEB}/app/platform`;
+    const root = `${WEB}/app/organizations/[organizationId]/administration`;
     const pages: string[] = [];
     const walk = (dir: string) => {
       for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -54,7 +54,7 @@ describe('hiding a navigation item is never the security boundary', () => {
   });
 
   it('the front door sends a limited operator to the first place they may go, not to a 404', () => {
-    expect(read('app/platform/page.tsx')).toContain(
+    expect(read('app/organizations/[organizationId]/administration/page.tsx')).toContain(
       "requirePlatformArea(goldId, 'platform.health', { landing: true })",
     );
     const guard = read('lib/route/platform.ts');
@@ -63,8 +63,8 @@ describe('hiding a navigation item is never the security boundary', () => {
   });
 
   it('the platform scope proves GildOps’ operating organization, membership and a live platform row — never a claim or the URL alone', () => {
-    const layout = code(read('app/platform/layout.tsx'));
-    expect(layout).toContain('requirePlatformScope()');
+    const layout = code(read('app/organizations/[organizationId]/administration/layout.tsx'));
+    expect(layout).toContain('requirePlatformScope(organizationId)');
     const guard = code(read('lib/route/platform.ts'));
     // The three facts, in the order a refusal is cheapest: membership, identity, authority.
     expect(guard).toContain('requireOrganizationForBillingRecovery(organizationId)');
@@ -75,17 +75,19 @@ describe('hiding a navigation item is never the security boundary', () => {
     expect(guard).not.toMatch(/user_metadata|app_metadata|jwt|role\s*===/);
   });
 
-  it('owns Platform at its root with no organization compatibility routes', () => {
-    expect(read('app/platform/layout.tsx')).toContain('<PlatformShell');
-    expect(existsSync(`${WEB}/app/platform/page.tsx`)).toBe(true);
+  it('serves Administration inside the organization shell, with no standalone shell or root of its own', () => {
+    const layout = code(read('app/organizations/[organizationId]/administration/layout.tsx'));
+    expect(layout).not.toMatch(/PlatformShell|WorkspaceShell|<Sidebar|AccountAppearance|ShellLayoutProvider/);
+    expect(existsSync(`${WEB}/app/organizations/[organizationId]/administration/page.tsx`)).toBe(true);
+    expect(existsSync(`${WEB}/app/platform`)).toBe(false);
+    expect(existsSync(`${WEB}/features/platform/platform-shell.tsx`)).toBe(false);
     expect(existsSync(`${WEB}/app/organizations/[organizationId]/platform`)).toBe(false);
-    expect(existsSync(`${WEB}/app/platform/[[...path]]`)).toBe(false);
+    expect(existsSync(`${WEB}/app/organizations/[organizationId]/administration/[[...path]]`)).toBe(false);
   });
 
-  it('resolves Platform authority from the configured operating organization', () => {
+  it('resolves Administration authority from the configured operating organization, at an address beneath it', () => {
     expect(read('lib/route/platform.ts')).toContain('callerOperatingOrganizationId()');
-    expect(read('lib/platform-navigation.ts')).toContain('`/platform${');
-    expect(read('features/platform/platform-shell.tsx')).toContain('agent={null}');
+    expect(read('lib/platform-navigation.ts')).toContain('`/organizations/${organizationId}/${ADMINISTRATION_SEGMENT}');
   });
 
   it('every organization page still calls requireOrganization for itself — a layout is never the guard', () => {

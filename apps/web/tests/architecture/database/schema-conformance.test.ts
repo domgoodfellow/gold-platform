@@ -80,7 +80,7 @@ describe('schema conformance', () => {
         order by t.relname, i.relname`,
     );
 
-    // **Eight exceptions, and they share one rule rather than being separate lapses.**
+    // **Nine exceptions, and they share one rule rather than being separate lapses.**
     //
     // Tenant isolation exists so one tenant's uniqueness cannot block another's: two businesses must both be
     // able to call a status "Booked". Every index below is the opposite question — **an
@@ -115,6 +115,10 @@ describe('schema conformance', () => {
     //     tenant in hand, and the webhook must resolve it to exactly one organization. Scoping it by
     //     `organization_id` would let two businesses claim one processor customer, which is the
     //     routing defect it exists to prevent. Pending placeholders are excluded; they identify nobody.
+    //   * `platform_plan_provider_prices_reference_unique` is the same shape as the processor
+    //     customer reference: a signed processor event arrives holding a price reference and its
+    //     environment, with no business in hand, and must resolve it to exactly one price. Scoping it
+    //     by `organization_id` would let two businesses map one processor price.
     //   * `platform_retail_rates_id_meter_currency_unique` is the inverse case: not an outsider's
     //     secret, but a row that may belong to *no* tenant at all. `platform_retail_rates` gained
     //     an optional `organization_id` in `20261018000001` for a negotiated override; most rows
@@ -130,7 +134,7 @@ describe('schema conformance', () => {
     //     match a real tenant id against a null, so it would refuse to record usage the moment no
     //     negotiated rate existed for that tenant, which is the common case.
     //
-    // Named individually rather than excluded by a pattern, so a seventh cannot arrive quietly
+    // Named individually rather than excluded by a pattern, so a tenth cannot arrive quietly
     // by matching a rule somebody loosened. A new entry here should have to argue for itself.
     expect(rows).toEqual([
       {
@@ -172,6 +176,11 @@ describe('schema conformance', () => {
         table_name: 'platform_retail_rates',
         index_name: 'platform_retail_rates_id_meter_currency_unique',
         first: 'id',
+      },
+      {
+        table_name: 'price_book_item_provider_prices',
+        index_name: 'platform_plan_provider_prices_reference_unique',
+        first: 'environment',
       },
     ]);
   });
@@ -224,13 +233,18 @@ describe('schema conformance', () => {
 
     // Only where the capability is actually consulted. Matching `has_capability` in the same
     // body is what keeps this from passing on a function that merely mentions the string in a
-    // comment, which would make the whole assertion decorative.
+    // comment, which would make the whole assertion decorative. GildOps' own Finance permissions
+    // are consulted through `app.platform_seller_has` and its refusing form
+    // `app.require_platform_seller`, which ask `has_capability` in the business that sells GildOps
+    // (ADR-057); a call to either is the same consultation.
     const { rows: functions } = await db.query<{ body: string }>(
       `select p.prosrc as body
          from pg_proc p
          join pg_namespace n on n.oid = p.pronamespace
         where n.nspname in ('public', 'app')
-          and p.prosrc like '%has_capability%'`,
+          and (p.prosrc like '%has_capability%'
+            or p.prosrc like '%app.platform_seller_has(%'
+            or p.prosrc like '%app.require_platform_seller(%')`,
     );
 
     const enforcement = [
@@ -344,7 +358,8 @@ describe('schema conformance', () => {
                 when 'forms' then 'form_id' when 'ai_assistant_deployments' then 'ai_deployment_id' when 'portal_definitions' then 'portal_id' else 'automation_rule_id' end]
             and (select array_agg(a.attname::text order by k.ordinality)
               from unnest(c.confkey) with ordinality k(attnum,ordinality)
-              join pg_attribute a on a.attrelid=r.oid and a.attnum=k.attnum)=array['organization_id','id'])`,
+              join pg_attribute a on a.attrelid=r.oid and a.attnum=k.attnum)=array['organization_id','id'])
+        order by c.conname`,
     );
 
     // **One exception, for the reason `platform_retail_rates_id_meter_currency_unique` is named
@@ -357,7 +372,14 @@ describe('schema conformance', () => {
     // reasoning and the real bug its investigation found (`app.retail_rate_at` resolving with no
     // regard to organization at all, which is what RLS cannot catch on this side either, since the
     // function runs as its own definer rather than through a row a policy could refuse).
+    //
+    // **A second, for the buyer and the seller of GildOps.** `platform_billing_checkout_sessions`
+    // belongs to the business buying a plan; the plan price it captured belongs to the business
+    // that sells GildOps (ADR-057), so the two `organization_id`s differ by construction. No
+    // signed-in role can write a session (only the billing service does, through the API), and a
+    // price is resolved by the operating Organization's own price book before the session exists.
     expect(rows).toEqual([
+      { constraint_name: 'platform_billing_checkout_sessions_plan_price_id_fkey', table_name: 'platform_billing_checkout_sessions' },
       { constraint_name: 'usage_events_retail_rate_matches', table_name: 'usage_events' },
     ]);
   });

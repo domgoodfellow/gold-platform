@@ -7,8 +7,7 @@ import { loadOrganizationShellModel } from '@/lib/application/shell/organization
 import { loadPlatformContext } from '@/lib/application/shell/platform-context';
 import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import { projectedItems } from '@/lib/shell';
-import { recordPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
-import { createPlan, getPlan } from '@/lib/domain/catalogue/plans';
+import { getPlan } from '@/lib/domain/catalogue/plans';
 import {
   bootstrapOperatingOrganization,
   callerOperatingOrganization,
@@ -17,6 +16,7 @@ import {
 import { requirePlatformArea, requirePlatformCapability, requirePlatformScope } from '@/lib/route/platform';
 import { foundBusiness } from '@/tests/support/founding';
 import { setAsideOperatingOrganization } from '@/tests/support/operating-organization';
+import { assignFixturePlan, createFixturePlan } from '@/tests/support/plans';
 
 /**
  * GildOps' operating identity end to end: the configured identity, the caller's membership and
@@ -103,7 +103,7 @@ beforeAll(async () => {
   otherOwner = await person('internal-plan-holder', { staff: true });
   internalPlanHolder = await foundBusiness({ ownerEmail: otherOwner.email, name: `Internal plan holder ${randomUUID().slice(0, 8)}`, currency: 'USD' });
   const internal = await getPlan(operator.db, 'gold_internal');
-  await recordPlanAssignment(operator.db, { organizationId: internalPlanHolder, planId: internal!.id, periodStart: '2000-01-01', periodEnd: '9999-12-31' });
+  await assignFixturePlan({ organizationId: internalPlanHolder, planId: internal!.id, periodStart: '2000-01-01', periodEnd: '9999-12-31' });
 }, 120_000);
 
 afterAll(async () => {
@@ -124,9 +124,9 @@ describe('the operating organization and the Platform guards', () => {
   it('admits a staff member who is a member of the operating organization', async () => {
     const scope = await as(operator, () => requirePlatformScope(gildops));
     expect(scope.organization.id).toBe(gildops);
-    expect(scope.permissions.size).toBe(5);
+    expect(scope.permissions.size).toBe(4);
     await expect(as(operator, () => requirePlatformArea(gildops, 'platform.health'))).resolves.toBeTruthy();
-    await expect(as(operator, () => requirePlatformCapability('platform.commercial'))).resolves.toBe(gildops);
+    await expect(as(operator, () => requirePlatformCapability('platform.catalogue'))).resolves.toBe(gildops);
     expect(await callerOperatingOrganization(operator.db)).toEqual({ id: gildops });
     expect((await loadPlatformContext(operator.db, gildops))?.organizationId).toBe(gildops);
   });
@@ -168,14 +168,14 @@ describe('the operating organization and the Platform guards', () => {
         where organization_id = $1 and plan_id = (select id from public.platform_plans where key = 'gold_internal')`,
       [gildops],
     );
-    const planId = await createPlan(operator.db, {
+    const planId = await createFixturePlan({
       key: `plan_${randomUUID().replace(/-/g, '').slice(0, 12)}`,
       kind: 'plan',
       label: 'Replacement plan',
       description: '',
       billable: false,
     });
-    await recordPlanAssignment(operator.db, { organizationId: gildops, planId, periodStart: '2000-01-01', periodEnd: '9999-12-31' });
+    await assignFixturePlan({ organizationId: gildops, planId, periodStart: '2000-01-01', periodEnd: '9999-12-31' });
 
     expect(await callerOperatingOrganization(operator.db)).toEqual({ id: gildops });
     await expect(as(operator, () => requirePlatformScope(gildops))).resolves.toBeTruthy();

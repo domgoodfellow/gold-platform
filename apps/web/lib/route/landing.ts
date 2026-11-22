@@ -1,4 +1,3 @@
-import { isPlatformStaff } from '@/lib/domain/platform/tenants';
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
 import { callerOperatingOrganization } from '@/lib/domain/platform/operating-organization';
 import { organizationHomeHref } from '@/lib/navigation';
@@ -10,11 +9,10 @@ import type { OperationalState } from '@/lib/domain/tenancy/lifecycle';
 import { awaitsFirstReview, currentConfigurationProposal } from '@/lib/domain/configuration/proposals';
 
 /**
- * Where `/organizations` sends somebody, decided from two independent facts about one identity:
- * platform authority and real organization membership. Platform authority does not invent GOLD
- * membership; when the membership exists, GOLD is the operating workspace and Platform is a
- * sub-scope of it. Without it there is no canonical Platform address, so `/platform` — the legacy
- * entry, and the one place still named — renders the bootstrap-required state.
+ * Where `/organizations` sends somebody, decided from their real organization memberships. A
+ * member of GildOps' operating organization lands there first; Administration is a context of
+ * that organization, so platform authority adds no destination of its own and never stands in
+ * for a membership.
  *
  * This is where a *sign-in* lands, never how somebody switches context: that is the context
  * switcher, which links straight to a business. There is no directory outcome:
@@ -22,27 +20,21 @@ import { awaitsFirstReview, currentConfigurationProposal } from '@/lib/domain/co
  */
 export type OrganizationsLanding =
   | { kind: 'onboarding' }
-  | { kind: 'platform' }
   | { kind: 'enter'; organizationId: string; operationalState: OperationalState };
 
 export function resolveOrganizationsLanding(input: {
   organizations: readonly { id: string; operationalState: OperationalState }[];
-  staff: boolean;
   preferredOrganizationId?: string | null;
   /** The business last worked in (`last-organization.ts`). Honoured only if the caller is a member. */
   lastOrganizationId?: string | null;
 }): OrganizationsLanding {
-  const { organizations, staff, preferredOrganizationId, lastOrganizationId } = input;
+  const { organizations, preferredOrganizationId, lastOrganizationId } = input;
 
   const preferred = preferredOrganizationId
     ? organizations.find((org) => org.id === preferredOrganizationId)
     : undefined;
   if (preferred) {
     return { kind: 'enter', organizationId: preferred.id, operationalState: preferred.operationalState };
-  }
-
-  if (staff) {
-    return { kind: 'platform' };
   }
 
   if (organizations.length === 0) {
@@ -59,10 +51,6 @@ export function resolveOrganizationsLanding(input: {
 /** The one place a landing becomes a URL — pure, so a SETUP and a LIVE business can be told apart without a session. */
 export function destinationFor(landing: OrganizationsLanding): string {
   switch (landing.kind) {
-    case 'platform':
-      // Staff with no membership of GildOps' operating organization: there is no canonical address to compute, so this is
-      // the legacy entry, which explains what is missing rather than 404ing.
-      return '/platform';
     case 'enter':
       return organizationHomeHref(landing.organizationId, landing.operationalState);
     case 'onboarding':
@@ -97,13 +85,11 @@ export async function resolvePostAuthDestination(db: Db): Promise<string> {
   const invite = await consumePendingInviteDestination();
   if (invite) return invite;
 
-  const [staff, organizations] = await Promise.all([isPlatformStaff(db), listMyOrganizations(db)]);
-  const preferredOrganization = await callerOperatingOrganization(db);
+  const [organizations, preferredOrganization] = await Promise.all([listMyOrganizations(db), callerOperatingOrganization(db)]);
   return entryDestination(
     db,
     resolveOrganizationsLanding({
       organizations,
-      staff,
       preferredOrganizationId: preferredOrganization?.id,
       lastOrganizationId: await readLastOrganizationId(),
     }),

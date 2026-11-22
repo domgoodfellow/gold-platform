@@ -63,7 +63,7 @@ const organizationLayout = readFileSync(`${WEB}/features/shell/organization-shel
 // into one coordinating function the layout merely calls and destructures.
 const organizationShellModel = readFileSync(`${WEB}/lib/application/shell/organization-shell.ts`, 'utf8');
 const organizationLayoutRoute = readFileSync(`${WEB}/app/organizations/[organizationId]/layout.tsx`, 'utf8');
-const platformLayout = readFileSync(`${WEB}/app/platform/layout.tsx`, 'utf8');
+const platformLayout = readFileSync(`${WEB}/app/organizations/[organizationId]/administration/layout.tsx`, 'utf8');
 const legacyPlatformEntry = readFileSync(`${WEB}/lib/route/platform.ts`, 'utf8');
 const workspaceShell = readFileSync(`${WEB}/components/layout/workspace-shell.tsx`, 'utf8');
 const pageHeader = readFileSync(`${WEB}/components/headers/page-header.tsx`, 'utf8');
@@ -77,10 +77,10 @@ const platformNavigation = readFileSync(`${WEB}/lib/platform-navigation.ts`, 'ut
 const shellProjection = readFileSync(`${WEB}/lib/shell.ts`, 'utf8');
 const tenantWorkspace = readFileSync(`${WEB}/features/platform/tenant-workspace.tsx`, 'utf8');
 const platformOrganizationOverview = readFileSync(
-  `${WEB}/app/platform/organizations/[targetOrganizationId]/page.tsx`,
+  `${WEB}/app/organizations/[organizationId]/administration/organizations/[targetOrganizationId]/page.tsx`,
   'utf8',
 );
-const platformCatalogPage = readFileSync(`${WEB}/app/platform/catalog/page.tsx`, 'utf8');
+const platformCatalogPage = readFileSync(`${WEB}/app/organizations/[organizationId]/administration/catalog/page.tsx`, 'utf8');
 const platformOverview = readFileSync(`${WEB}/features/platform/platform-overview.tsx`, 'utf8');
 
 describe('WorkspaceHeader is the global bar, not a page header', () => {
@@ -229,7 +229,7 @@ describe('the Platform route renders inside the one organization shell', () => {
     expect(existsSync(`${WEB}/components/site-header.tsx`)).toBe(false);
     expect(existsSync(`${WEB}/features/platform/platform-header-title.tsx`)).toBe(false);
     expect(existsSync(`${WEB}/features/platform/platform-header.tsx`)).toBe(false);
-    expect(existsSync(`${WEB}/features/platform/platform-shell.tsx`)).toBe(true);
+    expect(existsSync(`${WEB}/features/platform/platform-shell.tsx`)).toBe(false);
     expect(existsSync(`${WEB}/features/platform/platform-navigation.tsx`)).toBe(false);
     expect(existsSync(`${WEB}/app/(platform)`)).toBe(false);
     // Frame and header are the organization layout's; the platform layout beneath it is only the door.
@@ -579,7 +579,7 @@ describe('Platform pages render their own page identity', () => {
 
   it('the legacy flat SKU list reads as "Line items" under Catalog, never a second "Products"', () => {
     const productsPage = readFileSync(
-      `${WEB}/app/platform/catalog/products/page.tsx`,
+      `${WEB}/app/organizations/[organizationId]/administration/catalog/products/page.tsx`,
       'utf8',
     );
     expect(productsPage).toContain("title=\"Line items\"");
@@ -656,7 +656,7 @@ describe('Personal settings shares the authenticated shell — no standalone isl
 
 describe('the Catalog family grid uses the shared Progress primitive, not a hand-built bar', () => {
   it('imports Progress from packages/ui rather than a styled div pair', () => {
-    const catalogPage = readFileSync(`${WEB}/app/platform/catalog/page.tsx`, 'utf8');
+    const catalogPage = readFileSync(`${WEB}/app/organizations/[organizationId]/administration/catalog/page.tsx`, 'utf8');
     expect(catalogPage).toContain("from '@gold/ui/components/progress'");
     expect(catalogPage).toContain('<Progress value={coverage}');
     expect(catalogPage).not.toContain('h-1.5 w-full overflow-hidden rounded-full bg-muted');
@@ -820,7 +820,7 @@ describe('the breadcrumb contract — every page publishes a location, ancestors
         }
       }
     };
-    walk(`${WEB}/app/platform`);
+    walk(`${WEB}/app/organizations/[organizationId]/administration`);
     walk(`${WEB}/features/platform`);
     expect(offenders).toEqual([]);
   });

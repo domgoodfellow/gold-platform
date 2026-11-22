@@ -24,7 +24,7 @@ import {
   saveConnectorAppAction,
   uploadLogoAction,
   type ConnectorState,
-} from '@/app/platform/integrations/actions';
+} from '@/app/organizations/[organizationId]/administration/integrations/actions';
 import { SelectField } from '@/components/controls/select-field';
 
 const INITIAL: ConnectorState = { error: null, saved: false };

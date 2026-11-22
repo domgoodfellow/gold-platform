@@ -15,8 +15,8 @@ import { scheduleWorkItem } from '../lib/domain/scheduling/schedule';
 import { listCalendarEvents } from '../lib/domain/calendar/events';
 import { todayInZone, zonedDayRange } from '../lib/domain/scheduling/window';
 import { setModuleEnabled } from '../lib/domain/tenancy/modules';
-import { recordCommercialTerm } from '../lib/domain/commercial/terms';
 import { chooseOption } from './select-field';
+import { recordFixtureTerm } from '../tests/support/plans';
 
 test.use({ storageState: { cookies: [], origins: [] }, hasTouch: true, trace: 'off' });
 test('shared Calendar has primary navigation, time blocks, attributed event editing and workspace filters', async ({ page }, testInfo) => {
@@ -84,7 +84,7 @@ test('shared Calendar has primary navigation, time blocks, attributed event edit
   expect(await listCalendarEvents(owner, { organizationId: foreign, within })).toEqual([]);
 
   await setModuleEnabled(owner, { organizationId, key: 'reception', enabled: true });
-  await recordCommercialTerm(staff, { organizationId, productKey: 'module:reception', periodStart: new Date().toISOString().slice(0, 10), periodEnd: '9999-12-31', priceMinor: 0, note: 'Local calendar fixture' });
+  await recordFixtureTerm({ organizationId, productKey: 'module:reception', periodStart: new Date().toISOString().slice(0, 10), periodEnd: '9999-12-31', priceMinor: 0, note: 'Local calendar fixture' });
   const customerId = await createCustomer(owner, { organizationId, name: 'Calendar customer' });
   const start = Date.parse(within.startsAt) + 11 * 60 * 60 * 1000;
   await createFollowUp(owner, { organizationId, customerId, title: 'Proposal meeting', kind: 'meeting', dueAt: new Date(start).toISOString() });

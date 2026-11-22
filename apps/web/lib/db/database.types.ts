@@ -9236,13 +9236,6 @@ export type Database = {
             foreignKeyName: "platform_billing_checkout_sessions_plan_price_id_fkey"
             columns: ["plan_price_id"]
             isOneToOne: false
-            referencedRelation: "platform_plan_prices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "platform_billing_checkout_sessions_plan_price_id_fkey"
-            columns: ["plan_price_id"]
-            isOneToOne: false
             referencedRelation: "price_book_item_prices"
             referencedColumns: ["id"]
           },
@@ -10330,56 +10323,6 @@ export type Database = {
           },
         ]
       }
-      platform_product_prices: {
-        Row: {
-          amount_minor: number
-          approval_state: string
-          billing_interval: string
-          currency: string
-          effective_from: string
-          id: string
-          note: string
-          product_key: string
-          recorded_at: string
-          recorded_by: string
-          source: string
-        }
-        Insert: {
-          amount_minor: number
-          approval_state?: string
-          billing_interval?: string
-          currency: string
-          effective_from?: string
-          id?: string
-          note?: string
-          product_key: string
-          recorded_at?: string
-          recorded_by: string
-          source: string
-        }
-        Update: {
-          amount_minor?: number
-          approval_state?: string
-          billing_interval?: string
-          currency?: string
-          effective_from?: string
-          id?: string
-          note?: string
-          product_key?: string
-          recorded_at?: string
-          recorded_by?: string
-          source?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "platform_product_prices_product_key_fkey"
-            columns: ["product_key"]
-            isOneToOne: false
-            referencedRelation: "platform_products"
-            referencedColumns: ["key"]
-          },
-        ]
-      }
       platform_products: {
         Row: {
           created_at: string
@@ -11395,20 +11338,6 @@ export type Database = {
           provisioned_by?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "platform_plan_provider_prices_plan_price_id_fkey"
-            columns: ["plan_price_id"]
-            isOneToOne: false
-            referencedRelation: "platform_plan_prices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "platform_plan_provider_prices_plan_price_id_fkey"
-            columns: ["plan_price_id"]
-            isOneToOne: false
-            referencedRelation: "price_book_item_prices"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "price_book_item_provider_prices_organization_id_fkey"
             columns: ["organization_id"]
@@ -15553,149 +15482,6 @@ export type Database = {
         }
         Relationships: []
       }
-      platform_plan_addons: {
-        Row: {
-          addon_plan_id: string | null
-          created_at: string | null
-          created_by: string | null
-          included_by_default: boolean | null
-          plan_id: string | null
-        }
-        Insert: {
-          addon_plan_id?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          included_by_default?: boolean | null
-          plan_id?: string | null
-        }
-        Update: {
-          addon_plan_id?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          included_by_default?: boolean | null
-          plan_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "platform_plan_addons_addon_plan_id_fkey"
-            columns: ["addon_plan_id"]
-            isOneToOne: false
-            referencedRelation: "platform_plans"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "platform_plan_addons_plan_id_fkey"
-            columns: ["plan_id"]
-            isOneToOne: false
-            referencedRelation: "platform_plans"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      platform_plan_prices: {
-        Row: {
-          amount_minor: number | null
-          approval_state: string | null
-          billing_interval: string | null
-          captured_at: string | null
-          currency: string | null
-          effective_from: string | null
-          effective_to: string | null
-          id: string | null
-          note: string | null
-          plan_id: string | null
-          recorded_by: string | null
-          source: string | null
-          source_url: string | null
-        }
-        Insert: {
-          amount_minor?: number | null
-          approval_state?: string | null
-          billing_interval?: string | null
-          captured_at?: string | null
-          currency?: string | null
-          effective_from?: string | null
-          effective_to?: string | null
-          id?: string | null
-          note?: string | null
-          plan_id?: string | null
-          recorded_by?: string | null
-          source?: string | null
-          source_url?: string | null
-        }
-        Update: {
-          amount_minor?: number | null
-          approval_state?: string | null
-          billing_interval?: string | null
-          captured_at?: string | null
-          currency?: string | null
-          effective_from?: string | null
-          effective_to?: string | null
-          id?: string | null
-          note?: string | null
-          plan_id?: string | null
-          recorded_by?: string | null
-          source?: string | null
-          source_url?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "platform_plan_prices_plan_id_fkey"
-            columns: ["plan_id"]
-            isOneToOne: false
-            referencedRelation: "platform_plans"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      platform_plan_provider_prices: {
-        Row: {
-          environment: string | null
-          id: string | null
-          plan_price_id: string | null
-          price_reference: string | null
-          product_reference: string | null
-          provider: string | null
-          provisioned_at: string | null
-          provisioned_by: string | null
-        }
-        Insert: {
-          environment?: string | null
-          id?: string | null
-          plan_price_id?: string | null
-          price_reference?: string | null
-          product_reference?: string | null
-          provider?: string | null
-          provisioned_at?: string | null
-          provisioned_by?: string | null
-        }
-        Update: {
-          environment?: string | null
-          id?: string | null
-          plan_price_id?: string | null
-          price_reference?: string | null
-          product_reference?: string | null
-          provider?: string | null
-          provisioned_at?: string | null
-          provisioned_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "platform_plan_provider_prices_plan_price_id_fkey"
-            columns: ["plan_price_id"]
-            isOneToOne: false
-            referencedRelation: "platform_plan_prices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "platform_plan_provider_prices_plan_price_id_fkey"
-            columns: ["plan_price_id"]
-            isOneToOne: false
-            referencedRelation: "price_book_item_prices"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       platform_tenants: {
         Row: {
           created_at: string | null
@@ -16084,14 +15870,6 @@ export type Database = {
           p_engagement_id: string
           p_organization_id: string
           p_work_item_id: string
-        }
-        Returns: undefined
-      }
-      attach_plan_addon: {
-        Args: {
-          p_addon_plan_id: string
-          p_included_by_default?: boolean
-          p_plan_id: string
         }
         Returns: undefined
       }
@@ -16689,15 +16467,13 @@ export type Database = {
         }
         Returns: string
       }
-      create_plan: {
+      create_plan_item: {
         Args: {
-          p_billable: boolean
-          p_description: string
-          p_display_order?: number
-          p_key: string
+          p_billable?: boolean
+          p_description?: string
           p_kind: string
-          p_label: string
-          p_sale_status: string
+          p_name: string
+          p_organization_id: string
         }
         Returns: string
       }
@@ -17021,10 +16797,6 @@ export type Database = {
       }
       delete_unused_work_type: {
         Args: { p_type_id: string }
-        Returns: undefined
-      }
-      detach_plan_addon: {
-        Args: { p_addon_plan_id: string; p_plan_id: string }
         Returns: undefined
       }
       dialer_contact_candidates: {
@@ -17709,6 +17481,10 @@ export type Database = {
           usage_overage_minor: number
         }[]
       }
+      organization_usable_modules: {
+        Args: { p_organization_id: string }
+        Returns: string[]
+      }
       organization_usage_detail: {
         Args: { p_organization_id: string }
         Returns: {
@@ -18265,22 +18041,6 @@ export type Database = {
         }
         Returns: string
       }
-      record_commercial_retail_rate: {
-        Args: {
-          p_approval_state?: string
-          p_billing_interval?: string
-          p_currency: string
-          p_effective_from: string
-          p_effective_to?: string
-          p_meter_id: string
-          p_note?: string
-          p_organization_id?: string
-          p_plan_id?: string
-          p_source: string
-          p_unit_amount_micros: number
-        }
-        Returns: string
-      }
       record_commercial_term: {
         Args: {
           p_currency?: string
@@ -18607,21 +18367,6 @@ export type Database = {
         }
         Returns: string
       }
-      record_phone_number_month: {
-        Args: { p_billing_period: string; p_phone_number_id: string }
-        Returns: string
-      }
-      record_plan_agreement: {
-        Args: {
-          p_amount_minor: number
-          p_currency: string
-          p_effective_from?: string
-          p_note?: string
-          p_organization_id: string
-          p_plan_id: string
-        }
-        Returns: string
-      }
       record_plan_assignment: {
         Args: {
           p_note?: string
@@ -18642,29 +18387,6 @@ export type Database = {
           p_source: string
           p_target_margin: number
           p_warning_margin: number
-        }
-        Returns: string
-      }
-      record_plan_price: {
-        Args: {
-          p_amount_minor: number
-          p_billing_interval: string
-          p_currency: string
-          p_effective_from?: string
-          p_note?: string
-          p_plan_id: string
-          p_source?: string
-          p_source_url?: string
-        }
-        Returns: string
-      }
-      record_plan_provider_price: {
-        Args: {
-          p_environment: string
-          p_plan_price_id: string
-          p_price_reference: string
-          p_product_reference: string
-          p_provider?: string
         }
         Returns: string
       }
@@ -18699,19 +18421,6 @@ export type Database = {
           p_event_reference: string
           p_event_type: string
           p_provider?: string
-        }
-        Returns: string
-      }
-      record_product_price: {
-        Args: {
-          p_amount_minor: number
-          p_approval_state?: string
-          p_billing_interval?: string
-          p_currency: string
-          p_effective_from?: string
-          p_note?: string
-          p_product_key: string
-          p_source?: string
         }
         Returns: string
       }
@@ -18807,19 +18516,6 @@ export type Database = {
           p_visitor_key: string
         }
         Returns: undefined
-      }
-      record_retail_rate: {
-        Args: {
-          p_approval_state?: string
-          p_currency: string
-          p_effective_from?: string
-          p_meter_id: string
-          p_note?: string
-          p_source: string
-          p_source_url?: string
-          p_unit_amount_micros: number
-        }
-        Returns: string
       }
       record_retained_logo: {
         Args: {
@@ -19907,17 +19603,6 @@ export type Database = {
           p_name: string
           p_slug: string
           p_timezone: string
-        }
-        Returns: undefined
-      }
-      update_plan: {
-        Args: {
-          p_billable: boolean
-          p_description: string
-          p_display_order: number
-          p_label: string
-          p_plan_id: string
-          p_sale_status: string
         }
         Returns: undefined
       }

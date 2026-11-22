@@ -26,48 +26,41 @@ test.describe('platform catalog', () => {
     await page.goto(platformUrl('catalog/families/comms'));
     await expect(page.getByRole('heading', { name: 'Gild Comms', level: 1 })).toBeVisible();
 
-    await page.getByRole('tab', { name: 'Modules & Features' }).click();
+    await page.getByRole('tab', { name: 'Features' }).click();
     await expect(page.getByText('Voice', { exact: true }).first()).toBeVisible();
     // A planned Feature is visibly planned, never claimed as implemented.
     await expect(page.getByText('Planned').first()).toBeVisible();
   });
 
-  test('shows GildOps Internal in Plans & Add-ons, non-billable, with entitlements and quotas', async ({ page }) => {
-    // Plans & Add-ons is GildOps' commercial control plane, so it lives under Platform; the old
-    // /finance/plans address is a redirect only.
-    await page.goto(platformUrl('plans'));
-    await expect(page.getByRole('heading', { name: 'Plans & Add-ons', level: 1 })).toBeVisible();
-    await expect(page.getByText('GildOps Internal').first()).toBeVisible();
-
-    await page.goto(platformUrl('plans/gold_internal'));
+  test('opens GildOps Internal as a plan record in GildOps’ Catalog & Pricing, with what it switches on', async ({ page }) => {
+    await page.goto(financeUrl('catalog'));
+    await page.getByRole('link', { name: 'GildOps Internal', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'GildOps Internal', level: 1 })).toBeVisible();
-    await expect(page.getByText('Non-billable').first()).toBeVisible();
-
-    await page.getByRole('tab', { name: 'Quotas' }).click();
-    await expect(page.getByText('AI tokens')).toBeVisible();
-
-    await page.getByRole('tab', { name: 'Organizations' }).click();
-    await expect(page.getByRole('tab', { name: 'Organizations', selected: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'What it switches on' })).toBeVisible();
+    await page.getByRole('tab', { name: 'Allowances' }).click();
+    await expect(page.getByText('AI tokens').first()).toBeVisible();
   });
 
-  test('the old Finance address redirects to Platform', async ({ page }) => {
-    await page.goto(financeUrl('plans/gold_internal'));
-    await expect(page).toHaveURL(platformUrl('plans/gold_internal'));
-    await expect(page.getByRole('heading', { name: 'GildOps Internal', level: 1 })).toBeVisible();
+  test('has no plan page in Administration and no Finance plans address', async ({ page }) => {
+    for (const address of [platformUrl('catalog/plans'), platformUrl('plans'), financeUrl('plans'), '/platform/catalog/plans']) {
+      await page.goto(address);
+      await expect(page.getByRole('heading', { name: /^This page does not exist/ }), address).toBeVisible();
+      await expect(page).toHaveURL(address);
+    }
   });
 });
 
 test.describe('tenant plan & usage', () => {
   test.use({ storageState: OWNER_STORAGE_STATE });
 
-  test('renders with no Plan assigned, and still shows legacy module state', async ({ page }) => {
+  test('renders the plan and the module terms bought before plans', async ({ page }) => {
     const { loadDemoContext } = await import('./helpers');
     const context = loadDemoContext();
     await page.goto(`/organizations/${context.organizationId}/settings/plan`);
 
     await expect(page.getByRole('heading', { name: 'Plan & usage', level: 1 })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Your Plan' })).toBeVisible();
-    await expect(page.getByText('This organization does not currently have a standard Plan')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Available Features' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Plan', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'What’s been bought' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Usage', exact: true })).toBeVisible();
   });
 });

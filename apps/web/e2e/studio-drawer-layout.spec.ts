@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { test, expect } from '@playwright/test';
-import { loadDemoContext, OWNER_STORAGE_STATE, STAFF_STORAGE_STATE, platformUrl } from './helpers';
+import { loadDemoContext, OWNER_STORAGE_STATE, STAFF_STORAGE_STATE } from './helpers';
 
 test.use({ storageState: OWNER_STORAGE_STATE });
 
@@ -102,13 +102,14 @@ test.describe('shared drawer contract outside Studio', () => {
   test('plan editing uses shell gutters and a fixed footer associated with its form', async ({ page }) => {
     test.setTimeout(60_000);
     await page.setViewportSize({ width: 1440, height: 560 });
-    await page.goto(platformUrl('plans/gold_internal'));
+    await page.goto(`/organizations/${loadDemoContext().goldOrganizationId}/finance/catalog`);
+    await page.getByRole('link', { name: 'GildOps Internal', exact: true }).click();
     await page.getByRole('button', { name: 'Edit', exact: true }).click();
     const drawer = page.getByRole('dialog', { name: 'Edit GildOps Internal', exact: true });
     const body = drawer.locator('[data-drawer-body]');
     const footer = drawer.locator('[data-drawer-footer]');
     const panelBounds = await drawer.boundingBox();
-    const inputBounds = await drawer.getByLabel('Label', { exact: true }).boundingBox();
+    const inputBounds = await drawer.getByLabel('Name', { exact: true }).boundingBox();
     expect(inputBounds!.x - panelBounds!.x).toBeGreaterThanOrEqual(15);
     expect(inputBounds!.x - panelBounds!.x).toBeLessThanOrEqual(18);
     const footerBefore = await footer.boundingBox();
@@ -117,9 +118,9 @@ test.describe('shared drawer contract outside Studio', () => {
     expect(footerAfter!.y).toBe(footerBefore!.y);
     const submit = footer.getByRole('button', { name: 'Save', exact: true });
     expect(await submit.evaluate((button: HTMLButtonElement) => button.form?.id === button.getAttribute('form'))).toBe(true);
-    await drawer.getByLabel('Label', { exact: true }).fill('');
+    await drawer.getByLabel('Name', { exact: true }).fill('');
     await submit.click();
-    await expect(drawer.getByLabel('Label', { exact: true })).toBeFocused();
+    await expect(drawer.getByLabel('Name', { exact: true })).toBeFocused();
     await expect(drawer).toBeVisible();
     await page.screenshot({ path: 'test-results/studio-layout/shared-plan-drawer-1440.png' });
   });

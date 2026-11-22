@@ -27,14 +27,15 @@ function walk(dir: string, match: (name: string) => boolean): string[] {
 }
 
 // Actions reachable from inside a business. `settings/plan/actions.ts` is the recovery surface.
-// The Platform subtree is not "inside a business": its actions are staff writes through narrow
-// `security definer` doors that check `platform_staff` themselves (`app.require_platform_staff()`),
-// and a business's service access is not a question they ask.
+// Administration is not "inside a business": its actions are staff writes through narrow
+// `security definer` doors that check `platform_staff` themselves, and it stays reachable while
+// GildOps' own service access is locked (`requirePlatformScope`, below), so a business's service
+// access is not a question they ask.
 const RECOVERY_ACTIONS = ['app/organizations/[organizationId]/settings/plan/actions.ts'];
 const actionFiles = [
   ...walk(ORGANIZATION, (name) => name === 'actions.ts')
     .map(rel)
-    .filter((file) => !file.includes('/platform/')),
+    .filter((file) => !file.startsWith('app/organizations/[organizationId]/administration/')),
   'features/agent/actions.ts',
   'features/work/configuration/actions.ts',
 ];
@@ -46,7 +47,7 @@ const RECOVERY_USERS = [
   'app/organizations/[organizationId]/settings/plan/actions.ts',
   'app/organizations/[organizationId]/settings/plan/locked/page.tsx',
   'lib/route/organization.ts',
-  // The Platform console stays reachable while GOLD's own service access is locked, exactly as the
+  // Administration stays reachable while GildOps' own service access is locked, exactly as the
   // shell drawing it does; `requirePlatformScope` is where that is decided, once.
   'lib/route/platform.ts',
 ];

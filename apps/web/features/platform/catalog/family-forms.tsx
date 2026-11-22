@@ -2,7 +2,7 @@
 
 import { useActionState, useId, useState } from 'react';
 import { toast } from 'sonner';
-import { renameTemplateAction, setTemplatePublishedAction, type TemplateState } from '@/app/platform/actions';
+import { renameTemplateAction, setTemplatePublishedAction, type TemplateState } from '@/app/organizations/[organizationId]/administration/actions';
 import { INDUSTRY_SUGGESTIONS } from '@/lib/domain/tenancy/industries';
 import { Button } from '@/components/controls/button';
 import { ErrorText, FieldLabel, Hint, TextArea, TextInput } from '@/components/controls/inputs';
@@ -21,7 +21,7 @@ import {
   updateCatalogModuleAction,
   updateCatalogProductAction,
   type FormState,
-} from '@/app/platform/catalog/families/[familyKey]/actions';
+} from '@/app/organizations/[organizationId]/administration/catalog/families/[familyKey]/actions';
 import { SelectField, SuggestionField } from '@/components/controls/select-field';
 
 const INITIAL: FormState = { error: null, updated: false };

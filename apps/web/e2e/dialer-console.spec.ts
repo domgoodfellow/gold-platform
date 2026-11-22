@@ -10,10 +10,10 @@ import { createCustomer } from '../lib/domain/customers/customers';
 import { createContact } from '../lib/domain/contacts/contacts';
 import { createFollowUp } from '../lib/domain/follow-ups/follow-ups';
 import { setModuleEnabled } from '../lib/domain/tenancy/modules';
-import { createPlan, grantPlanProduct } from '../lib/domain/catalogue/plans';
-import { recordPlanAssignment } from '../lib/domain/catalogue/organization-plans';
+import { grantPlanProduct } from '../lib/domain/catalogue/plans';
 import { assignPhoneNumber } from '../lib/domain/reception/numbers';
 import { currentMembershipId } from '../lib/domain/reception/inbox';
+import { assignFixturePlan, createFixturePlan } from '../tests/support/plans';
 
 /**
  * Rendered evidence for the Dialer console: a business with no calling account and nothing
@@ -60,12 +60,12 @@ test('Dialer console keeps its operating composition empty, populated, focused a
     const login = await db.auth.signInWithPassword({ email, password }); if (login.error) throw login.error;
     for (const name of ['Dialer empty business', 'Dialer queue business']) organizations.push(await provisionOrganization(db, { ownerEmail: email, name, currency: 'CAD', timezone: 'America/Toronto', displayName: 'Jane Doe' }));
     const [empty, populated] = organizations;
-    const planId = await createPlan(db, { key: `dialer_console_${Date.now()}`, kind: 'plan', label: 'Local Dialer console', description: 'Local browser fixture only', billable: false });
+    const planId = await createFixturePlan({ key: `dialer_console_${Date.now()}`, kind: 'plan', label: 'Local Dialer console', description: 'Local browser fixture only', billable: false });
     for (const productKey of ['comms', 'sales']) await grantPlanProduct(db, { planId, productKey });
     for (const organizationId of organizations) {
       await setModuleEnabled(db, { organizationId, key: 'reception', enabled: true });
       await pg.query("insert into organization_commercial_terms(organization_id,product_key,period_start,period_end,quantity,price_minor,currency,recorded_by,note) values($1,'module:reception','2020-01-01','9999-12-31',1,0,'CAD',$2,'Local Dialer console fixture')", [organizationId, made.data.user.id]);
-      await recordPlanAssignment(db, { organizationId, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
+      await assignFixturePlan({ organizationId, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
     }
     // The populated business: a locally assigned outbound number and a real call list.
     const number = (await pg.query("insert into public.phone_numbers (organization_id,e164,label,origin,lifecycle,purpose,voice_outbound_enabled,sms_outbound_enabled,voice_inbound_enabled,sms_inbound_enabled) values ($1,'+14385550100','Main line','external','active','main',true,false,false,false) returning id", [populated])).rows[0].id;

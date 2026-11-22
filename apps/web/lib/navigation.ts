@@ -67,7 +67,7 @@ export const WORKSPACES = [
   { key: 'marketing', label: 'Marketing', home: 'marketing', featureKeys: [] },
   { key: 'support', label: 'Support', home: 'support', featureKeys: [] },
   { key: 'field', label: 'Work', home: 'field', featureKeys: ['resource_records', 'assignment', 'locations', 'weather_aware_dispatch', 'assets'] },
-  { key: 'finance', label: 'Finance', home: 'finance', featureKeys: ['price_book', 'quote_creation', 'quote_to_invoice', 'invoices', 'invoice_history', 'card_payments', 'connected_processor', 'adjustments_credits', 'recurring_items'] },
+  { key: 'finance', label: 'Finance', home: 'finance', featureKeys: ['price_book', 'quote_creation', 'quote_to_invoice', 'invoices', 'invoice_history', 'card_payments', 'connected_processor', 'adjustments_credits', 'recurring_items', 'subscriptions', 'supplier_costs', 'cost_to_serve', 'package_economics'] },
   { key: 'automations', label: 'Automations', home: 'automations', featureKeys: ['rule_authoring', 'domain_event_trigger', 'email_action', 'run_history'] },
   { key: 'ai', label: 'AI', home: 'ai', featureKeys: ['agent_tools'] },
   { key: 'studio', label: 'Studio', home: 'studio', featureKeys: ['pages_sections', 'draft_review_publish', 'seo_metadata', 'booking', 'portal_auth', 'portal_history'] },
@@ -400,17 +400,23 @@ export const AREAS: readonly Area[] = [
   { segment: 'ai-activity', label: 'Agent activity', group: 'workspaces', workspace: 'ai', route: 'ai/activity' },
   { segment: 'ai-evaluations', label: 'Evaluations', group: 'workspaces', workspace: 'ai', route: 'ai/evaluations' },
   // Finance: how this business prices, bills, gets paid and understands what its work earns —
-  // tenant Financial Operations, customer to business, and nothing a business pays GildOps (that is
-  // Settings → Plan & usage, and Platform for GildOps' own control plane). Home is kernel, like
-  // Sales and Field's own. Catalog & Pricing (the operating price book), Quotes, Invoices and
-  // Payments are its operating pages behind the billing module; Financial reports adds `report.read`.
-  // Trading currency is General's; payment collection is Settings → Customer payments (`CONFIG_TARGETS` payments).
+  // customer to business, and nothing a business pays GildOps (that is Settings → Plan & usage).
+  // Home is kernel, like Sales and Field's own. Catalog & Pricing (the operating price book),
+  // Quotes, Invoices and Payments are its operating pages behind the billing module; Financial
+  // reports adds `report.read`. Subscriptions, Costs and Economics are what a business reselling
+  // metered platform services runs (ADR-057): they belong to the unlisted operator Product, which
+  // only GildOps' own plan includes, and each answers to its own Finance permission — never to
+  // platform authority. Trading currency is General's; payment collection is Settings → Customer
+  // payments (`CONFIG_TARGETS` payments).
   { segment: 'finance', label: 'Finance', group: 'workspaces', workspace: 'finance' },
   // Readable by any member (RLS); offered to those who price, quote from it or manage the business.
   { segment: 'finance-catalog', label: 'Catalog & Pricing', group: 'workspaces', workspace: 'finance', route: 'finance/catalog', module: 'billing', relevantCapabilities: ['price.manage', 'work_item.price', 'organization.manage'], featureKeys: ['price_book'] },
+  { segment: 'finance-subscriptions', label: 'Subscriptions', group: 'workspaces', workspace: 'finance', route: 'finance/subscriptions', module: 'billing', relevantCapabilities: ['subscription.read'], featureKeys: ['subscriptions'] },
   { segment: 'finance-quotes', label: 'Quotes', group: 'workspaces', workspace: 'finance', route: 'finance/quotes', module: 'billing', featureKeys: ['quote_creation'] },
   { segment: 'finance-invoices', label: 'Invoices', group: 'workspaces', workspace: 'finance', route: 'finance/invoices', module: 'billing', featureKeys: ['invoices', 'invoice_history'] },
   { segment: 'finance-payments', label: 'Payments', group: 'workspaces', workspace: 'finance', route: 'finance/payments', module: 'billing', featureKeys: ['invoices', 'card_payments'] },
+  { segment: 'finance-costs', label: 'Costs', group: 'workspaces', workspace: 'finance', route: 'finance/costs', module: 'billing', relevantCapabilities: ['cost.read'], featureKeys: ['supplier_costs'] },
+  { segment: 'finance-economics', label: 'Economics', group: 'workspaces', workspace: 'finance', route: 'finance/economics', module: 'billing', relevantCapabilities: ['cost.read'], featureKeys: ['cost_to_serve', 'package_economics'] },
   { segment: 'finance-reports', label: 'Financial reports', group: 'workspaces', workspace: 'finance', route: 'finance/reports', module: 'billing', relevantCapabilities: ['report.read'], featureKeys: ['invoices', 'invoice_history'] },
   // Automations: building, reviewing and observing rules is ongoing work, so it is a workspace.
   // Home carries Rules' own entitlement, so the workspace draws no row for a business without it.

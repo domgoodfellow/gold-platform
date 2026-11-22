@@ -1,11 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { getPlan, listPlanQuotas, setPlanQuota } from '@/lib/domain/catalogue/plans';
-import { recordPlanAgreement, recordPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
+import { recordPlanAgreement } from '@/lib/domain/catalogue/organization-plans';
 import { listDraftScenarios, saveDraftScenario, simulatePackageEconomics } from '@/lib/domain/commercial/package-economics';
 import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
+import { assignFixturePlan, designateGildOps } from '@/tests/support/plans';
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
 const ANON_KEY = process.env.SUPABASE_ANON_KEY ?? '';
@@ -25,14 +26,28 @@ async function tenant(): Promise<{ db: SupabaseClient; organizationId: string }>
 }
 
 describe('commercial packaging and package economics', () => {
+  /** Product Registry: what a plan switches on. */
   let staff: SupabaseClient;
+  /** GildOps' Finance: scenarios, simulations and agreed prices take its cost and subscription permissions (ADR-057). */
+  let seller: SupabaseClient;
   let ordinary: { db: SupabaseClient; organizationId: string };
   let planId: string;
+  let pg: Client;
+  let restore: () => Promise<void>;
 
   beforeAll(async () => {
+    pg = new Client({ connectionString: CONNECTION });
+    await pg.connect();
     staff = await asPlatformStaff();
+    const gildops = await designateGildOps(pg, 'economics-gildops');
+    seller = gildops.db;
+    restore = gildops.restore;
     ordinary = await tenant();
     planId = (await getPlan(staff, 'start'))!.id;
+  });
+
+  afterAll(async () => {
+    try { await restore?.(); } finally { await pg?.end(); }
   });
 
   it('stores structured allowance and overage semantics on the canonical Plan quota', async () => {
@@ -59,7 +74,7 @@ describe('commercial packaging and package economics', () => {
 
   it('versions an organization-free reference scenario and compares candidate prices without choosing one', async () => {
     const name = `Reference ${randomUUID().slice(0, 8)}`;
-    const scenarioId = await saveDraftScenario(staff, {
+    const scenarioId = await saveDraftScenario(seller, {
       name,
       notes: 'Planning only',
       planId,
@@ -69,7 +84,7 @@ describe('commercial packaging and package economics', () => {
       expectedResourceCount: 3,
       inputs: [{ allowanceKey: 'voice_minutes', meterId: 'voice_minutes', expectedQuantity: 250 }],
     });
-    await saveDraftScenario(staff, {
+    await saveDraftScenario(seller, {
       scenarioId,
       name,
       notes: 'Second planning revision',
@@ -78,17 +93,17 @@ describe('commercial packaging and package economics', () => {
       candidatePricesMinor: [49900, 69900, 89900, 99900],
       inputs: [{ allowanceKey: 'voice_minutes', meterId: 'voice_minutes', expectedQuantity: 300 }],
     });
-    const saved = (await listDraftScenarios(staff)).find((scenario) => scenario.id === scenarioId)!;
+    const saved = (await listDraftScenarios(seller)).find((scenario) => scenario.id === scenarioId)!;
     expect(saved).toMatchObject({ revision: 2, candidatePricesMinor: [49900, 69900, 89900, 99900] });
-    const simulation = await simulatePackageEconomics(staff, { source: { type: 'draft_scenario', id: scenarioId }, profile: 'expected' });
+    const simulation = await simulatePackageEconomics(seller, { source: { type: 'draft_scenario', id: scenarioId }, profile: 'expected' });
     expect(simulation.comparisons.map((result) => result.candidateAmountMinor)).toEqual([49900, 69900, 89900, 99900]);
     expect(simulation.result.sourceType).toBe('draft_scenario');
     expect(simulation.maxAllowance.profile).toBe('max_allowance');
   });
 
-  it('keeps draft planning staff-only and side-effect free', async () => {
+  it('keeps draft planning to GildOps’ Finance and side-effect free', async () => {
     const before = await tableCounts();
-    await simulatePackageEconomics(staff, { source: { type: 'plan_default', id: planId }, profile: 'heavy' });
+    await simulatePackageEconomics(seller, { source: { type: 'plan_default', id: planId }, profile: 'heavy' });
     expect(await tableCounts()).toEqual(before);
     expect((await ordinary.db.from('commercial_draft_scenarios').select('id')).data).toEqual([]);
     await expect(saveDraftScenario(ordinary.db, {
@@ -97,12 +112,12 @@ describe('commercial packaging and package economics', () => {
   });
 
   it('requires a real Plan assignment before recording an organization agreement and honors its end date', async () => {
-    await expect(recordPlanAgreement(staff, {
+    await expect(recordPlanAgreement(seller, {
       organizationId: ordinary.organizationId, planId, currency: 'CAD', amountMinor: 69900,
       effectiveFrom: '2026-11-01T00:00:00Z', effectiveTo: '2026-12-01T00:00:00Z',
     })).rejects.toMatchObject({ code: 'organization_plans.record_agreement_failed' });
-    await recordPlanAssignment(staff, { organizationId: ordinary.organizationId, planId, periodStart: '2026-01-01', periodEnd: '2027-01-01' });
-    await expect(recordPlanAgreement(staff, {
+    await assignFixturePlan({ organizationId: ordinary.organizationId, planId, periodStart: '2026-01-01', periodEnd: '2027-01-01' });
+    await expect(recordPlanAgreement(seller, {
       organizationId: ordinary.organizationId, planId, currency: 'CAD', amountMinor: 69900,
       effectiveFrom: '2026-11-01T00:00:00Z', effectiveTo: '2026-12-01T00:00:00Z',
     })).resolves.toBeTruthy();

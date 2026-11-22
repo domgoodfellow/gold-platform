@@ -348,15 +348,15 @@ Platform Administration owns cross-organization and system concerns such as:
 - global feature definitions (the product/catalogue registry) and entitlement enforcement;
 - provider accounts and provider infrastructure;
 - platform AI runtime assignments;
-- usage economics, provider costs and platform margin;
+- metering in units and billing-webhook delivery health;
 - platform failures and health;
 - control-plane policy.
 
-Selling is not a Platform concern (ADR-051). During transition, Platform Administration also holds the existing platform-billing records and their screens: Plans and Add-ons, GildOps retail pricing, plan assignments and agreements, subscriptions and platform billing (see *Two finance planes*).
+Money is not a Platform concern (ADR-057). GildOps' plans, prices, subscriptions, supplier costs and economics are its operating Organization's Finance, reached only with Finance permissions there (see *Two finance planes*).
 
 GildOps' own business uses the ordinary organization product like any other customer.
 
-Platform Administration is rendered at `/platform` in its own guarded shell. GildOps' ordinary business remains organization-scoped; the control plane is platform-owned.
+Administration is a privileged context of GildOps' own organization at `/organizations/{goldId}/administration`, drawn by the same organization shell and navigation as every workspace. It has its own registry and guard; there is no second application.
 
 ---
 
@@ -537,7 +537,7 @@ GildOps should meter normalized product concepts rather than make vendor-specifi
 
 ## Two finance planes
 
-GildOps contains two economic systems and they must remain separate (ADR-014, ADR-051).
+GildOps contains two money directions and they must remain separate (ADR-051, ADR-057): what an Organization sells, in its Finance, and what it buys from GildOps, in Plan & usage.
 
 ### Organization Finance
 
@@ -556,29 +556,25 @@ Organization Finance owns the reusable commercial capabilities every Organizatio
 - credits/adjustments;
 - work and supplier costs;
 - job economics;
-- later: subscriptions, recurring charges, metered usage and prepaid balances.
+- recurring items;
+- for a business reselling the platform (today only GildOps): subscriptions, supplier rates, usage and infrastructure costs, cost to serve and package economics;
+- later: a business's own subscriptions and recurring charges to its customers, and prepaid balances.
 
 Every Organization sells its own products and services through its own Finance. GildOps sells its platform the same way, through its operating Organization's Finance: the seller-side records of a GildOps sale belong there. Each seller's customers pay through that seller's own payment-processing relationship.
 
 Financial reports (`/finance/reports`) also owns Economics & pricing planning: up to three unsaved delivery scenarios for a member with `report.read`, under the same billing/feature availability as reports. Operators enter currency, labor hours and cost per hour, materials, supplier and other estimated costs, and a target gross margin. A current price-book unit may be compared beside the suggestion. Recorded Work costs remain historical report context; entering an estimate neither copies back to Work nor changes a catalog price, quote, invoice or payment. This capability creates no persistence or publishing operation and exposes no platform economics or buyer-side Plan & usage.
 
-### Platform control plane
+### Administration
 
-Direction:
+Administration owns what only the platform may do, and manages no money:
 
-```text
-GildOps → provider
-```
-
-Platform Administration owns what only the platform may do or know:
-
-- tenant provisioning and global feature definitions;
+- tenant provisioning, lifecycle and support sessions;
+- global feature definitions and plan switch lists (edited from each plan's Finance record);
 - entitlement enforcement;
-- provider accounts, provider rates and provider costs;
-- platform margin, package economics and infrastructure economics;
-- platform security and diagnostics.
+- provider accounts, credentials and infrastructure;
+- metering in units, billing-webhook delivery health, platform security and diagnostics.
 
-During transition, the existing platform-billing records (Plans and Add-ons, plan assignments and agreements, commercial terms, platform subscriptions and usage events) remain in Platform Administration, protected and unchanged, until a reviewed migration moves GildOps' selling onto its operating Organization's Finance.
+GildOps sells its platform through its operating Organization's Finance: a plan is created and priced in Catalog & Pricing, a business's subscription, agreed price and billing state are its record in Subscriptions, and what suppliers charge, what each business costs to serve and what a package earns are Costs and Economics, behind `subscription.read`/`subscription.manage` and `cost.read`/`cost.manage` in that Organization. Platform permissions open none of it.
 
 An Organization's purchase of GildOps is shown to that Organization under Business Settings → Plan & usage, never as its revenue.
 
@@ -965,4 +961,4 @@ Platform Administration remains independently authorized system administration. 
 
 ## Business vocabulary and destination choices
 
-An organization may save singular/plural nouns, authored destination labels and an ordered workspace page labels in one versioned business profile. Setup and Settings → Words & navigation edit the same record. An absent profile retains neutral labels; it does not assert onboarding completion. Canonical permissions, entitlements, routes and stored record names remain independent. Platform lives at `/platform` with its own privileged shell.
+An organization may save singular/plural nouns, authored destination labels and an ordered workspace page labels in one versioned business profile. Setup and Settings → Words & navigation edit the same record. An absent profile retains neutral labels; it does not assert onboarding completion. Canonical permissions, entitlements, routes and stored record names remain independent. Administration is a privileged context of GildOps' organization shell.

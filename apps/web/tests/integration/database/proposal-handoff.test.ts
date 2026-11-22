@@ -223,7 +223,9 @@ describe('handing off an accepted proposal', () => {
     const handoff = await getProposalHandoff(repDb, { organizationId: gildOpsOrgId, proposalId: acceptedProposalId });
     const createdOrganizationId = handoff!.createdOrganizationId;
 
-    expect(await currentPlanAssignment(repDb, { organizationId: createdOrganizationId })).toBeNull();
+    // The rep holds `platform.organizations` (above), and Administration reads which Plan a
+    // business is on to enforce what it may use (ADR-057). The assignment carries no price.
+    expect((await currentPlanAssignment(repDb, { organizationId: createdOrganizationId }))?.planId).toBe(planId);
     const ownerDb = anonClient();
     const signedIn = await ownerDb.auth.signInWithPassword({ email: ownerEmail, password: ownerPassword });
     expect(signedIn.error).toBeNull();

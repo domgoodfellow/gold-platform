@@ -8,13 +8,14 @@ import { DomainError } from '@/lib/domain/errors';
  * here. Never named after a job title: a salesperson at GOLD is a role in GOLD, and holds none of
  * these unless somebody wrote them onto their row.
  *
- * The scopes are deliberately coarse — one per part of the console an operator's job is split
+ * The scopes are deliberately coarse — one per part of Administration an operator's job is split
  * along — because a permission nobody can explain in a sentence is one nobody will grant correctly.
+ * None of them reaches money: prices, subscriptions, supplier costs and margins are GildOps'
+ * Finance, opened only by Finance permissions in GildOps' own organization (ADR-057).
  */
 export const PLATFORM_CAPABILITIES = [
   'platform.organizations',
   'platform.catalogue',
-  'platform.commercial',
   'platform.providers',
   'platform.health',
 ] as const;
@@ -28,7 +29,6 @@ export function isPlatformCapability(value: string): value is PlatformCapability
 export const PLATFORM_CAPABILITY_LABELS: Record<PlatformCapability, string> = {
   'platform.organizations': 'Organizations, provisioning and support',
   'platform.catalogue': 'Products, plans, meters and connectors',
-  'platform.commercial': 'Pricing and billing',
   'platform.providers': 'Vendor accounts and bindings',
   'platform.health': 'Overview and failures',
 };

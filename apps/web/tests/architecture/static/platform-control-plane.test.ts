@@ -21,22 +21,21 @@ const allMigrations = () =>
     .join('\n');
 
 describe('platform control-plane scope boundaries', () => {
-  it('reads no prices or rates in Product Registry, now that GildOps prices in its own Finance (ADR-057)', () => {
-    for (const path of ['app/platform/catalog/meters/page.tsx', 'app/platform/catalog/products/page.tsx', 'app/platform/catalog/products/[productKey]/page.tsx', 'app/platform/catalog/plans/page.tsx', 'app/platform/catalog/plans/[planKey]/page.tsx']) {
-      expect(source(path), path).not.toMatch(/listProviderRates|listRetailRates|listProductPrices|listPlanPrices|formatMoney/);
+  it('reads no prices, rates or money anywhere a business is administered (ADR-057)', () => {
+    const base = 'app/organizations/[organizationId]/administration';
+    for (const path of ['catalog/meters/page.tsx', 'catalog/products/page.tsx', 'catalog/products/[productKey]/page.tsx', 'providers/page.tsx', 'organizations/[targetOrganizationId]/page.tsx', 'organizations/[targetOrganizationId]/usage/page.tsx', 'billing-deliveries/page.tsx']) {
+      expect(source(`${base}/${path}`), path).not.toMatch(/listProviderRates|listRetailRates|listPlanPrices|organizationPlanPrice|formatMoney|formatMicrosMoney|listEconomicsEvents|listCostComponents/);
     }
-    expect(source('app/platform/pricing/page.tsx')).toMatch(/redirect\(`\/organizations\/\$\{organizationId\}\/finance\/catalog`\)/);
   });
 
-  it('keeps tenant commercial and provider tasks in their tenant routes', () => {
-    const commercial = source('app/platform/organizations/[targetOrganizationId]/commercial/page.tsx');
-    const providers = source('app/platform/organizations/[targetOrganizationId]/providers/page.tsx');
-    // Phase C (Slice 9) moved the commercial route's read into its application-layer loader; the
-    // page itself now only resolves params, guards and renders the Screen with that loader's model.
-    const commercialModel = source('lib/application/platform/organization-commercial.ts');
-    expect(commercialModel).toContain('listOrganizationTerms');
-    expect(commercial).not.toContain('RecordProviderRateForm');
-    expect(commercial).not.toContain('RecordRetailRateForm');
+  it('keeps a business’s subscription in GildOps’ Finance and its provider tasks in Administration', () => {
+    const record = source('app/organizations/[organizationId]/administration/organizations/[targetOrganizationId]/page.tsx');
+    const providers = source('app/organizations/[organizationId]/administration/organizations/[targetOrganizationId]/providers/page.tsx');
+    // The record links to the subscription, for members who may read it, and writes none of it.
+    expect(record).toMatch(/finance\/subscriptions\/\$\{organizationId\}/);
+    expect(record).toContain("may('subscription.read')");
+    expect(record).not.toMatch(/recordPlanAssignment|recordPlanAgreement|recordCommercialTerm|AssignPlanSheet/);
+    expect(source('lib/application/finance/subscriptions.ts')).toContain('listOrganizationTerms');
     expect(providers).toContain('listProviderBindings');
     expect(providers).toContain('listProviderResources');
   });
@@ -47,8 +46,8 @@ describe('platform control-plane scope boundaries', () => {
   });
 
   it('guards all platform child routes in the shared layout', () => {
-    const layout = source('app/platform/layout.tsx');
-    expect(layout).toContain('requirePlatformScope()');
+    const layout = source('app/organizations/[organizationId]/administration/layout.tsx');
+    expect(layout).toContain('requirePlatformScope(organizationId)');
     const guard = source('lib/route/platform.ts');
     // Platform authority is the caller's own platform_staff row, read live; none means no Platform.
     expect(guard).toContain('platformPermissions(db)');
@@ -78,6 +77,11 @@ describe('platform control-plane scope boundaries', () => {
       // signature puts it.
       /\{ goldId,/g,
       /goldId: string[;,]/g,
+      // The scope guard is asked of the route's organization, which it proves is GildOps'.
+      /requirePlatformScope\(goldId\)/g,
+      // GildOps' own CRM: which of its customers this business is, read in GildOps' organization.
+      /customerForTenant\(db, \{ organizationId: goldId,/g,
+      /\/organizations\/\$\{goldId\}\/crm\//g,
     ];
     const files: string[] = [];
     const walk = (dir: string) => {
@@ -87,7 +91,7 @@ describe('platform control-plane scope boundaries', () => {
         else if (/\.tsx?$/.test(entry.name)) files.push(path);
       }
     };
-    walk(resolve(root, 'app/platform'));
+    walk(resolve(root, 'app/organizations/[organizationId]/administration'));
     walk(resolve(root, 'features/platform'));
     expect(files.length).toBeGreaterThan(30);
     const offenders = files.filter((file) => {

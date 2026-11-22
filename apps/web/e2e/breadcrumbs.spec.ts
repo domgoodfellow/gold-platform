@@ -55,18 +55,16 @@ test.describe('Administration breadcrumbs', () => {
     await expect(trail.getByText('Product Registry', { exact: true })).toBeVisible();
     await expect(trail.getByText('Meters', { exact: true })).toBeVisible();
     await platformLink.click();
-    await expect(page).toHaveURL(new RegExp(`/platform$`));
+    await expect(page).toHaveURL(new RegExp(`/administration$`));
   });
 
-  test('Plans & Add-ons reads Administration / Commercial administration / Plans & Add-ons, never Finance', async ({ page }) => {
-    await page.goto(platformUrl('plans'));
+  test('a plan reads Finance / Catalog & Pricing, never Administration', async ({ page }) => {
+    await page.goto(`/organizations/${loadDemoContext().goldOrganizationId}/finance/catalog`);
+    await page.getByRole('link', { name: 'GildOps Internal', exact: true }).click();
     const trail = page.getByRole('navigation', { name: 'breadcrumb' });
-    const platformLink = trail.getByRole('link', { name: 'Administration' });
-    await expect(platformLink).toBeVisible();
-    await expect(trail.getByText('Commercial administration', { exact: true })).toBeVisible();
-    await expect(trail.getByRole('link', { name: 'Finance' })).toHaveCount(0);
-    await platformLink.click();
-    await expect(page).toHaveURL(new RegExp(`/platform$`));
+    await expect(trail.getByRole('link', { name: 'Finance' })).toBeVisible();
+    await expect(trail.getByRole('link', { name: 'Catalog & Pricing' })).toBeVisible();
+    await expect(trail.getByRole('link', { name: 'Administration' })).toHaveCount(0);
   });
 
   test('a nested Administration record extends the trail one level further', async ({ page }) => {
@@ -74,11 +72,11 @@ test.describe('Administration breadcrumbs', () => {
     const trail = page.getByRole('navigation', { name: 'breadcrumb' });
     await expect(trail.getByRole('link', { name: 'Administration' })).toBeVisible();
     await expect(trail.getByText('Infrastructure', { exact: true })).toBeVisible();
-    const providersLink = trail.getByRole('link', { name: 'Providers' });
+    const providersLink = trail.getByRole('link', { name: 'Vendors' });
     await expect(providersLink).toBeVisible();
     await expect(trail.getByText('Twilio', { exact: true })).toBeVisible();
     await providersLink.click();
-    await expect(page).toHaveURL(/\/platform\/providers$/);
+    await expect(page).toHaveURL(/\/administration\/providers$/);
   });
 });
 
@@ -196,7 +194,7 @@ test.describe('mobile Platform page location', () => {
   test('uses the authorized system navigation and semantic provider parent', async ({ page }) => {
     await page.goto(platformUrl('providers/twilio'));
     await page.getByRole('button', { name: 'Navigate within current section' }).click();
-    await expect(page.getByRole('menuitem', { name: 'Providers', exact: true })).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByRole('menuitem', { name: 'Vendors', exact: true })).toHaveAttribute('aria-current', 'page');
     await expect(page.getByRole('menuitem', { name: 'CRM', exact: true })).toHaveCount(0);
     await page.keyboard.press('Escape');
     await expect(page.getByRole('link', { name: 'Back to parent' })).toHaveAttribute('href', platformUrl('providers'));

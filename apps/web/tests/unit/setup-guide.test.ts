@@ -49,6 +49,7 @@ describe('guided configuration destinations', () => {
     expect(configurationOwnerPath(href)).toBe('/organizations/org/work/configuration');
     expect(setupReturnHref('/organizations/org/work/configuration', 'operations')).toBe('/organizations/org/setup?step=operations');
     expect(setupReturnHref('/platform/providers', 'operations')).toBeNull();
+    expect(setupReturnHref('/organizations/org/administration/providers', 'operations')).toBeNull();
     expect(setupReturnHref('/organizations/org/work', 'https://outside.test')).toBeNull();
     expect(withSetupContext('/organizations/org/settings/general#regional-heading', 'business')).toBe('/organizations/org/settings/general?setupStep=business#regional-heading');
   });

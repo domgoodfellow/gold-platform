@@ -186,7 +186,8 @@ export function PageCrumbs({ crumbs: authoredCrumbs, current }: { crumbs: Crumb[
   const slot = context?.slot;
   // A workspace's own pages too (Work items, Schedule…), so an ancestor reads the business's own label for it.
   const destinations = reachableItems(context?.navigation?.sections ?? []);
-  const crumbs = authoredCrumbs.map(crumb => { const destination = destinations.find(item => item.href === crumb.href); return destination ? {...crumb,label:destination.label} : crumb; });
+  // A heading borrows its first page's address, so it never names that page.
+  const crumbs = authoredCrumbs.map(crumb => { const destination = destinations.find(item => item.href === crumb.href && !item.heading); return destination ? {...crumb,label:destination.label} : crumb; });
   const pathname = usePathname();
   const isMobile = useIsMobile();
   const navigation = pageNavigation(context?.navigation, pathname, crumbs.map((crumb) => crumb.href));

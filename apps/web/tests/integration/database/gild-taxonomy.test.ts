@@ -28,6 +28,8 @@ const MODULE_HOME: Record<string, string> = {
   job_economics: 'finance',
   subscriptions: 'finance',
   cost_economics: 'operator',
+  // GildOps' own subscriptions to its plans, sold from its Finance (ADR-057).
+  platform_subscriptions: 'operator',
   intelligence: 'agents',
   tools: 'agents',
   workflows: 'automations',

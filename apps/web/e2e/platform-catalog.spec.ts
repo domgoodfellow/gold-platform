@@ -18,7 +18,7 @@ test('opens a product from the list, edits it on its own page, and the edit pers
   const row = page.getByRole('link', { name: 'Ask' });
   await expect(row).toBeVisible();
 
-  await Promise.all([page.waitForURL(/\/platform\/catalog\/products\/.+/), row.click()]);
+  await Promise.all([page.waitForURL(/\/administration\/catalog\/products\/.+/), row.click()]);
   await expect(page.getByRole('heading', { name: 'Ask', level: 1 })).toBeVisible();
   await expect(page.getByText('module:assistant')).toBeVisible();
 

@@ -6,13 +6,13 @@ Workspace and feature surface specifications. System-wide rules, including **Cor
 
 - **Marketing:** Campaigns, Audiences, Leads and Performance (`marketing.read` or `marketing.manage`; changes still need `marketing.manage`).
 - **AI:** Agent activity and Evaluations, for any member. Agents, Channel deployments, Knowledge and Tools stay `organization.manage` configuration targets in AI's Configuration branch.
-- **Finance:** Catalog & Pricing (the operating price book; `price.manage`, `work_item.price` or `organization.manage`), Quotes, Invoices, Payments and Financial reports (`report.read`), each behind the billing module. Finance has no Configuration row, Configure control or configuration landing: trading currency belongs to Organization Settings → General (Regional settings) and payment collection to Organization Settings → Customer payments (`settings/payments`, whose card section keeps the `#getting-paid` anchor), and Finance shows no platform link.
+- **Finance:** Catalog & Pricing (the operating price book; `price.manage`, `work_item.price` or `organization.manage`), Subscriptions (`subscription.read`), Quotes, Invoices, Payments, Costs and Economics (`cost.read`) and Financial reports (`report.read`), each behind the billing module; Subscriptions, Costs and Economics also need the operator Product's features, which only GildOps' own plan includes. Finance has no Configuration row, Configure control or configuration landing: trading currency belongs to Organization Settings → General (Regional settings) and payment collection to Organization Settings → Customer payments (`settings/payments`, whose card section keeps the `#getting-paid` anchor), and Finance shows no platform link.
 - **Communications:** Numbers and Configuration stay under Configure.
 - **Work:** Dashboard, Work items, Schedule, Resources, Locations and Equipment & Assets as eligible. Work has no Configuration row: Work types & workflow open from Work items and Scheduling & hours from Schedule (each page's Configure control), and that page stays selected while its editor is open. `field/configuration` still redirects to the first editor the member may open.
 
 ## Unified navigation preview
 
-The unified layout (ADR-056, product contract in `docs/product.md` → *Workspace navigation*) is composed by `unifiedNavigation` (`lib/unified-navigation.ts`) from the shell's authorized sections and rendered by `OrgNav` with `layout="unified"`. Operations: CRM, Communications, Marketing, Support, Work, Finance, each a group whose heading opens its Dashboard; then Studio, Settings and, for staff, Administration. Studio, AI and Automations addresses enter the Studio creation context. `/platform` stays the Administration context. Row keys inside a group are prefixed with the group's key so one selected row never marks another group's Dashboard or Settings.
+The unified layout (ADR-056, product contract in `docs/product.md` → *Workspace navigation*) is composed by `unifiedNavigation` (`lib/unified-navigation.ts`) from the shell's authorized sections and rendered by `OrgNav` with `layout="unified"`. Operations: CRM, Communications, Marketing, Support, Work, Finance, each a group whose heading opens its Dashboard; then Studio, Settings and, for staff, Administration. Studio, AI and Automations addresses enter the Studio creation context. `/organizations/{goldId}/administration` stays the Administration context. Row keys inside a group are prefixed with the group's key so one selected row never marks another group's Dashboard or Settings.
 
 GildOps staff with the interface-design platform permission (`INTERFACE_DESIGN_CAPABILITY` in `lib/interface-design.ts`) switch layouts at Studio → Interface design → Navigation (`/studio/interface/navigation`). The page draws both layouts with the real `OrgNav` over the shell's projection at a simulated address: Compare, Current or Unified; Desktop, Rail or Phone (the phone width renders in an isolated viewport so the sidebar's own phone breakpoints apply); an Address chooser listing every address the projection offers; and links inside a preview move the simulated address instead of leaving the page. Use unified navigation stores `gildops_navigation_layout=unified` (httpOnly, 30 days) for this browser only; `OrganizationShell` honours it only when `loadPlatformContext` confirms the permission in GildOps' operating organization, so it never applies in a customer business or to anybody else. The header's Unified navigation control and Return to current navigation clear it; clearing needs no permission. The page and its action refuse everybody else (not-found, and an error result) through the Platform guards. Neither layout changes what a person may open.
 
@@ -42,11 +42,9 @@ Navigation requires a real surface.
 
 ## Administration navigation
 
-Platform Administration lives at `/platform`, with its own shared-shell composition and permission-filtered navigation. The business switcher lists organizations only. GildOps' configured operating-organization Membership and exact live platform capability remain required; the URL conveys no authority. Old organization-scoped Platform addresses render the organization not-found page.
+Administration is an entered context of GildOps' own organization, at `/organizations/{goldId}/administration/**`, drawn by the same organization shell, header, Agent, appearance and responsive navigation as every workspace (ADR-057). There is no standalone Platform application or shell, and the retired `/platform` addresses do not exist. The business switcher lists organizations only. GildOps' configured operating-organization Membership and exact live platform permissions remain required (`requirePlatformScope`); the URL conveys no authority. Customer organizations never receive the entry.
 
-`lib/platform-navigation.ts` owns destination URLs and required capabilities. The authorized GildOps business sidebar offers Administration as a way into this separate scope. Customer organizations never receive that entry.
-
-Its standalone scope provides its own authorized navigation:
+`lib/platform-navigation.ts` owns destination URLs and required permissions. In GildOps' sidebar, Administration is one private row after the workspaces; entering it replaces the sidebar with its own groups, with Home as the way back:
 
 ```text
 Overview
@@ -54,22 +52,19 @@ Organizations
 Product Registry
   Products
   Meters
-  Plans
 Integration Registry
   Connectors
 Infrastructure
-  Providers
-  AI Runtime
+  Vendors
+  AI answering
 Reliability
   Failures
-Commercial administration
-  Usage & economics / Vendor rates /
-  Package economics / Portfolio economics / Billing
+  Billing deliveries
 ```
 
-Product Registry → Plans holds what each plan and add-on switches on (products, modules, feature overrides and allowances), whether it is billed and the businesses that hold it, under `platform.catalogue`. Its name, description, prices, add-ons and sale status are the recurring item in GildOps' own Finance that sells it, reached by Pricing in Finance (ADR-057). The former Plans & Add-ons and Pricing addresses redirect: plans to Product Registry, pricing to GildOps' Catalog & Pricing, whose own guard decides access.
+Administration manages no money: plans, prices, subscriptions, supplier costs and economics are GildOps' Finance (Catalog & Pricing, Subscriptions, Costs, Economics). What a plan switches on is edited in a section of the plan's own item in Catalog & Pricing, by members who also hold `platform.catalogue`. An organization's record holds its identity (stable ID and slug), lifecycle, service access, provider resources, integrations, metered usage in units, failures and support sessions, and links to its subscription in Finance and its customer in CRM for members who may open them.
 
-Each destination is offered only to its own permission. Platform's separate sidebar uses the canonical registry; tenant vocabulary does not relabel control-plane concepts. The same shared header, surfaces, focus states and responsive sidebar apply. During an active business call, entering `/platform` opens a separate tab to retain the business telephone runtime.
+Each destination is offered only to its own permission; tenant vocabulary does not relabel control-plane concepts. Administration shows no organization setup status and offers no Return to setup.
 
 ## Workspace Configure doors
 
@@ -85,21 +80,20 @@ One dialog element and conversation subtree remain in place across layout change
 
 ## Persistent application controls
 
-The persistent organization header groups Team, Connections and Activity before Agent. Activity is an icon-only control named Organization activity with an Activity tooltip at every width. Its nonmodal responsive panel shows chronological recent history, actor and time, useful authorized record context, and canonical links, with loading, empty, error/retry and bounded Load more states. The shell supplies it independently of page Activity; both retain state, with the selected secondary panel visible. Global Activity overlays the page at tablet/desktop widths and uses the nonmodal phone sheet; Activity and Agent follow last-opened arbitration, while existing page panels retain wide coexistence with Agent. Escape and Close restore the global trigger. No unread indicator or notifications model is added; Platform receives no control (ADR-053).
+The persistent organization header groups Team, Connections and Activity before Agent. Activity is an icon-only control named Organization activity with an Activity tooltip at every width. Its nonmodal responsive panel shows chronological recent history, actor and time, useful authorized record context, and canonical links, with loading, empty, error/retry and bounded Load more states. The shell supplies it independently of page Activity; both retain state, with the selected secondary panel visible. Global Activity overlays the page at tablet/desktop widths and uses the nonmodal phone sheet; Activity and Agent follow last-opened arbitration, while existing page panels retain wide coexistence with Agent. Escape and Close restore the global trigger. No unread indicator or notifications model is added; Administration pages show no Activity control (ADR-053).
 
 The sidebar footer holds the Account/session menu, which represents the signed-in person: Settings,
 Help & documentation, Contact GildOps Support, then Sign out. Help and Contact are organization-scoped
 and appear only where an organization is in context. Mobile Agent remains a Sheet control. Locked
 organizations keep the Plan & usage recovery destination as their Settings entry. The no-organization
 fallback offers personal Settings without inventing an organization Help or Platform context.
-Platform Administration is reached at `/platform` from
-GildOps' own navigation, only with server-resolved platform authority, and the account menu never
-links to it.
+Administration is reached from GildOps' own sidebar, only with server-resolved platform authority,
+and the account menu never links to it.
 `AccountMenu` owns the footer presentation, identity and Sign out. `settings-icons.ts` owns recognizable Settings destination icons, used with accessible
 labels and rail tooltips. The existing `SettingsNav` retains search and closes the mobile Sheet
 on navigation. Back to app validates its per-tab hint against current authorized destinations
 and falls back to organization Home. Stored navigation is never an authorization authority.
 
-## Platform navigation and the business telephone
+## Administration and the business telephone
 
-Platform uses its own authorized registry and shared responsive sidebar. The business switcher changes business context only. `NavigationActivityContext` carries only a retention hint from the persistent telephone owner. During an active call, cross-business and global personal Settings links open a separate tab. Ordinary same-organization configuration, General Settings and workspace navigation reuse the existing telephone runtime. This does not provide call continuation after reload or browser termination.
+Administration is part of GildOps' organization layout, so moving into it keeps the business telephone runtime like any workspace. The business switcher changes business context only. `NavigationActivityContext` carries only a retention hint from the persistent telephone owner. During an active call, cross-business and global personal Settings links open a separate tab. Ordinary same-organization configuration, General Settings and workspace navigation reuse the existing telephone runtime. This does not provide call continuation after reload or browser termination.

@@ -9,27 +9,29 @@ import { Hint } from '@/components/controls/inputs';
 import { PageHeader } from '@/components/headers/page-header';
 import { platformAncestry, platformHref } from '@/lib/platform-navigation';
 
-const sections = [['Overview', ''], ['Plan', '/commercial'], ['Vendors', '/providers'], ['Integrations', '/integrations'], ['Usage', '/usage'], ['Failures', '/failures']] as const;
+const sections = [['Overview', ''], ['Vendors', '/providers'], ['Integrations', '/integrations'], ['Usage', '/usage'], ['Failures', '/failures']] as const;
 
 /**
- * A Platform view OF an organization — never the organization's own tenant shell. `canOpenBusiness`
- * is the one door between the two: true only when this platform-staff caller's own
- * `listMyOrganizations()` already includes this organization (real membership, not staff
- * authority standing in for one), so "Open business" never fabricates a tenant capability inside
- * `/platform` (ADR-003). Computed once, on the overview page, since a
- * membership fact doesn't change per tab.
+ * Administration's view OF a provisioned business — never that business's own shell. It is
+ * identified by its stable id; the slug is its human-readable address and may change.
+ * `canOpenBusiness` is the one door between the two: true only when this caller's own
+ * `listMyOrganizations()` already includes the business (real membership, not staff authority
+ * standing in for one), so "Open business" never fabricates a tenant capability (ADR-003).
+ * Computed once, on the overview page, since a membership fact doesn't change per tab.
  */
 export function TenantWorkspaceHeader({
   goldId,
   id,
+  slug,
   name,
   currency,
   canOpenBusiness,
   actions,
 }: {
-  /** GOLD's own organization — the context these pages are drawn in, not the organization being viewed. */
+  /** GildOps' own organization — the context these pages are drawn in, not the business being viewed. */
   goldId: string;
   id: string;
+  slug?: string | null;
   name: string;
   currency: string;
   canOpenBusiness?: boolean;
@@ -59,7 +61,7 @@ export function TenantWorkspaceHeader({
         }
       />
       <Hint className="block">
-        Business ID: {id} · Trades in {currency || 'a currency not yet set'}.
+        ID {id}{slug ? ` · ${slug}` : ''} · {currency || 'No currency set'}
       </Hint>
       <nav aria-label="Business" className="mt-4 flex gap-1 overflow-x-auto border-b border-border">
         {sections.map(([label, suffix]) => {

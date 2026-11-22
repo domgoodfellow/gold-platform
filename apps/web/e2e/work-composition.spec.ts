@@ -8,8 +8,8 @@ import { DEMO_PASSWORD } from '../scripts/demo/businesses';
 import { createWorkItemType } from '../lib/domain/work-items/types';
 import { createWorkItemStatus } from '../lib/domain/work-items/statuses';
 import { provisionOrganization } from '../lib/domain/platform/provision';
-import { recordPlanAssignment } from '../lib/domain/catalogue/organization-plans';
 import { chooseOption, selectFieldValue } from './select-field';
+import { seedPlanAssignment } from '../tests/support/plans';
 
 const artifact = (file: string) => path.resolve(__dirname, '../../../.artifacts/composition', file);
 // The focused config provisions globally; the full acceptance runner provisions this spec's
@@ -125,7 +125,7 @@ test('creation prerequisites, setup return, unsaved edits, failed and successful
     emptyId=await provisionOrganization(db,{ownerEmail:ctx.ownerEmail,name:'Composition empty fixture',displayName:'Owner',currency:'CAD',timezone:'America/Toronto'});
     manifest.organizationIds.push(emptyId);writeFileSync(manifestPath,JSON.stringify(manifest));
     const plan=await pg.query('select id from platform_plans where key=$1',[manifest.planKeys[0]]);
-    await recordPlanAssignment(db,{organizationId:emptyId,planId:plan.rows[0].id,periodStart:'2020-01-01',periodEnd:'9999-12-31'});
+    await seedPlanAssignment(pg,{organizationId:emptyId,planId:plan.rows[0].id,periodStart:'2020-01-01',periodEnd:'9999-12-31',actorId:login.data.user!.id});
   } finally { await pg.query('delete from platform_staff where user_id=$1',[login.data.user!.id]);await pg.end(); }
   await page.goto(`/organizations/${emptyId}/work/new`);
   await expect(page.getByText('No work types yet',{exact:true})).toBeVisible();

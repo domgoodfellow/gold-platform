@@ -37,7 +37,7 @@ const GROUPS: readonly { label: string; capabilities: readonly Capability[] }[] 
     label: 'Support',
     capabilities: ['support.read', 'support.case.create', 'support.case.update', 'support.case.assign', 'support.case.resolve', 'support.configure'],
   },
-  { label: 'Finance', capabilities: ['price.manage', 'invoice.issue', 'payment.record', 'subscription.manage', 'cost.read', 'cost.manage'] },
+  { label: 'Finance', capabilities: ['price.manage', 'invoice.issue', 'payment.record', 'subscription.read', 'subscription.manage', 'cost.read', 'cost.manage'] },
   {
     label: 'Automation & AI',
     capabilities: ['automation.manage', 'assistant.ask', 'configuration.propose'],

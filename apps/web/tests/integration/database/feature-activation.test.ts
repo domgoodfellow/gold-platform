@@ -6,15 +6,15 @@ import {
   disableOrganizationFeature,
   enableOrganizationFeature,
   organizationResolvedFeatureStates,
-  recordPlanAssignment,
   type ResolvedFeatureState,
 } from '@/lib/domain/catalogue/organization-plans';
-import { createPlan, setPlanFeatureOverride } from '@/lib/domain/catalogue/plans';
+import { setPlanFeatureOverride } from '@/lib/domain/catalogue/plans';
 import { computeReadiness, computeSetupOverview } from '@/lib/domain/tenancy/lifecycle';
 import { createPriceBookItem } from '@/lib/domain/pricing/price-book';
 import { assignRole, createRole } from '@/lib/domain/tenancy/roles';
 import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { assignFixturePlan, createFixturePlan } from '@/tests/support/plans';
 
 /**
  * The four-axis feature resolver (domain-model.md): entitlement, activation, readiness, and —
@@ -195,9 +195,9 @@ describe('Plan-assignment authority over legacy fallback', () => {
     const organizationId = await foundBusiness({ ownerEmail: owner.email, name: 'CRM only', currency: 'EUR' });
     const feature = (await listFeaturesByRuntimeMapping(owner.db, { mappingKind: 'module_key', mappingValue: 'reception' })).find((entry) => entry.key === 'pipeline')!;
     const staff = await asPlatformStaff();
-    const planId = await createPlan(staff, { key: `crm_${randomUUID().slice(0, 8)}`, kind: 'plan', label: 'CRM readiness fixture', description: 'Controlled test', billable: false });
+    const planId = await createFixturePlan({ key: `crm_${randomUUID().slice(0, 8)}`, kind: 'plan', label: 'CRM readiness fixture', description: 'Controlled test', billable: false });
     await setPlanFeatureOverride(staff, { planId, featureId: feature.id, included: true });
-    await recordPlanAssignment(staff, { organizationId, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
+    await assignFixturePlan({ organizationId, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
     expect((await organizationResolvedFeatureStates(owner.db, { organizationId })).find((state) => state.featureId === feature.id)?.readiness).toBe('ready');
     const overview = await computeSetupOverview(owner.db, { organizationId });
     expect(overview.areas.map((area) => area.key)).not.toContain('reception');
@@ -209,9 +209,9 @@ describe('Plan-assignment authority over legacy fallback', () => {
     const org = await foundBusiness({ ownerEmail: owner.email, name: 'Plan-only booking', currency: 'EUR' });
     const features = await listFeaturesByRuntimeMapping(owner.db, { mappingKind: 'module_key', mappingValue: 'booking' });
     const feature = features.find((entry) => entry.key === 'booking')!;
-    const planId = await createPlan(staff, { key: `booking_${randomUUID().slice(0, 8)}`, kind: 'plan', label: 'Booking verification', description: 'Controlled local fixture', billable: false });
+    const planId = await createFixturePlan({ key: `booking_${randomUUID().slice(0, 8)}`, kind: 'plan', label: 'Booking verification', description: 'Controlled local fixture', billable: false });
     await setPlanFeatureOverride(staff, { planId, featureId: feature.id, included: true });
-    await recordPlanAssignment(staff, { organizationId: org, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
+    await assignFixturePlan({ organizationId: org, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
     const states = await organizationResolvedFeatureStates(owner.db, { organizationId: org });
     expect(states.find((entry) => entry.featureId === feature.id)?.readiness).toBe('setup_required');
     expect((await computeReadiness(owner.db, { organizationId: org })).blockers.map((entry) => entry.key)).toContain('booking');
@@ -226,7 +226,6 @@ describe('Plan-assignment authority over legacy fallback', () => {
   });
 
   it('never falls back to legacy wanted∩paid once a real Plan assignment exists, even one granting nothing', async () => {
-    const staff = await asPlatformStaff();
     const owner = await signUp('plan-authority');
     const org = await foundBusiness({
       ownerEmail: owner.email,
@@ -253,14 +252,14 @@ describe('Plan-assignment authority over legacy fallback', () => {
     // Feature override. `organization_effective_entitlements` for this org now resolves to an
     // empty list, exactly the count-based trap `planEntitlements.length > 0` used to fall into.
     const planKey = `empty_${randomUUID().slice(0, 8)}`;
-    const planId = await createPlan(staff, {
+    const planId = await createFixturePlan({
       key: planKey,
       kind: 'plan',
       label: 'Empty Plan (authority test)',
       description: 'Grants nothing on purpose — proves assignment existence, not entitlement count, is authoritative.',
       billable: true,
     });
-    await recordPlanAssignment(staff, { organizationId: org, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
+    await assignFixturePlan({ organizationId: org, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
 
     // The legacy module is still wanted and paid underneath — untouched by the Plan assignment —
     // so a count-based check would still see "no entitlements" and wrongly fall back to it.

@@ -43,7 +43,7 @@ describe('the operations sidebar', () => {
     expect(group(view.sections, 'workspace-crm')!.children!.map((child) => child.label)).toEqual(['Contacts', 'Pipeline']);
     expect(group(view.sections, 'workspace-communications')!.children!.map((child) => child.label).slice(0, 2)).toEqual(['Dialer', 'Conversations']);
     expect(group(view.sections, 'workspace-field')!.children!.map((child) => child.label)).toEqual(['Work items', 'Schedule', 'Resources', 'Locations', 'Equipment & Assets']);
-    expect(group(view.sections, 'workspace-finance')!.children!.map((child) => child.label)).toEqual(['Catalog & Pricing', 'Quotes', 'Invoices', 'Payments', 'Financial reports']);
+    expect(group(view.sections, 'workspace-finance')!.children!.map((child) => child.label)).toEqual(['Catalog & Pricing', 'Subscriptions', 'Quotes', 'Invoices', 'Payments', 'Costs', 'Economics', 'Financial reports']);
   });
 
   it('keeps keys unique within the sidebar, so one selected row never marks another workspace', () => {
@@ -166,13 +166,13 @@ describe('GildOps-only interface design', () => {
     expect(navigationLayoutFor(undefined, new Set(PLATFORM_CAPABILITIES))).toBe('contextual');
   });
 
-  it('keeps Administration a separate entered context with its existing registry', () => {
+  it('keeps Administration a separate entered context of the same shell, with its existing registry', () => {
     const sections = staff(PLATFORM_CAPABILITIES);
     const operations = unifiedNavigation(sections, `${base}/home`);
-    expect(operations.sections.at(-1)!.items.map((item) => [item.key, item.href])).toEqual([['administration', '/platform']]);
-    const inside = unifiedNavigation(sections, '/platform/providers');
+    expect(operations.sections.at(-1)!.items.map((item) => [item.key, item.href])).toEqual([['administration', `${base}/administration`]]);
+    const inside = unifiedNavigation(sections, `${base}/administration/providers`);
     expect(inside.context?.workspace.key).toBe('administration');
-    expect(activeItemKey(inside.sections, '/platform/providers')).toBe('platform-providers');
+    expect(activeItemKey(inside.sections, `${base}/administration/providers`)).toBe('platform-providers');
     expect(flat(inside.sections).some((item) => item.key.startsWith('workspace-'))).toBe(false);
     expect(flat(unifiedNavigation(project(), `${base}/home`).sections).some((item) => item.key === 'administration')).toBe(false);
   });

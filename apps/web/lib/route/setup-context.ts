@@ -12,7 +12,8 @@ export function withSetupContext(href: string, step: string): string {
 
 export function setupReturnHref(pathname: string, step: string | null): string | null {
   const match = /^\/organizations\/([^/]+)\/(.+)$/.exec(pathname);
-  if (!match || match[2] === 'setup' || match[2].startsWith('setup/') || !setupStepKey(step)) return null;
+  // Setup's own pages and Administration (which runs the platform, not this business) offer no way back to Setup.
+  if (!match || ['setup', 'administration'].some((root) => match[2] === root || match[2].startsWith(`${root}/`)) || !setupStepKey(step)) return null;
   return `/organizations/${match[1]}/setup?${new URLSearchParams({ step: step! })}`;
 }
 

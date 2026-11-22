@@ -130,7 +130,7 @@ export async function buildOrganizationPurchaseQuote(
   if (!baseAssignment) {
     blockers.push({
       code: 'no_base_plan',
-      message: 'This business has no assigned Plan yet -- ask platform staff to assign one before checkout.',
+      message: 'This business has no assigned Plan yet -- ask GildOps to assign one before checkout.',
     });
   }
 
@@ -151,7 +151,7 @@ export async function buildOrganizationPurchaseQuote(
       if (!price) {
         blockers.push({
           code: 'no_plan_price',
-          message: `${plan.label} has no price in force -- ask platform staff to approve one.`,
+          message: `${plan.label} has no price in force -- ask GildOps to approve one.`,
         });
       } else {
         currency = price.currency;
@@ -200,7 +200,7 @@ export async function buildOrganizationPurchaseQuote(
     if (!price) {
       blockers.push({
         code: 'no_addon_price',
-        message: `${plan.label} has no price in force -- ask platform staff to approve one.`,
+        message: `${plan.label} has no price in force -- ask GildOps to approve one.`,
       });
       continue;
     }

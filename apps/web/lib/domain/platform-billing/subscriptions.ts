@@ -263,7 +263,7 @@ export async function listSubscriptionItems(
     .filter((item) => current.has(`${item.organizationId}:${item.environment}:${item.subscriptionReference}`));
 }
 
-/** past_due/unpaid, for the platform staff console (Phase 5: "organizations requiring attention"). Staff-only by RLS on the underlying select — an ordinary member reading this sees only their own organization's row, never the list. */
+/** past_due/unpaid, for GildOps' Finance Subscriptions ("requiring attention"). Readable with `subscription.read` in GildOps' operating organization by RLS on the underlying select — an ordinary member reading this sees only their own organization's row, never the list. */
 export async function listOrganizationsRequiringAttention(
   db: Db,
 ): Promise<OrganizationSubscription[]> {
@@ -276,7 +276,7 @@ export async function listOrganizationsRequiringAttention(
   return (data ?? []).map(toSubscription);
 }
 
-/** Every current GOLD subscription, for the platform staff overview. Same RLS reasoning as above. */
+/** Every current GildOps subscription, for GildOps' Finance Subscriptions. Same RLS reasoning as above. */
 export async function listOrganizationSubscriptions(db: Db): Promise<OrganizationSubscription[]> {
   const { data, error } = await db
     .from('organization_platform_subscriptions')

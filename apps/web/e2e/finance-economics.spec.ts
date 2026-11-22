@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Client } from 'pg';
 import { expect, test } from '@playwright/test';
-import { loadDemoContext, OWNER_STORAGE_STATE, platformUrl, STAFF_STORAGE_STATE } from './helpers';
+import { loadDemoContext, OWNER_STORAGE_STATE, financeUrl, STAFF_STORAGE_STATE } from './helpers';
 import { chooseOption } from './select-field';
 
 const CONNECTION = process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
@@ -37,16 +37,16 @@ test.afterAll(async () => {
   await pg.end();
 });
 
-test.describe('staff finance economics', () => {
+test.describe('GildOps Finance costs', () => {
   test.use({ storageState: STAFF_STORAGE_STATE });
 
   test('filters usage and opens a mixed known/unknown component drawer', async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (error) => errors.push(error.message));
-    await page.goto(platformUrl('usage'));
-    await expect(page.getByRole('heading', { name: 'Usage & economics', level: 1 })).toBeVisible();
+    await page.goto(financeUrl('costs?view=usage'));
+    await expect(page.getByRole('heading', { name: 'Costs', level: 1 })).toBeVisible();
     const { organizationId } = loadDemoContext();
-    await chooseOption(page.getByLabel('Organization', { exact: true }), organizationId);
+    await chooseOption(page.getByLabel('Business', { exact: true }), organizationId);
     await page.getByRole('button', { name: 'Filter' }).click();
     await expect(page).toHaveURL(new RegExp(`organization=${organizationId}`));
     await expect(page.getByText('Cost unknown').first()).toBeVisible();
@@ -55,7 +55,7 @@ test.describe('staff finance economics', () => {
     await expect(page.getByRole('heading', { name: 'Cost components' })).toBeVisible();
     await expect(page.getByText('No current provider rate matches this component.')).toBeVisible();
     await page.screenshot({ path: '../../.artifacts/finance/usage-economics-desktop.png', fullPage: true });
-    await page.goto(platformUrl('usage'));
+    await page.goto(financeUrl('costs?view=usage'));
     await page.getByLabel('From date').fill('2099-01-01');
     await page.getByRole('button', { name: 'Filter' }).click();
     await expect(page.getByText('No usage for this period.')).toBeVisible();
@@ -64,16 +64,16 @@ test.describe('staff finance economics', () => {
   });
 
   test('shows vendor rate history and remains usable at a narrow viewport', async ({ page }) => {
-    await page.goto(platformUrl('vendor-rates'));
-    await expect(page.getByRole('heading', { name: 'Vendor rates', level: 1 })).toBeVisible();
+    await page.goto(financeUrl('costs'));
+    await expect(page.getByRole('heading', { name: 'Costs', level: 1 })).toBeVisible();
     const pstnRate = page.getByRole('button', { name: 'PSTN outbound minute' }).first();
     await expect(pstnRate).toBeVisible();
     await pstnRate.click();
     await expect(page.getByRole('heading', { name: 'History' })).toBeVisible();
     await page.screenshot({ path: '../../.artifacts/finance/vendor-rates-desktop.png', fullPage: true });
     await page.setViewportSize({ width: 320, height: 800 });
-    await page.goto(platformUrl('usage'));
-    await expect(page.getByRole('heading', { name: 'Usage & economics', level: 1 })).toBeVisible();
+    await page.goto(financeUrl('costs?view=usage'));
+    await expect(page.getByRole('heading', { name: 'Costs', level: 1 })).toBeVisible();
     await page.screenshot({ path: '../../.artifacts/finance/usage-economics-narrow.png', fullPage: true });
   });
 });
@@ -95,7 +95,7 @@ test.describe('tenant cost boundary', () => {
     await page.goto(`/organizations/${organizationId}/home`);
     await page.getByRole('link', { name: 'Finance', exact: true }).click();
     await expect(page).toHaveURL(`/organizations/${organizationId}/finance`);
-    await expect(page.getByRole('heading', { name: 'Finance', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible();
     await expect(page.getByText('Known COGS')).toHaveCount(0);
     await expect(page.getByText('Provider rate')).toHaveCount(0);
     await expect(page.getByText('Usage allowances')).toHaveCount(0);

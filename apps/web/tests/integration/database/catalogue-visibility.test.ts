@@ -3,6 +3,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
+import { mapFixturePlanPrice } from '@/tests/support/plans';
 
 /**
  * Which platform tables each kind of caller can read.
@@ -30,14 +31,19 @@ const VOCABULARY = [
   'platform_catalog_feature_dependencies',
 ] as const;
 
-const COMMERCIAL = [
+/** What each plan switches on: readable by any business member and by the platform staff who shape and enforce it. */
+const PLAN_DEFINITIONS = [
   'platform_plans',
   'platform_plan_product_grants',
   'platform_plan_module_grants',
   'platform_plan_feature_grants',
   'platform_plan_quotas',
-  'platform_plan_prices',
-  'platform_retail_rates',
+] as const;
+
+/** What plans cost: published list prices for business members, and nothing at all for platform authority alone (ADR-057). */
+const LIST_PRICES = [
+  { table: 'price_book_item_prices', listed: 'plan_id is not null' },
+  { table: 'platform_retail_rates', listed: 'organization_id is null' },
 ] as const;
 
 const CONTROL_PLANE = [
@@ -89,32 +95,19 @@ beforeAll(async () => {
   expect((await visitor.auth.signInAnonymously()).error).toBeNull();
   signedOut = fresh();
 
-  // Two tables the seed leaves empty, filled through their own staff doors so the deny has a row
-  // to refuse. Removed afterwards over the direct connection.
-  const rate = await staff.rpc('record_retail_rate', {
-    p_meter_id: 'email_send',
-    p_currency: 'EUR',
-    p_unit_amount_micros: 1,
-    p_source: 'visibility fixture',
-    p_source_url: null,
-    p_approval_state: 'approved',
-    p_note: FIXTURE,
-  });
-  expect(rate.error).toBeNull();
-  const { rows: prices } = await pg.query('select id from public.platform_plan_prices limit 1');
-  const provisioned = await staff.rpc('record_plan_provider_price', {
-    p_plan_price_id: prices[0].id,
-    p_environment: 'sandbox',
-    p_product_reference: `prod_${FIXTURE}`,
-    p_price_reference: `price_${FIXTURE}`,
-    p_provider: 'stripe',
-  });
-  expect(provisioned.error).toBeNull();
+  // Two tables the seed leaves empty, filled as the database owner so the deny has a row to refuse.
+  // Removed afterwards over the direct connection.
+  await pg.query(
+    "insert into public.platform_retail_rates (meter_id, currency, unit_amount_micros, source, note) values ('email_send', 'EUR', 1, 'visibility fixture', $1)",
+    [FIXTURE],
+  );
+  const { rows: prices } = await pg.query('select id from public.price_book_item_prices where plan_id is not null limit 1');
+  await mapFixturePlanPrice({ planPriceId: prices[0].id, environment: 'sandbox', productReference: `prod_${FIXTURE}`, priceReference: `price_${FIXTURE}` });
 }, 90_000);
 
 afterAll(async () => {
   await pg.query('delete from public.platform_retail_rates where note = $1', [FIXTURE]);
-  await pg.query('delete from public.platform_plan_provider_prices where price_reference = $1', [`price_${FIXTURE}`]);
+  await pg.query('delete from public.price_book_item_provider_prices where price_reference = $1', [`price_${FIXTURE}`]);
   await pg.end();
 });
 
@@ -133,8 +126,8 @@ describe('vocabulary is readable by any signed-in caller', () => {
   });
 });
 
-describe('commercial configuration is for a member of some business or staff', () => {
-  for (const table of COMMERCIAL) {
+describe('what a plan switches on is for a member of some business or staff', () => {
+  for (const table of PLAN_DEFINITIONS) {
     it(`${table}: member and staff see every row, a booking visitor sees none`, async () => {
       const expected = await realCount(table);
       expect(await seenBy(member, table)).toBe(expected);
@@ -144,10 +137,22 @@ describe('commercial configuration is for a member of some business or staff', (
   }
 
   it('is not vacuous: the tables the deny is proved on hold rows', async () => {
-    for (const table of ['platform_plans', 'platform_plan_product_grants', 'platform_plan_quotas', 'platform_retail_rates']) {
+    for (const table of ['platform_plans', 'platform_plan_product_grants', 'platform_plan_quotas']) {
       expect(await realCount(table)).toBeGreaterThan(0);
     }
   });
+});
+
+describe('what a plan costs is published to business members, never to platform authority alone', () => {
+  for (const { table, listed } of LIST_PRICES) {
+    it(`${table}: a member sees the published rows, staff and a booking visitor see none`, async () => {
+      const { rows } = await pg.query(`select count(*)::int as n from public.${table} where ${listed}`);
+      expect(rows[0].n).toBeGreaterThan(0);
+      expect(await seenBy(member, table)).toBe(rows[0].n);
+      expect(await seenBy(staff, table)).toBe(0);
+      expect(await seenBy(visitor, table)).toBe(0);
+    });
+  }
 });
 
 describe('the control plane is for staff only', () => {
@@ -187,7 +192,7 @@ describe('the control plane is for staff only', () => {
 });
 
 describe('a caller with no session reads nothing at all', () => {
-  it.each([...VOCABULARY, ...COMMERCIAL, ...CONTROL_PLANE])('%s is refused before any policy runs', async (table) => {
+  it.each([...VOCABULARY, ...PLAN_DEFINITIONS, ...LIST_PRICES.map((entry) => entry.table), ...CONTROL_PLANE])('%s is refused before any policy runs', async (table) => {
     const { error, data } = await signedOut.from(table).select('*').limit(1);
     expect(data).toBeNull();
     expect(error?.code).toBe('42501');

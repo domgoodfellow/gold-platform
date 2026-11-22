@@ -70,7 +70,7 @@ export type EffectiveQuota = {
 };
 
 function staffOnly(error: { code?: string; message: string }, code: string): never {
-  throw new DomainError(error.code === '42501' ? 'Only platform staff may manage Plan assignments.' : error.message, code);
+  throw new DomainError(error.code === '42501' ? 'Changing a subscription needs the subscription permission in GildOps’ own business.' : error.message, code);
 }
 
 /** Every organization currently or historically assigned one Plan — the platform's "Organizations" tab on a Plan detail page. Staff-only in practice: RLS admits a tenant only its own rows. */
@@ -113,6 +113,28 @@ export async function listOrganizationPlanAssignments(db: Db, input: { organizat
 }
 
 /** The organization's current base Plan (not an Add-on), if any — for a "Current plan" card. */
+/** Every business's plans and add-ons in force today, for GildOps' Finance Subscriptions. RLS decides whose rows are returned. */
+export async function listCurrentPlanAssignments(db: Db): Promise<PlanAssignment[]> {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await db
+    .from('organization_plan_assignments')
+    .select('id, organization_id, plan_id, plan_kind, period_start, period_end, assigned_at, note')
+    .lte('period_start', today)
+    .gt('period_end', today)
+    .order('period_start', { ascending: false });
+  if (error) throw fromDatabaseError(error, 'organization_plans.current_assignments_failed');
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    organizationId: row.organization_id,
+    planId: row.plan_id,
+    planKind: row.plan_kind as PlanKind,
+    periodStart: row.period_start,
+    periodEnd: row.period_end,
+    assignedAt: row.assigned_at,
+    note: row.note,
+  }));
+}
+
 export async function currentPlanAssignment(db: Db, input: { organizationId: string }): Promise<PlanAssignment | null> {
   const today = new Date().toISOString().slice(0, 10);
   const { data, error } = await db

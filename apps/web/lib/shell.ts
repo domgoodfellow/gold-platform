@@ -153,10 +153,10 @@ function destinationItem(organizationId: string, area: Area, offered?: readonly 
  * of it and which platform permissions they hold; nothing here widens that.
  *
  * Every destination is filtered by its own permission and forms one private Administration
- * entry. A group or destination linked from a workspace (Commercial administration from Finance,
- * AI Runtime from AI) also gets a link there when that workspace is in the shell. When every
- * part of Administration is already linked that way — staff who hold only commercial authority —
- * the entry is drawn only once they are inside it, so they are not offered an empty area.
+ * entry, an entered context of this same shell at `/organizations/{goldId}/administration`. A
+ * group or destination linked from a workspace (AI answering from AI) also gets a link there when
+ * that workspace is in the shell. When every part of Administration is already linked that way,
+ * the entry is drawn only once somebody is inside it, so they are not offered an empty area.
  */
 export function withAdministration(sections: readonly ShellSection[], organizationId: string, permissions: ReadonlySet<PlatformCapability>): ShellSection[] {
   const destinations = platformDestinationsFor(permissions);
@@ -424,16 +424,16 @@ export function inPlatformScope(pathname: string): boolean {
 }
 
 /**
- * Where the header's setup status belongs: this business's own pages. Never Platform (`/platform`)
- * or a personal account page, both outside the business's address, and not the Setup pages, which
- * already show it in full.
+ * Where the header's setup status belongs: this business's own pages. Never Administration, which
+ * runs the platform rather than this business, or a personal account page outside the business's
+ * address, and not the Setup pages, which already show it in full.
  */
 export function showsSetupStatus(pathname: string, organizationId: string): boolean {
   const base = `/organizations/${organizationId}`;
   const path = pathname.split(/[?#]/)[0].replace(/\/$/, '');
   if (path !== base && !path.startsWith(`${base}/`)) return false;
   const rest = path.slice(base.length);
-  return rest !== '/setup' && !rest.startsWith('/setup/');
+  return !['/setup', '/administration'].some((root) => rest === root || rest.startsWith(`${root}/`));
 }
 
 /**

@@ -23,7 +23,7 @@ export type Recovery = { href: string; label: string };
  * the lobby, not Room 412. The sidebar is the context switcher and account menu and nothing else.
  *
  * The recovery is the same validated landing a sign-in uses (`resolveOrganizationsLanding`), not
- * GOLD, not the first business and not Platform by hand. It only reads, so it is safe to run
+ * GildOps, not the first business and not Administration by hand. It only reads, so it is safe to run
  * while rendering: `resolvePostAuthDestination` also consumes an invite cookie, which a render
  * may not do.
  */
@@ -32,7 +32,6 @@ export async function GlobalFallbackShell({ children }: { children: (recovery: R
 
   const landing = resolveOrganizationsLanding({
     organizations: person.organizations,
-    staff: person.staff,
     preferredOrganizationId: person.operatingOrganization?.id,
     lastOrganizationId: await readLastOrganizationId(),
   });

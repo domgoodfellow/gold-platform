@@ -7,7 +7,7 @@ import { useActionState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { CurrencyField, TimeZoneField } from '@/features/locale/locale-fields';
 import { SelectField } from '@/components/controls/select-field';
-import { provisionOrganizationAction, type ProvisionState } from '@/app/platform/actions';
+import { provisionOrganizationAction, type ProvisionState } from '@/app/organizations/[organizationId]/administration/actions';
 
 const INITIAL: ProvisionState = { error: null, provisioned: null };
 

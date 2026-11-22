@@ -5,9 +5,10 @@ import { OWNER_STORAGE_STATE, COLLEAGUE_STORAGE_STATE, loadDemoContext } from '.
 import { signInOwner, populateFinanceBusiness, provisionFinanceBusiness } from './finance-fixtures';
 import { setModuleEnabled } from '../lib/domain/tenancy/modules';
 import { recordCost } from '../lib/domain/work-items/consumption';
-import { organizationResolvedFeatureStates, disableOrganizationFeature, enableOrganizationFeature, currentPlanAssignment, recordPlanAssignment } from '../lib/domain/catalogue/organization-plans';
+import { organizationResolvedFeatureStates, disableOrganizationFeature, enableOrganizationFeature, currentPlanAssignment } from '../lib/domain/catalogue/organization-plans';
 import { guardedShot } from './visual-guard';
 import { chooseOption } from './select-field';
+import { seedPlanAssignment } from '../tests/support/plans';
 
 const baseline = process.env.FINANCE_E1_BASELINE === '1';
 const out = path.join(__dirname, '../../../.artifacts/finance-e1', baseline ? 'before' : 'after');
@@ -144,10 +145,8 @@ test.describe.serial('Finance pricing planning', () => {
     const pg = new Client(process.env.SUPABASE_DB_URL!);
     await pg.connect();
     try {
-      await pg.query('insert into platform_staff(user_id,name) values($1,$2)', [owner.userId, 'Finance E1 empty fixture']);
-      await recordPlanAssignment(owner.db, { organizationId, planId: plan.planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
+      await seedPlanAssignment(pg, { organizationId, planId: plan.planId, periodStart: '2020-01-01', periodEnd: '9999-12-31', actorId: owner.userId });
     } finally {
-      await pg.query('delete from platform_staff where user_id=$1', [owner.userId]);
       await pg.end();
     }
     const url = `/organizations/${organizationId}/finance/reports`;

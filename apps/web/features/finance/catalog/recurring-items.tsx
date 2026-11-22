@@ -42,20 +42,25 @@ function useToast(state: RecurringItemState) {
   useEffect(() => { if (state.success) toast.success(state.success); }, [state]);
 }
 
+/** The day a price starts or ends, written the same on the server and in the browser. */
+function priceDay(iso: string): string {
+  return iso.slice(0, 10);
+}
+
 function kindLabel(item: RecurringItem): string | null {
   if (!item.plan) return null;
   return item.plan.kind === 'plan' ? 'Plan' : 'Add-on';
 }
 
 /** The catalog's recurring items, beside the one-off price book. */
-export function RecurringItemsSection({ organizationId, items, mayManage }: { organizationId: string; items: RecurringItemRow[]; mayManage: boolean }) {
+export function RecurringItemsSection({ organizationId, items, mayManage, sellsPlans = false }: { organizationId: string; items: RecurringItemRow[]; mayManage: boolean; sellsPlans?: boolean }) {
   const href = (item: RecurringItem) => `/organizations/${organizationId}/finance/catalog/${item.id}`;
   return (
     <section aria-labelledby="recurring-items-heading" className="@container mt-8">
       <SectionHeader
         id="recurring-items-heading"
         title={<>Recurring items <span className="text-sm font-normal text-muted">({items.length})</span></>}
-        action={mayManage ? <NewRecurringItemDrawer organizationId={organizationId} /> : undefined}
+        action={mayManage ? <NewRecurringItemDrawer organizationId={organizationId} sellsPlans={sellsPlans} /> : undefined}
       />
       <div className="mt-3">
         <DataTable
@@ -79,8 +84,14 @@ export function RecurringItemsSection({ organizationId, items, mayManage }: { or
   );
 }
 
-function NewRecurringItemDrawer({ organizationId }: { organizationId: string }) {
+/**
+ * A new recurring item. In GildOps' own organization it can be a GildOps plan or add-on, created
+ * with an empty switch list that Product Registry fills on the item's own page.
+ */
+function NewRecurringItemDrawer({ organizationId, sellsPlans }: { organizationId: string; sellsPlans: boolean }) {
   const formId = useId();
+  const kindId = useId();
+  const [kind, setKind] = useState<'item' | 'plan' | 'addon'>('item');
   const router = useRouter();
   const [state, action, pending] = useActionState(createRecurringItemAction, INITIAL);
   useEffect(() => {
@@ -98,7 +109,19 @@ function NewRecurringItemDrawer({ organizationId }: { organizationId: string }) 
         <PageDrawerBody>
           <form id={formId} action={action} className="flex flex-col gap-4">
             <input type="hidden" name="organizationId" value={organizationId} />
-            <ItemFields />
+            {sellsPlans ? (
+              <div className="flex flex-col gap-1">
+                <FieldLabel htmlFor={kindId}>Kind</FieldLabel>
+                <SelectField
+                  id={kindId}
+                  name="kind"
+                  value={kind}
+                  onValueChange={(next) => setKind(next as typeof kind)}
+                  options={[{ value: 'item', label: 'Recurring item' }, { value: 'plan', label: 'GildOps plan' }, { value: 'addon', label: 'GildOps add-on' }]}
+                />
+              </div>
+            ) : null}
+            <ItemFields chargedPer={kind === 'item'} />
             <ErrorText role="alert">{state.error}</ErrorText>
           </form>
         </PageDrawerBody>
@@ -108,18 +131,20 @@ function NewRecurringItemDrawer({ organizationId }: { organizationId: string }) 
   );
 }
 
-function ItemFields({ item }: { item?: RecurringItem }) {
+function ItemFields({ item, chargedPer = true }: { item?: RecurringItem; chargedPer?: boolean }) {
   const id = useId();
   return (
     <>
       <div className="flex flex-col gap-1">
         <FieldLabel htmlFor={`${id}-name`}>Name</FieldLabel>
-        <TextInput id={`${id}-name`} name="name" required maxLength={200} defaultValue={item?.name} />
+        <TextInput id={`${id}-name`} name="name" required maxLength={chargedPer ? 200 : 120} defaultValue={item?.name} />
       </div>
-      <div className="flex flex-col gap-1">
-        <FieldLabel htmlFor={`${id}-unit`}>Charged per</FieldLabel>
-        <TextInput id={`${id}-unit`} name="unit" required maxLength={40} defaultValue={item?.unit ?? 'subscription'} />
-      </div>
+      {chargedPer ? (
+        <div className="flex flex-col gap-1">
+          <FieldLabel htmlFor={`${id}-unit`}>Charged per</FieldLabel>
+          <TextInput id={`${id}-unit`} name="unit" required maxLength={40} defaultValue={item?.unit ?? 'subscription'} />
+        </div>
+      ) : null}
       <div className="flex flex-col gap-1">
         <FieldLabel htmlFor={`${id}-description`}>Description</FieldLabel>
         <TextArea id={`${id}-description`} name="description" rows={3} maxLength={2000} defaultValue={item?.description} />
@@ -133,7 +158,12 @@ export function EditRecurringItemDrawer({ organizationId, item }: { organization
   const [open, setOpen] = useState(false);
   const [state, action, pending] = useActionState(updateRecurringItemAction, INITIAL);
   useToast(state);
-  useEffect(() => { if (state.success) setOpen(false); }, [state]);
+  // A saved form closes its drawer: adjusted while rendering the new result, not in an effect.
+  const [handled, setHandled] = useState(state);
+  if (state !== handled) {
+    setHandled(state);
+    if (state.success) setOpen(false);
+  }
   return (
     <PageDrawer open={open} onOpenChange={setOpen}>
       <PageDrawerTrigger asChild><Button tone="secondary" size="small">Edit</Button></PageDrawerTrigger>
@@ -183,8 +213,8 @@ export function PriceHistory({
           tableFrom="medium"
           columns={[
             { key: 'price', header: 'Price', emphasis: 'primary', cell: (price) => priceText(price) },
-            { key: 'from', header: 'From', cell: (price) => new Date(price.effectiveFrom).toLocaleDateString() },
-            { key: 'to', header: 'Until', cell: (price) => price.effectiveTo ? new Date(price.effectiveTo).toLocaleDateString() : '—', cardValue: (price) => price.effectiveTo ? new Date(price.effectiveTo).toLocaleDateString() : null },
+            { key: 'from', header: 'From', cell: (price) => priceDay(price.effectiveFrom) },
+            { key: 'to', header: 'Until', cell: (price) => price.effectiveTo ? priceDay(price.effectiveTo) : '—', cardValue: (price) => price.effectiveTo ? priceDay(price.effectiveTo) : null },
             { key: 'state', header: 'State', cell: (price) => currentIds.has(price.id) ? <Badge tone="success">Current</Badge> : price.approvalState === 'draft' ? <Badge>Draft</Badge> : null },
             ...(checkout ? [{
               key: 'checkout',
@@ -222,7 +252,12 @@ function RecordPriceDrawer({ organizationId, itemId, defaultCurrency }: { organi
   const [open, setOpen] = useState(false);
   const [state, action, pending] = useActionState(recordItemPriceAction, INITIAL);
   useToast(state);
-  useEffect(() => { if (state.success) setOpen(false); }, [state]);
+  // A saved form closes its drawer: adjusted while rendering the new result, not in an effect.
+  const [handled, setHandled] = useState(state);
+  if (state !== handled) {
+    setHandled(state);
+    if (state.success) setOpen(false);
+  }
   return (
     <PageDrawer open={open} onOpenChange={setOpen}>
       <PageDrawerTrigger asChild><Button size="small"><Plus aria-hidden className="size-4" />Record price</Button></PageDrawerTrigger>
@@ -371,7 +406,12 @@ function RecordUsagePriceDrawer({ organizationId, itemId, allowance, defaultCurr
   const [open, setOpen] = useState(false);
   const [state, action, pending] = useActionState(recordUsagePriceAction, INITIAL);
   useToast(state);
-  useEffect(() => { if (state.success) setOpen(false); }, [state]);
+  // A saved form closes its drawer: adjusted while rendering the new result, not in an effect.
+  const [handled, setHandled] = useState(state);
+  if (state !== handled) {
+    setHandled(state);
+    if (state.success) setOpen(false);
+  }
   return (
     <PageDrawer open={open} onOpenChange={setOpen}>
       <PageDrawerTrigger asChild><Button tone="secondary" size="small" aria-label={`Record price for ${allowance.label}`}>Record price</Button></PageDrawerTrigger>

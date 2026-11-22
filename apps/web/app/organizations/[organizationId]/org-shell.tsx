@@ -6,7 +6,6 @@ import { HeaderConnectionsControl } from '@/features/integrations/connections/he
 import type { HeaderConnections } from '@/lib/application/shell/connection-menu-model';
 import { WORKSPACES } from '@/lib/navigation';
 
-import { NavigationActivityContext } from '@/components/navigation/activity-context';
 import { OrganizationActivityTrigger } from '@/components/panels/workspace-right-rail';
 import { WorkspaceHeader } from '@/components/headers/workspace-header';
 import { Badge } from '@/components/display/data';
@@ -41,7 +40,7 @@ import { useWorkspaceRail } from '@/components/panels/workspace-right-rail';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useContext, useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/controls/confirm-submit';
 import { CreateBusinessForm } from '@/app/organizations/create-business-form';
 import {
@@ -56,7 +55,6 @@ import {
   CircleDollarSign,
   FileText,
   ClipboardList,
-  Coins,
   CreditCard,
   Filter,
   Globe,
@@ -84,6 +82,9 @@ import {
   ShieldCheck,
   Plug,
   Receipt,
+  Repeat,
+  Scale,
+  TrendingUp,
   Server,
   Settings,
   Timer,
@@ -147,6 +148,9 @@ export const AREA_ICONS: Record<string, LucideIcon> = {
   calls: Phone,
   'comms-inbox': MessageSquare,
   'finance-catalog': Tags,
+  'finance-subscriptions': Repeat,
+  'finance-costs': Scale,
+  'finance-economics': TrendingUp,
   'finance-quotes': FileText,
   'finance-invoices': Receipt,
   'finance-payments': Banknote,
@@ -199,8 +203,6 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   'platform-group-integration-registry': Blocks,
   'platform-group-infrastructure': Server,
   'platform-group-reliability': TriangleAlert,
-  'platform-group-commercial': Coins,
-  'platform-link-commercial': Coins,
   'platform-link-ai-runtime': Server,
 };
 
@@ -210,7 +212,6 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
  * through `NavItem.children` rather than a case built for particular groups by name.
  */
 function NavSubRow({ item, active }: { item: NavItem; active: string | null }) {
-  const retainActivity = useContext(NavigationActivityContext);
   const current = item.key === active;
   const inside = itemContains(item, active);
   const [open, setOpen] = useState(inside);
@@ -223,7 +224,7 @@ function NavSubRow({ item, active }: { item: NavItem; active: string | null }) {
   const tall = item.section !== 'home' && item.section !== 'library' && 'h-auto min-h-11 md:min-h-7';
   const link = (
     <SidebarMenuSubButton asChild isActive={current} className={cx(item.children && 'flex-1', tall)}>
-      <Link href={item.href} target={retainActivity && item.href.startsWith('/platform') ? '_blank' : undefined} rel={retainActivity && item.href.startsWith('/platform') ? 'noopener noreferrer' : undefined} aria-current={current ? 'page' : undefined}>
+      <Link href={item.href} aria-current={current ? 'page' : undefined}>
         <span>{item.label}</span>
       </Link>
     </SidebarMenuSubButton>
@@ -286,7 +287,6 @@ function NavSubRow({ item, active }: { item: NavItem; active: string | null }) {
  * A leaf is a link. A row with pages is a link and a disclosure, open while the person is inside it.
  */
 function NavRow({ item, active, owns = false }: { item: NavItem; active: string | null; owns?: boolean }) {
-  const retainActivity = useContext(NavigationActivityContext);
   const Icon = NAV_ICONS[item.key];
   const current = item.key === active;
   // `owns`: the address belongs to this group even where none of its rows is selected (a task, a record).
@@ -308,7 +308,7 @@ function NavRow({ item, active, owns = false }: { item: NavItem; active: string 
 
   const link = (
     <SidebarMenuButton asChild isActive={current || railSelected} tooltip={item.label} className={item.children ? 'max-md:min-h-11' : undefined}>
-      <Link href={item.href} target={retainActivity && item.href.startsWith('/platform') ? '_blank' : undefined} rel={retainActivity && item.href.startsWith('/platform') ? 'noopener noreferrer' : undefined} aria-current={current ? 'page' : undefined}>
+      <Link href={item.href} aria-current={current ? 'page' : undefined}>
         {Icon ? <Icon aria-hidden /> : null}
         <span>{item.label}</span>
       </Link>

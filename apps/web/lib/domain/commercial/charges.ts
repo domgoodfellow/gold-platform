@@ -93,7 +93,7 @@ export type ComposeResultRow = { kind: ChargeComponentType; written: boolean; pr
  * Composes (or idempotently refreshes) every charge component for one organization and billing
  * period. Running twice never duplicates a component, and a finalized component is never
  * rewritten. A component kind whose commercial assignments disagree mid-period is skipped and
- * reported in `prorationRequired` rather than guessed. Needs `platform.commercial`.
+ * reported in `prorationRequired` rather than guessed. Needs `subscription.manage` in GildOps' operating organization.
  */
 export async function composeOrganizationCharges(
   db: Db,
@@ -106,7 +106,7 @@ export async function composeOrganizationCharges(
   });
   if (error) {
     throw new DomainError(
-      error.code === '42501' ? 'This needs the commercial platform permission.' : error.message,
+      error.code === '42501' ? 'This needs the subscription permission in GildOps’ own business.' : error.message,
       'charges.compose_failed',
     );
   }
@@ -117,7 +117,7 @@ export async function composeOrganizationCharges(
   }));
 }
 
-/** Freezes every not-yet-finalized component of one organization's billing period. Needs `platform.commercial`. */
+/** Freezes every not-yet-finalized component of one organization's billing period. Needs `subscription.manage` in GildOps' operating organization. */
 export async function finalizeOrganizationCharges(
   db: Db,
   input: { organizationId: string; billingPeriodStart: string; billingPeriodEnd: string },
@@ -129,7 +129,7 @@ export async function finalizeOrganizationCharges(
   });
   if (error) {
     throw new DomainError(
-      error.code === '42501' ? 'This needs the commercial platform permission.' : error.message,
+      error.code === '42501' ? 'This needs the subscription permission in GildOps’ own business.' : error.message,
       'charges.finalize_failed',
     );
   }
@@ -145,7 +145,7 @@ export type RecordAdjustmentInput = {
   effectiveAt?: string;
 };
 
-/** The only writer of `organization_commercial_adjustments` — a minimal, staff-recorded debit or credit, never a refund/payment mechanism. Needs `platform.commercial`. */
+/** The only writer of `organization_commercial_adjustments` — a minimal, staff-recorded debit or credit, never a refund/payment mechanism. Needs `subscription.manage` in GildOps' operating organization. */
 export async function recordCommercialAdjustment(db: Db, input: RecordAdjustmentInput): Promise<string> {
   const { data, error } = await db.rpc('record_commercial_adjustment', {
     p_organization_id: input.organizationId,
@@ -157,7 +157,7 @@ export async function recordCommercialAdjustment(db: Db, input: RecordAdjustment
   });
   if (error) {
     throw new DomainError(
-      error.code === '42501' ? 'This needs the commercial platform permission.' : error.message,
+      error.code === '42501' ? 'This needs the subscription permission in GildOps’ own business.' : error.message,
       'charges.record_adjustment_failed',
     );
   }
@@ -195,7 +195,7 @@ export async function organizationRevenueSummary(
   });
   if (error) {
     throw new DomainError(
-      error.code === '42501' ? 'Only platform staff may read this.' : error.message,
+      error.code === '42501' ? 'This needs the cost permission in GildOps’ own business.' : error.message,
       'charges.revenue_summary_failed',
     );
   }
@@ -258,7 +258,7 @@ export async function platformRevenuePortfolio(
   });
   if (error) {
     throw new DomainError(
-      error.code === '42501' ? 'Only platform staff may read this.' : error.message,
+      error.code === '42501' ? 'This needs the cost permission in GildOps’ own business.' : error.message,
       'charges.portfolio_failed',
     );
   }

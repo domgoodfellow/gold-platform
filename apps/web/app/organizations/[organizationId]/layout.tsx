@@ -5,7 +5,7 @@ import { OrganizationShell } from '@/features/shell/organization-shell';
 
 /**
  * The operator shell for one business. Every organization page renders inside `OrganizationShell`,
- * Platform Administration (`platform/`, beneath GOLD's own organization) included; see it for what
+ * Administration (`administration/`, beneath GildOps' own organization) included; see it for what
  * the shell projects and why it is not the authorization boundary.
  *
  * **The telephone device lives above the shell, not inside a workspace page.** A live call is

@@ -1020,7 +1020,16 @@ Money is integer minor units with currency-specific precision. Decimal inputs ar
 
 ## Platform commercial model
 
-A **commercial capability** (a sellable item and its price, a quote, an invoice, a payment, and later a subscription, metered usage or prepaid balance) is owned by organization Finance and reused by every Organization, including GildOps selling its platform through its operating Organization (ADR-051). A **commercial record** is one Organization's instance of a capability and belongs to that Organization. The organization price book is a commercial capability; the platform capability registry below (Catalogue Products, Modules, Features, Plans) describes what the platform can enable and entitle, and is not a price book. Provider rates, costs and platform margin are never commercial capabilities.
+A **commercial capability** (a sellable item and its price, a quote, an invoice, a payment, a subscription, metered usage, supplier costs and economics) is owned by organization Finance and reused by every Organization, including GildOps selling its platform through its operating Organization (ADR-051, ADR-057). A **commercial record** is one Organization's instance of a capability and belongs to that Organization; GildOps' records keyed by the business they serve (plan assignments, agreed prices, terms, charges, usage costs, the billing provider's copy) take the operating Organization as their derived seller. The concepts stay distinct:
+
+1. the **sellable offering** — a recurring item of the seller's price book (for GildOps, the item that sells a Plan or Add-on);
+2. its **price and billing terms** — the item's price history and billing-provider references, and a business's agreed price;
+3. the **subscription** — which business holds which plan and add-ons, for which period, at which price, in GildOps' Finance;
+4. **financial transactions** — charges, credits, adjustments and the billing provider's invoices and payments;
+5. **usage and cost accounting** — usage events in units, their costs and charges, supplier rates and infrastructure costs, in Finance;
+6. the **technical entitlement** — what a Plan switches on (its switch list) and what a business is entitled to, a platform record enforced by Administration.
+
+The platform capability registry below (Catalogue Products, Modules, Features, the Plan's switch list) describes what the platform can enable and entitle, and is not a price book.
 
 ### Catalogue Product
 
@@ -1046,14 +1055,15 @@ A Module may map to one or more Features and may support multiple workspace surf
 
 ### Plan
 
-**Definition:** A reusable package of GildOps commercial capability and defaults.
+**Definition:** A reusable package of GildOps capability and defaults, sold by one recurring item of GildOps' price book.
 
-A Plan may include:
+A Plan's switch list holds:
 
-- Features;
+- Features (through product, module and feature grants);
 - allowances;
-- limits;
-- recurring price.
+- limits.
+
+Its name, description, prices, add-ons, usage prices and sale status are the selling item's, created and edited in GildOps' Finance; the switch list is edited from the same record under Product Registry's authority.
 
 ---
 
@@ -1065,7 +1075,7 @@ A Plan may include:
 
 ### Subscription
 
-**Definition:** The provider-backed and GildOps-recorded commercial lifecycle for one Organization's recurring GildOps package.
+**Definition:** The GildOps-recorded commercial lifecycle for one Organization's recurring GildOps package — its plan and add-on periods, agreed price and terms, in GildOps' Finance — with the billing provider's copy of its billing state beside it.
 
 A Subscription is not the same as Entitlement.
 

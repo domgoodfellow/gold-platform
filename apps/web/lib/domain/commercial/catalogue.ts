@@ -62,19 +62,6 @@ export function productKeyFromUrlSegment(segment: string): string {
   return segment.replace(/~/g, ':');
 }
 
-export type ProductPrice = {
-  id: string;
-  productKey: string;
-  currency: string;
-  amountMinor: number;
-  billingInterval: 'month' | 'year' | 'one_time';
-  effectiveFrom: string;
-  approvalState: 'draft' | 'approved';
-  source: string;
-  note: string;
-};
-
-/** A provider rate names who; a retail rate does not (`providerKey` is null on that one). */
 export type Rate = {
   id: string;
   providerKey: string | null;
@@ -218,7 +205,7 @@ export async function recordProviderCostRate(
     p_provider_account_id: undefined,
     p_note: input.note ?? '',
   });
-  if (error) throw new DomainError(error.code === '42501' ? 'Only platform staff may record vendor rates.' : error.message, 'commercial.record_provider_cost_rate_failed');
+  if (error) throw new DomainError(error.code === '42501' ? 'Recording a supplier rate needs the cost-management permission in GildOps’ own business.' : error.message, 'commercial.record_provider_cost_rate_failed');
   return data as string;
 }
 
@@ -287,13 +274,6 @@ export async function listMeterUsageObservations(db: Db): Promise<Map<string, nu
   const { data, error } = await db.rpc('platform_meter_observations');
   if (error) throw fromDatabaseError(error, 'commercial.meter_observations_failed');
   return new Map((data ?? []).map((row) => [row.meter_id, Number(row.usage_event_count)]));
-}
-
-/** GOLD's global, append-only list-price card. It deliberately has no organization id. */
-export async function listProductPrices(db: Db): Promise<ProductPrice[]> {
-  const { data, error } = await db.from('platform_product_prices').select('id, product_key, currency, amount_minor, billing_interval, effective_from, approval_state, source, note').order('product_key').order('effective_from', { ascending: false });
-  if (error) throw fromDatabaseError(error, 'commercial.product_prices_failed');
-  return (data ?? []).map((row) => ({ id: row.id, productKey: row.product_key, currency: row.currency, amountMinor: Number(row.amount_minor), billingInterval: row.billing_interval as ProductPrice['billingInterval'], effectiveFrom: row.effective_from, approvalState: isApprovalState(row.approval_state) ? row.approval_state : 'approved', source: row.source, note: row.note }));
 }
 
 function isApprovalState(value: string): value is Rate['approvalState'] {
@@ -381,12 +361,6 @@ export type RecordProviderRateInput = {
   note?: string;
 };
 
-export type RecordRetailRateInput = Omit<RecordProviderRateInput, 'providerKey'> & {
-  /** When the price starts. Defaults to now; never in the past. */
-  effectiveFrom?: string;
-};
-
-/** Staff only — `public.record_provider_rate` refuses anyone not listed in `platform_staff`. */
 export async function recordProviderRate(db: Db, input: RecordProviderRateInput): Promise<string> {
   const { data, error } = await db.rpc('record_provider_rate', {
     p_provider_key: input.providerKey,
@@ -401,39 +375,10 @@ export async function recordProviderRate(db: Db, input: RecordProviderRateInput)
 
   if (error) {
     if (error.code === '42501') {
-      throw new DomainError('Only platform staff may record a vendor rate.', 'commercial.forbidden');
+      throw new DomainError('Recording a supplier rate needs the cost permission in GildOps’ own business.', 'commercial.forbidden');
     }
     throw fromDatabaseError(error, 'commercial.record_provider_rate_failed');
   }
 
   return data as string;
-}
-
-/** Staff only — the retail twin of `recordProviderRate`. Names no provider — see `RecordRetailRateInput`. */
-export async function recordRetailRate(db: Db, input: RecordRetailRateInput): Promise<string> {
-  const { data, error } = await db.rpc('record_retail_rate', {
-    p_meter_id: input.meterId,
-    p_currency: input.currency,
-    p_unit_amount_micros: input.unitAmountMicros,
-    p_source: input.source,
-    p_source_url: input.sourceUrl,
-    p_approval_state: input.approvalState ?? 'approved',
-    p_note: input.note ?? '',
-    p_effective_from: input.effectiveFrom,
-  });
-
-  if (error) {
-    if (error.code === '42501') {
-      throw new DomainError('Only platform staff may record a retail rate.', 'commercial.forbidden');
-    }
-    throw fromDatabaseError(error, 'commercial.record_retail_rate_failed');
-  }
-
-  return data as string;
-}
-
-export async function recordProductPrice(db: Db, input: Omit<ProductPrice, 'id' | 'approvalState' | 'note'> & { approvalState?: ProductPrice['approvalState']; note?: string }): Promise<string> {
-  const { data, error } = await db.rpc('record_product_price', { p_product_key: input.productKey, p_currency: input.currency, p_amount_minor: input.amountMinor, p_billing_interval: input.billingInterval, p_effective_from: input.effectiveFrom, p_approval_state: input.approvalState ?? 'approved', p_source: input.source, p_note: input.note ?? '' });
-  if (error) throw new DomainError(error.code === '42501' ? 'Only platform staff may record a product price.' : error.message, 'commercial.record_product_price_failed');
-  return data;
 }

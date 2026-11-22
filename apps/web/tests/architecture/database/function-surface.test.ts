@@ -92,6 +92,15 @@ describe('SECURITY DEFINER functions in app', () => {
         // member of the named business who holds `call.place` (20261119171617), so asking it
         // directly discloses nothing about a business the caller may not call for.
         'outbound_destination_allowed',
+        // The seller side of GildOps' own Finance (ADR-057): the business that sells GildOps, whether
+        // the caller is a member of it, and whether their role there holds one Finance permission.
+        // Row policies on plans, subscriptions and supplier costs call all three as the caller.
+        'platform_seller_id',
+        'platform_seller_member',
+        'platform_seller_has',
+        // Refuses a recurring price-book item on a one-off line. `add_work_item_priced_line` is an
+        // invoker function and calls it as the caller; it reads only the named items' pricing model.
+        'require_one_off_items',
       ].sort(),
     );
   });

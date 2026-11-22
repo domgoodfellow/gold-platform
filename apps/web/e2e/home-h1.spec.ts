@@ -10,13 +10,13 @@ import { getOrganization } from '../lib/domain/tenancy/organizations';
 import { homePresentation } from '../lib/application/home/presentation';
 import { workOperations } from '../lib/application/work/operations';
 import { seedH1 } from '../tests/support/home-h1-fixture';
-import { recordPlanAssignment } from '../lib/domain/catalogue/organization-plans';
 import { setModuleEnabled } from '../lib/domain/tenancy/modules';
 import { createRole } from '../lib/domain/tenancy/roles';
 import { changeTaskStatus } from '../lib/domain/tasks/tasks';
 import { addMember } from '../lib/domain/tenancy/members';
 import type { Db } from '../lib/db/types';
 import { chooseOption } from './select-field';
+import { seedPlanAssignment } from '../tests/support/plans';
 
 const PHASE = process.env.H1_PHASE === 'before' ? 'before' : 'after';
 const OUT = path.join(__dirname, '../../../.artifacts/home-h1', PHASE);
@@ -49,9 +49,7 @@ test('Home H1 cross-workspace reconciliation and responsive states', async ({ pa
   try {
     for (const kind of ['empty', 'crm', 'work', 'finance', 'mixed'] as const) {
       const id = await provisionFinanceBusiness(owner, `H1 ${kind} ${Date.now()}`);
-      await pg.query('insert into platform_staff(user_id,name) values($1,$2) on conflict do nothing', [owner.userId, 'H1 disposable provisioning']);
-      try { await recordPlanAssignment(db, { organizationId: id, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' }); }
-      finally { await pg.query('delete from platform_staff where user_id=$1', [owner.userId]); }
+      await seedPlanAssignment(pg, { organizationId: id, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31', actorId: owner.userId });
       if (!['mixed', 'finance'].includes(kind)) await setModuleEnabled(db, { organizationId: id, key: 'billing', enabled: false });
       fixtures[kind] = await seedH1(db, id, kind);
       await capture(page, kind, id);

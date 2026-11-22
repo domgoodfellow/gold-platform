@@ -19,8 +19,8 @@ import { createForm, createFormDraft, saveFormDraft, publishFormRevision, formEd
 import { setPortalForm } from '../lib/domain/portal/portal-forms';
 import { markCommercialProposalSent } from '../lib/domain/customers/commercial-proposals';
 import { createProposalInvite } from '../lib/domain/customers/proposal-invites';
-import { createPlan, recordPlanPrice } from '../lib/domain/catalogue/plans';
 import type { Database } from '../lib/db/types';
+import { createFixturePlan, priceFixturePlan } from '../tests/support/plans';
 test.describe('Full Batch B Portal',()=>{
  test.use({storageState:{cookies:[],origins:[]},actionTimeout:15000,navigationTimeout:30000});
  test('composes, reviews and delivers customer records without crossing identities or origins',async({page,context},testInfo)=>{
@@ -36,8 +36,8 @@ test.describe('Full Batch B Portal',()=>{
    await pg.query('insert into platform_staff(user_id,name) values($1,$2)',[account.data.user.id,'Local B browser fixture']);
    const login=await db.auth.signInWithPassword({email,password});if(login.error)throw login.error;
    const org=await provisionOrganization(db,{ownerEmail:email,name:`Portal B ${Date.now()}`,currency:'CAD',displayName:'Owner'});
-   const planId=await createPlan(db,{key:`portal_browser_${randomUUID().replaceAll('-','')}`,kind:'plan',label:'Portal browser proposal Plan',description:'Local fixture',billable:true,saleStatus:'active'});
-   await recordPlanPrice(db,{planId,currency:'CAD',amountMinor:1000,billingInterval:'month',effectiveFrom:'2020-01-01T00:00:00Z'});
+   const planId=await createFixturePlan({key:`portal_browser_${randomUUID().replaceAll('-','')}`,kind:'plan',label:'Portal browser proposal Plan',description:'Local fixture',billable:true,saleStatus:'active'});
+   await priceFixturePlan({planId,currency:'CAD',amountMinor:1000,billingInterval:'month',effectiveFrom:'2020-01-01T00:00:00Z'});
    await pg.query('delete from platform_staff where user_id=$1',[account.data.user.id]);
    const customer=await createCustomer(db,{organizationId:org,name:'Portal customer'});
    const other=await createCustomer(db,{organizationId:org,name:'Another customer'});

@@ -10,7 +10,6 @@ import {
   listPayments,
   recordPayment,
 } from '@/lib/domain/billing/invoices';
-import { recordCommercialTerm } from '@/lib/domain/commercial/terms';
 import { createCustomer } from '@/lib/domain/customers/customers';
 import { createPriceBookItem } from '@/lib/domain/pricing/price-book';
 import { addPricedLine } from '@/lib/domain/pricing/prices';
@@ -21,10 +20,10 @@ import { createWorkItemStatus } from '@/lib/domain/work-items/statuses';
 import { createWorkItemType } from '@/lib/domain/work-items/types';
 import { createWorkItem } from '@/lib/domain/work-items/work-items';
 import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
-import { recordPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
-import { createPlan, grantPlanProduct } from '@/lib/domain/catalogue/plans';
+import { grantPlanProduct } from '@/lib/domain/catalogue/plans';
 import { DEFAULT_PORTAL_CONTENT } from '@/lib/domain/portal/composition';
 import { portalEditorState, publishPortalDraft, savePortalDraft, submitPortalDraft } from '@/lib/domain/portal/definitions';
+import { assignFixturePlan, createFixturePlan, recordFixtureTerm } from '@/tests/support/plans';
 
 /**
  * A customer initiating their own card payment — the external axis's narrowest door yet.
@@ -104,7 +103,7 @@ async function newBusiness(label: string, options: { cardPayments: boolean }): P
 
   if (options.cardPayments) {
     await setModuleEnabled(db, { organizationId: orgId, key: 'card_payments', enabled: true });
-    await recordCommercialTerm(staff, {
+    await recordFixtureTerm({
       organizationId: orgId,
       productKey: 'module:card_payments',
       periodStart: '2026-01-01',
@@ -503,17 +502,17 @@ describe('card payments also require plan entitlement and Portal invoice payment
 
     // A plan that sells the workspace product only: card payments are switched on and paid for,
     // but not entitled.
-    const planId = await createPlan(staff, {
+    const planId = await createFixturePlan({
       key: `pp_unsold_${randomUUID().slice(0, 8)}`, kind: 'plan', label: 'No card payments',
       description: 'Test plan without card payments.', billable: false,
     });
     await grantPlanProduct(staff, { planId, productKey: 'workspace' });
     // A plan selling the shared Workspace also sells Agents (gild-taxonomy's "no Plan lost reach").
     await grantPlanProduct(staff, { planId, productKey: 'agents' });
-    await recordPlanAssignment(staff, { organizationId: unsold.organizationId, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
+    await assignFixturePlan({ organizationId: unsold.organizationId, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
 
     // A published Portal whose invoices module does not offer payments.
-    await recordCommercialTerm(staff, { organizationId: hidden.organizationId, productKey: 'module:portal', periodStart: '2026-01-01', periodEnd: '9999-12-31', priceMinor: 0, currency: 'CAD' });
+    await recordFixtureTerm({ organizationId: hidden.organizationId, productKey: 'module:portal', periodStart: '2026-01-01', periodEnd: '9999-12-31', priceMinor: 0, currency: 'CAD' });
     const draft = structuredClone(DEFAULT_PORTAL_CONTENT);
     draft.pages = draft.pages.map((page) => ({
       ...page,

@@ -48,7 +48,8 @@ export async function listEnabledModules(
 
 /**
  * What a business wants **and** has currently paid for — the wanted∩paid intersection,
- * computed by `public.usable_modules`. This is what a screen or a presentation-level gate should
+ * computed by `public.usable_modules` and read through `public.organization_usable_modules`, which
+ * returns the module keys without the priced terms behind them. This is what a screen or a presentation-level gate should
  * ask: the wanted-versus-paid entitlement rule's "screens hidden, nothing deleted" is a rendering rule, not an operational one, and
  * `listEnabledModules` above still answers the operational question unchanged.
  */
@@ -56,7 +57,7 @@ export async function listUsableModules(
   db: Db,
   input: { organizationId: string },
 ): Promise<Set<ModuleKey>> {
-  const { data, error } = await db.rpc('usable_modules', {
+  const { data, error } = await db.rpc('organization_usable_modules', {
     p_organization_id: input.organizationId,
   });
 

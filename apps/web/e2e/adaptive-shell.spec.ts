@@ -115,10 +115,9 @@ test.describe('a tenant owner', () => {
     await page.screenshot({path:info.outputPath(`business-${width}.png`)});
     if(width<768){await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0);await expect(page.getByRole('button',{name:/^(Toggle Sidebar|Menu)$/})).toBeFocused();}
   });
-  test('refuses Platform content to a tenant owner',async({page})=>{
-    await page.goto('/platform/providers');
-    await expect(page.getByRole('navigation',{name:'Platform Administration'})).toHaveCount(0);
-    await expect(page.getByText('GildOps Platform',{exact:true})).toHaveCount(0);
+  test('refuses Administration to a tenant owner',async({page})=>{
+    expect((await page.goto(platformUrl('providers')))?.status()).toBe(404);
+    await expect(sidebar(page).getByRole('link',{name:'Administration',exact:true})).toHaveCount(0);
   });
 });
 
@@ -150,32 +149,40 @@ test.describe('a tenant colleague with a reduced role', () => {
 
 test.describe('GildOps platform staff',()=>{
   test.use({storageState:STAFF_STORAGE_STATE});
-  test('enters the separate Platform shell from the operating business',async({page})=>{
+  test('enters Administration in the same shell as the operating business',async({page})=>{
     const {goldOrganizationId}=loadDemoContext();await page.goto(`/organizations/${goldOrganizationId}/home`);
     await sidebar(page).getByRole('link',{name:'Administration',exact:true}).click();
     await expect(page).toHaveURL(platformUrl());
-    await expect(page.getByText('GildOps Platform',{exact:true})).toBeVisible();
-    await expect(page.getByRole('navigation',{name:'Platform Administration'})).toBeVisible();
-    await expect(page.getByRole('button',{name:'Agent',exact:true})).toHaveCount(0);
+    await expect(page.getByText('GildOps Platform',{exact:true})).toHaveCount(0);
+    await expect(sidebar(page).getByRole('link',{name:'Home',exact:true})).toBeVisible();
+    await expect(page.getByRole('button',{name:'Agent',exact:true})).toBeVisible();
   });
   test('keeps canonical links, current state and browser history',async({page})=>{
-    await page.goto(platformUrl('providers'));const nav=page.getByRole('navigation',{name:'Platform Administration'});
-    await expect(nav.getByRole('link',{name:'Providers',exact:true})).toHaveAttribute('aria-current','page');
+    await page.goto(platformUrl('providers'));const nav=sidebar(page);
+    await expect(nav.getByRole('link',{name:'Vendors',exact:true})).toHaveAttribute('aria-current','page');
+    await nav.getByRole('button',{name:'Expand Product Registry'}).click();
     await nav.getByRole('link',{name:'Meters',exact:true}).focus();await page.keyboard.press('Enter');
     await expect(page).toHaveURL(platformUrl('catalog/meters'));await page.goBack();await expect(page).toHaveURL(platformUrl('providers'));
-    await page.getByRole('link',{name:'Open GildOps business'}).click();await expect(page).toHaveURL(`/organizations/${loadDemoContext().goldOrganizationId}/home`);
+    await nav.getByRole('link',{name:'Home',exact:true}).click();await expect(page).toHaveURL(`/organizations/${loadDemoContext().goldOrganizationId}/home`);
   });
-  test('retired organization Platform addresses render not-found without redirecting',async({page})=>{
-    const path=`/organizations/${loadDemoContext().organizationId}/platform/providers`;await page.goto(path);
-    await expect(page.getByRole('heading',{name:'This page does not exist'})).toBeVisible();await expect(page).toHaveURL(path);
-    await expect(page.getByRole('navigation',{name:'Platform Administration'})).toHaveCount(0);
+  test('retired Platform addresses render not-found without redirecting',async({page})=>{
+    for(const path of ['/platform/providers',`/organizations/${loadDemoContext().goldOrganizationId}/platform/providers`]){
+      await page.goto(path);await expect(page.getByRole('heading',{name:'This page does not exist'})).toBeVisible();await expect(page).toHaveURL(path);
+    }
   });
   for(const width of [768,390])test(`Platform navigation at ${width}px`,async({page},info)=>{
     await page.setViewportSize({width,height:900});await page.goto(platformUrl('providers'));
     if(width<768)await page.getByRole('button',{name:/^(Toggle Sidebar|Menu)$/}).click();
-    const nav=page.getByRole('navigation',{name:'Platform Administration'}).filter({visible:true});
-    await expect(nav.getByRole('link',{name:'Providers',exact:true})).toHaveAttribute('aria-current','page');
-    await expect(nav.getByRole('link',{name:'Failures',exact:true})).toBeVisible();
+    const nav=page.getByRole('navigation',{name:'This business'}).filter({visible:true});
+    await expect(nav.getByRole('link',{name:'Vendors',exact:true})).toHaveAttribute('aria-current','page');
+    if(width<768){
+      await nav.getByRole('button',{name:'Expand Reliability'}).click();
+      await expect(nav.getByRole('link',{name:'Failures',exact:true})).toBeVisible();
+      await expect(nav.getByRole('link',{name:'Billing deliveries',exact:true})).toBeVisible();
+    }else{
+      // At tablet width the sidebar is an icon rail: a group is one icon that opens its first page.
+      await expect(nav.getByRole('link',{name:'Reliability',exact:true})).toHaveAttribute('href',platformUrl('failures'));
+    }
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
     await page.screenshot({path:info.outputPath(`platform-${width}.png`)});
   });

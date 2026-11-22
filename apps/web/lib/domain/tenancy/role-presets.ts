@@ -21,7 +21,7 @@ export const ROLE_PRESETS: readonly RolePreset[] = [
       'customer.read', 'customer.create', 'customer.update', 'customer.delete', 'role.manage', 'field.manage', 'location.create', 'resource.create',
       'resource.update', 'work_item.create', 'asset.create', 'document.create', 'work_item.transition', 'work_item.schedule',
       'work_item.record', 'organization.manage', 'price.manage', 'work_item.price', 'work_item.update',
-      'invoice.issue', 'payment.record', 'subscription.manage', 'cost.read', 'cost.manage', 'automation.manage', 'configuration.propose', 'assistant.ask',
+      'invoice.issue', 'payment.record', 'subscription.read', 'subscription.manage', 'cost.read', 'cost.manage', 'automation.manage', 'configuration.propose', 'assistant.ask',
       'report.read', 'report.manage', 'call.place', 'call.dial_manual', 'call_list.remove', 'message.send', 'integration.manage', 'feature.manage', 'billing.manage', 'secret.manage',
     ],
   },

@@ -1,6 +1,7 @@
+import { Client } from 'pg';
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, afterAll } from 'vitest';
 import {
   listMeters,
   listProducts,
@@ -8,9 +9,20 @@ import {
   listProviders,
   listRetailRates,
   recordProviderRate,
-  recordRetailRate,
 } from '@/lib/domain/commercial/catalogue';
 import { asPlatformStaff, newAccountEmail } from '@/tests/support/founding';
+import { designateGildOps, recordFixtureRetailRate } from '@/tests/support/plans';
+
+let restoreOperatingSeller: () => Promise<void> = async () => {};
+let sellerPg: Client | undefined;
+async function connectSellerPg(): Promise<Client> {
+  const client = new Client({ connectionString: process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' });
+  await client.connect();
+  return client;
+}
+afterAll(async () => {
+  try { await restoreOperatingSeller(); } finally { await sellerPg?.end(); }
+});
 
 /**
  * GOLD's own catalogue: what can be metered, what is sold, and the two rate cards.
@@ -48,6 +60,9 @@ async function signedInStranger(): Promise<SupabaseClient> {
 
 describe('the commercial catalogue', () => {
   let staff: SupabaseClient;
+  /** GildOps' Finance (ADR-057): subscriptions, prices, costs and economics take its permissions. */
+  let seller: SupabaseClient;
+  
   let stranger: SupabaseClient;
 
   beforeAll(async () => {
@@ -55,6 +70,9 @@ describe('the commercial catalogue', () => {
       throw new Error('SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY must be set.');
     }
     staff = await asPlatformStaff();
+    const gildopsSeller = await designateGildOps(sellerPg ??= await connectSellerPg());
+    seller = gildopsSeller.db;
+    restoreOperatingSeller = gildopsSeller.restore;
     stranger = await signedInStranger();
     // Only ever true if provisioning has already run in this database once — establishes an
     // account exists so nothing here is the first caller of that machinery.
@@ -80,7 +98,7 @@ describe('the commercial catalogue', () => {
     expect(products.find((product) => product.key === 'module:billing')?.kind).toBe('module');
   });
 
-  it('lets staff record a provider rate and a retail rate, and refuses anyone else', async () => {
+  it('lets GildOps’ Finance record a supplier rate, refuses anyone else, and resolves a usage price beside it', async () => {
     const meterId = 'transcription_seconds';
     const currency = 'USD';
 
@@ -94,16 +112,8 @@ describe('the commercial catalogue', () => {
       }),
     ).rejects.toMatchObject({ code: 'commercial.forbidden' });
 
-    await expect(
-      recordRetailRate(stranger, {
-        meterId,
-        currency,
-        unitAmountMicros: 9900,
-        source: 'a stranger should not reach this',
-      }),
-    ).rejects.toMatchObject({ code: 'commercial.forbidden' });
 
-    const providerId = await recordProviderRate(staff, {
+    const providerId = await recordProviderRate(seller, {
       providerKey: 'deepgram',
       meterId,
       currency,
@@ -112,7 +122,7 @@ describe('the commercial catalogue', () => {
     });
     expect(providerId).toBeTruthy();
 
-    const retailId = await recordRetailRate(staff, {
+    const retailId = await recordFixtureRetailRate({
       meterId,
       currency,
       unitAmountMicros: 9900,
@@ -125,7 +135,7 @@ describe('the commercial catalogue', () => {
     // (20260915000001), so a stranger's call no longer fails outright — the row policy declines
     // instead, and `listProviderRates` has nothing to throw on. An empty list is the honest
     // negative; a rejection would now be testing for a mechanism that no longer exists here.
-    const providerRates = await listProviderRates(staff, { meterId });
+    const providerRates = await listProviderRates(seller, { meterId });
     expect(providerRates.some((rate) => rate.id === providerId)).toBe(true);
 
     const providerRatesAsStranger = await listProviderRates(stranger, { meterId });
@@ -133,8 +143,10 @@ describe('the commercial catalogue', () => {
 
     // What GOLD charges: a business is entitled to know, so a member of a business reads it (proved
     // in catalogue-visibility.test.ts); a signed-in account that belongs to none does not.
-    const retailRatesAsStaff = await listRetailRates(staff, { meterId });
-    expect(retailRatesAsStaff.some((rate) => rate.id === retailId)).toBe(true);
+    const retailRatesAsMember = await listRetailRates(seller, { meterId });
+    expect(retailRatesAsMember.some((rate) => rate.id === retailId)).toBe(true);
+    // Platform authority alone reads no price (ADR-057).
+    expect((await listRetailRates(staff, { meterId })).some((rate) => rate.id === retailId)).toBe(false);
 
     const retailRatesAsTenant = await listRetailRates(stranger, { meterId });
     expect(retailRatesAsTenant).toEqual([]);
@@ -143,7 +155,7 @@ describe('the commercial catalogue', () => {
   it('lets two providers price the same meter independently, without touching a business meter', async () => {
     const meterId = 'transcription_seconds';
 
-    const deepgramId = await recordProviderRate(staff, {
+    const deepgramId = await recordProviderRate(seller, {
       providerKey: 'deepgram',
       meterId,
       currency: 'GBP',
@@ -151,7 +163,7 @@ describe('the commercial catalogue', () => {
       source: 'Deepgram, GBP price list',
     });
 
-    const elevenLabsId = await recordProviderRate(staff, {
+    const elevenLabsId = await recordProviderRate(seller, {
       providerKey: 'elevenlabs',
       meterId,
       currency: 'GBP',
@@ -159,7 +171,7 @@ describe('the commercial catalogue', () => {
       source: 'ElevenLabs, GBP price list',
     });
 
-    const rates = await listProviderRates(staff, { meterId, providerKey: undefined });
+    const rates = await listProviderRates(seller, { meterId, providerKey: undefined });
     const deepgram = rates.find((rate) => rate.id === deepgramId);
     const elevenLabs = rates.find((rate) => rate.id === elevenLabsId);
 
@@ -171,14 +183,14 @@ describe('the commercial catalogue', () => {
 
     // Anthropic and an OpenAI-compatible host can both price the same AI meter too, without a
     // second business meter ever being created.
-    const anthropicId = await recordProviderRate(staff, {
+    const anthropicId = await recordProviderRate(seller, {
       providerKey: 'anthropic',
       meterId: 'ai_tokens_input',
       currency: 'USD',
       unitAmountMicros: 300,
       source: 'Anthropic price list',
     });
-    const openaiId = await recordProviderRate(staff, {
+    const openaiId = await recordProviderRate(seller, {
       providerKey: 'openai_compatible',
       meterId: 'ai_tokens_input',
       currency: 'USD',
@@ -194,7 +206,7 @@ describe('the commercial catalogue', () => {
   it('is append-only — no update or delete grant reaches either rate table', async () => {
     const meterId = 'tts_characters';
     const currency = 'USD';
-    await recordRetailRate(staff, {
+    await recordFixtureRetailRate({
       meterId,
       currency,
       unitAmountMicros: 500,

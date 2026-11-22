@@ -89,7 +89,7 @@ const DESTINATION_NOUNS: Readonly<Record<string, BusinessEntity>> = {
   customers: 'customer', opportunities: 'opportunity', work: 'work', 'finance-invoices': 'invoice', 'finance-quotes': 'quote', resources: 'resource', locations: 'location',
 };
 
-const PLATFORM_ROOT_LABEL = 'Platform';
+const PLATFORM_ROOT_LABEL = 'Administration';
 
 /** What the registries cannot say: records, sub-views, creation and state routes. */
 const LOCATION_METADATA: readonly LocationNode[] = [
@@ -114,6 +114,9 @@ const LOCATION_METADATA: readonly LocationNode[] = [
   { id: 'record:asset', scope: 'organization', kind: 'record', pattern: 'assets/[assetId]', parent: 'area:assets', record: 'assetId' },
   // Finance
   { id: 'record:finance-catalog-item', scope: 'organization', kind: 'record', pattern: 'finance/catalog/[itemId]', parent: 'area:finance-catalog', record: 'itemId' },
+  { id: 'record:finance-subscription', scope: 'organization', kind: 'record', pattern: 'finance/subscriptions/[subscriberId]', parent: 'area:finance-subscriptions', record: 'subscriberId' },
+  { id: 'record:finance-cost-to-serve', scope: 'organization', kind: 'record', pattern: 'finance/economics/[subscriberId]', parent: 'area:finance-economics', record: 'subscriberId' },
+  { id: 'view:finance-packages', scope: 'organization', kind: 'view', pattern: 'finance/economics/packages', parent: 'area:finance-economics', label: 'Packages' },
   { id: 'view:finance-search', scope: 'organization', kind: 'view', pattern: 'finance/search', parent: 'workspace:finance', label: 'Search', open: 'U-12' },
   { id: 'view:finance-reports', scope: 'organization', kind: 'view', pattern: 'finance/reports', parent: 'workspace:finance', label: 'Financial performance', open: 'U-12' },
   // Automations, AI, Studio
@@ -147,7 +150,7 @@ const LOCATION_METADATA: readonly LocationNode[] = [
   { id: 'state:service-paused', scope: 'settings', kind: 'state', pattern: 'settings/plan/locked', parent: 'target:plan', label: 'Service paused' },
   // Platform
   { id: 'record:platform-tenant', scope: 'platform', kind: 'record', pattern: 'organizations/[targetOrganizationId]', parent: 'platform:organizations', record: 'targetOrganizationId' },
-  ...(['commercial', 'failures', 'integrations', 'providers', 'usage'] as const).map((tab): LocationNode => ({
+  ...(['failures', 'integrations', 'providers', 'usage'] as const).map((tab): LocationNode => ({
     id: `view:platform-tenant-${tab}`, scope: 'platform', kind: 'view', pattern: `organizations/[targetOrganizationId]/${tab}`, parent: 'record:platform-tenant', label: tab.charAt(0).toUpperCase() + tab.slice(1), open: 'U-10',
   })),
   { id: 'view:platform-modules', scope: 'platform', kind: 'view', pattern: 'catalog/modules', parent: 'platform:products', label: 'Features', open: 'U-9' },
@@ -159,8 +162,6 @@ const LOCATION_METADATA: readonly LocationNode[] = [
   { id: 'record:platform-provider', scope: 'platform', kind: 'record', pattern: 'providers/[providerKey]', parent: 'platform:providers', record: 'providerKey' },
   { id: 'view:platform-twilio', scope: 'platform', kind: 'view', pattern: 'providers/twilio', parent: 'platform:providers', label: 'Twilio' },
   { id: 'view:platform-twilio-configure', scope: 'platform', kind: 'view', pattern: 'providers/twilio/configure', parent: 'view:platform-twilio', label: 'Edit' },
-  { id: 'record:platform-plan', scope: 'platform', kind: 'record', pattern: 'catalog/plans/[planKey]', parent: 'platform:plans', record: 'planKey' },
-  { id: 'record:platform-tenant-economics', scope: 'platform', kind: 'record', pattern: 'economics/[targetOrganizationId]', parent: 'platform:portfolio-economics', record: 'targetOrganizationId' },
 ];
 
 const areaRoute = (segment: string) => {
@@ -356,12 +357,13 @@ type Root = { scope: 'organization' | 'personal' | 'platform'; base: string; seg
 
 function rootOf(pathname: string, organizationId?: string | null): Root | null {
   const path = pathname.split(/[?#]/)[0].replace(/\/+$/, '');
+  // Administration is a context of GildOps' organization; its nodes are addressed beneath it.
+  const administration = /^\/organizations\/([^/]+)\/administration(?:\/(.*))?$/.exec(path);
+  if (administration) return { scope: 'platform', base: `/organizations/${administration[1]}/administration`, segments: administration[2] ? administration[2].split('/') : [], organizationId: administration[1] };
   const organization = /^\/organizations\/([^/]+)(?:\/(.*))?$/.exec(path);
   if (organization && organization[1] !== 'accept-invite') {
     return { scope: 'organization', base: `/organizations/${organization[1]}`, segments: organization[2] ? organization[2].split('/') : [], organizationId: organization[1] };
   }
-  const platform = /^\/platform(?:\/(.*))?$/.exec(path);
-  if (platform) return { scope: 'platform', base: '/platform', segments: platform[1] ? platform[1].split('/') : [] };
   if (path === '/settings/account' || path.startsWith('/settings/account/')) return { scope: 'personal', base: '', segments: path.slice(1).split('/'), organizationId: organizationId ?? undefined };
   return null;
 }
@@ -406,7 +408,7 @@ function hrefOf(node: LocationNode, root: Root, params: Record<string, string>):
   if (node.pattern === null) return undefined;
   const path = node.pattern.replace(/\[(\w+)\]/g, (_, name: string) => encodeURIComponent(params[name] ?? ''));
   if (node.scope === 'personal') return `/${path}${root.organizationId ? `?org=${encodeURIComponent(root.organizationId)}` : ''}`;
-  if (node.scope === 'platform') return `/platform${path ? `/${path}` : ''}`;
+  if (node.scope === 'platform') return `${root.base}${path ? `/${path}` : ''}`;
   return `${root.base}/${path}`;
 }
 

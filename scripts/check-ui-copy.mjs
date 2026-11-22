@@ -60,21 +60,15 @@ export const WORD_EXEMPT = [
   [/^apps\/web\/lib\/domain\/ai\/agents\.ts$/, 'Agent domain messages, deferred (audit row 76)'],
   [/^apps\/web\/features\/agent\/agent-shared\.tsx$/, 'Agent panel, deferred (audit row 77)'],
   [/^apps\/web\/lib\/domain\/assistant\/questions\.ts$/, 'Agent questions, deferred (audit row 77)'],
-  // Platform-only screens, audit rows 92–100: seen by GildOps platform staff only, deferred.
-  [/^apps\/web\/features\/platform\/catalog\/family-forms\.tsx$/, 'Platform catalogue, deferred (audit rows 92–93)'],
-  [/^apps\/web\/app\/platform\/catalog\/(page|modules\/page|products\/page)\.tsx$/, 'Platform catalogue, deferred (audit row 93)'],
-  [/^apps\/web\/app\/platform\/billing\/page\.tsx$/, 'Platform billing, deferred (audit row 94)'],
-  [/^apps\/web\/app\/platform\/ai-runtime\/page\.tsx$/, 'Platform AI runtime, deferred (audit row 95)'],
-  [/^apps\/web\/features\/platform\/ai-runtime\/runtime-assignment-(form|row)\.tsx$/, 'Platform AI runtime, deferred (audit row 95)'],
-  [/^apps\/web\/app\/platform\/integrations\/page\.tsx$/, 'Platform integrations, deferred (audit row 96)'],
-  [/^apps\/web\/app\/platform\/pricing\/page\.tsx$/, 'Platform pricing, deferred (audit row 97)'],
-  [/^apps\/web\/features\/platform\/plans\/plan-forms\.tsx$/, 'Platform plans, deferred (audit row 97)'],
-  [/^apps\/web\/features\/platform\/commercial\/(package-simulator|usage-event-drawer)\.tsx$/, 'Platform commercial, deferred (audit rows 97–98)'],
-  [/^apps\/web\/app\/platform\/(usage|vendor-rates)\/page\.tsx$/, 'Platform usage and rates, deferred (audit row 98)'],
-  [/^apps\/web\/features\/platform\/organizations\/organization-commercial-screen\.tsx$/, 'Platform commercial, deferred (audit row 98)'],
-  [/^apps\/web\/lib\/domain\/providers\/(status|twilio-provisioning)\.ts$/, 'Platform providers, deferred (audit row 99)'],
-  [/^apps\/web\/features\/platform\/providers\/twilio-provider-screen\.tsx$/, 'Platform providers, deferred (audit row 99)'],
-  [/^apps\/web\/lib\/domain\/platform-billing\/reconciliation\.ts$/, 'Platform billing reconciliation, deferred (audit row 100)'],
+  // Administration screens, audit rows 92–100: seen by GildOps platform staff only, deferred.
+  [/^apps\/web\/features\/platform\/catalog\/family-forms\.tsx$/, 'Administration catalogue, deferred (audit rows 92–93)'],
+  [/^apps\/web\/app\/organizations\/\[organizationId\]\/administration\/catalog\/(page|modules\/page|products\/page)\.tsx$/, 'Administration catalogue, deferred (audit row 93)'],
+  [/^apps\/web\/app\/organizations\/\[organizationId\]\/administration\/ai-runtime\/page\.tsx$/, 'Administration AI answering, deferred (audit row 95)'],
+  [/^apps\/web\/features\/platform\/ai-runtime\/runtime-assignment-(form|row)\.tsx$/, 'Administration AI answering, deferred (audit row 95)'],
+  [/^apps\/web\/app\/organizations\/\[organizationId\]\/administration\/integrations\/page\.tsx$/, 'Administration integrations, deferred (audit row 96)'],
+  [/^apps\/web\/lib\/domain\/providers\/(status|twilio-provisioning)\.ts$/, 'Administration providers, deferred (audit row 99)'],
+  [/^apps\/web\/features\/platform\/providers\/twilio-provider-screen\.tsx$/, 'Administration providers, deferred (audit row 99)'],
+  [/^apps\/web\/lib\/domain\/platform-billing\/reconciliation\.ts$/, 'Billing reconciliation wording, deferred (audit row 100)'],
 ];
 
 // Not product text at all: tests, generated types, development-only pages.
@@ -431,7 +425,7 @@ export function scan(root) {
 }
 
 const WORKSPACES = [
-  ['platform', /app\/platform\/|features\/platform\/|features\/catalogue\//],
+  ['administration', /\/administration\/|features\/platform\/|features\/catalogue\//],
   ['crm', /\/crm\/|features\/crm\/|features\/customers\//],
   ['work', /\/(work|field|schedule|resources|locations|assets|dispatch)\/|features\/(work|scheduling|resources|locations|assets)\//],
   ['communications', /\/(comms|calls|communications)\/|features\/communications\//],

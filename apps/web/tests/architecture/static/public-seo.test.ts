@@ -48,7 +48,7 @@ describe('crawl surface', () => {
     const rules = Array.isArray(policy.rules) ? policy.rules : [policy.rules];
     const disallowed = rules.flatMap((rule) => rule.disallow ?? []);
     expect(disallowed).toContain('/organizations/');
-    expect(disallowed).toContain('/platform/');
+    expect(disallowed).not.toContain('/platform/');
     expect(disallowed).toContain('/portal');
     expect(disallowed).toContain('/portal/');
   });

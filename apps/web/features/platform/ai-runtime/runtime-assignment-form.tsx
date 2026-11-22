@@ -4,8 +4,8 @@ import { useActionState, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/controls/button';
 import { ErrorText, FieldLabel, Hint, TextInput } from '@/components/controls/inputs';
-import { saveRuntimeAssignmentAction } from '@/app/platform/ai-runtime/actions';
-import { RUNTIME_ASSIGNMENT_FORM_INITIAL } from '@/app/platform/ai-runtime/action-states';
+import { saveRuntimeAssignmentAction } from '@/app/organizations/[organizationId]/administration/ai-runtime/actions';
+import { RUNTIME_ASSIGNMENT_FORM_INITIAL } from '@/app/organizations/[organizationId]/administration/ai-runtime/action-states';
 import type { AiCapability } from '@/lib/domain/ai/runtime';
 import { SelectField } from '@/components/controls/select-field';
 

@@ -126,9 +126,9 @@ describe('where the setup status is shown', () => {
     expect(showsSetupStatus(`/organizations/${ORG}/settings/branding?x=1`, ORG)).toBe(true);
     expect(showsSetupStatus(`/organizations/${ORG}/crm/contacts/`, ORG)).toBe(true);
   });
-  it('is not shown in Platform administration, on the Setup pages, on account pages or for another business', () => {
-    expect(showsSetupStatus("/platform", ORG)).toBe(false);
-    expect(showsSetupStatus("/platform/organizations", ORG)).toBe(false);
+  it('is not shown in Administration, on the Setup pages, on account pages or for another business', () => {
+    expect(showsSetupStatus(`/organizations/${ORG}/administration`, ORG)).toBe(false);
+    expect(showsSetupStatus(`/organizations/${ORG}/administration/organizations`, ORG)).toBe(false);
     expect(showsSetupStatus(`/organizations/${ORG}/setup`, ORG)).toBe(false);
     expect(showsSetupStatus(`/organizations/${ORG}/setup/proposal`, ORG)).toBe(false);
     expect(showsSetupStatus('/settings/account', ORG)).toBe(false);

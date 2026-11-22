@@ -2,10 +2,10 @@ import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createPlan, setPlanQuota } from '@/lib/domain/catalogue/plans';
-import { recordPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
+import { setPlanQuota } from '@/lib/domain/catalogue/plans';
 import { buildOrganizationPurchaseQuote } from '@/lib/domain/platform-billing/quote';
 import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
+import { assignFixturePlan, createFixturePlan } from '@/tests/support/plans';
 
 /**
  * Work order C §3: what an organization is about to buy, resolved entirely from its own
@@ -42,7 +42,7 @@ async function foundTenant(label: string): Promise<{ db: SupabaseClient; organiz
 }
 
 async function assign(organizationId: string, planId: string) {
-  return recordPlanAssignment(staff, {
+  return assignFixturePlan({
     organizationId,
     planId,
     periodStart: new Date().toISOString().slice(0, 10),
@@ -57,13 +57,13 @@ beforeAll(async () => {
   await pg.connect();
   staff = await asPlatformStaff();
 
-  basePlanId = await createPlan(staff, {
+  basePlanId = await createFixturePlan({
     key: `quote_base_${RUN}`, kind: 'plan', label: 'Quote Base', description: 'x', billable: true, saleStatus: 'unlisted',
   });
-  recurringAddonPlanId = await createPlan(staff, {
+  recurringAddonPlanId = await createFixturePlan({
     key: `quote_recurring_${RUN}`, kind: 'addon', label: 'Quote Extra Seats', description: 'x', billable: true, saleStatus: 'unlisted',
   });
-  oneTimeAddonPlanId = await createPlan(staff, {
+  oneTimeAddonPlanId = await createFixturePlan({
     key: `quote_setup_${RUN}`, kind: 'addon', label: 'Quote Setup Service', description: 'x', billable: true, saleStatus: 'unlisted',
   });
 
@@ -74,17 +74,17 @@ beforeAll(async () => {
   });
 
   await pg.query(
-    `insert into public.platform_plan_prices (plan_id,currency,amount_minor,billing_interval,effective_from,approval_state,source,captured_at)
+    `insert into public.price_book_item_prices (plan_id,currency,amount_minor,billing_interval,effective_from,approval_state,source,captured_at)
      values ($1,$2,9900,'month',$3,'approved','quote.test.ts',$3)`,
     [basePlanId, CURRENCY, ANCHOR],
   );
   await pg.query(
-    `insert into public.platform_plan_prices (plan_id,currency,amount_minor,billing_interval,effective_from,approval_state,source,captured_at)
+    `insert into public.price_book_item_prices (plan_id,currency,amount_minor,billing_interval,effective_from,approval_state,source,captured_at)
      values ($1,$2,2000,'month',$3,'approved','quote.test.ts',$3)`,
     [recurringAddonPlanId, CURRENCY, ANCHOR],
   );
   await pg.query(
-    `insert into public.platform_plan_prices (plan_id,currency,amount_minor,billing_interval,effective_from,approval_state,source,captured_at)
+    `insert into public.price_book_item_prices (plan_id,currency,amount_minor,billing_interval,effective_from,approval_state,source,captured_at)
      values ($1,$2,15000,'one_time',$3,'approved','quote.test.ts',$3)`,
     [oneTimeAddonPlanId, CURRENCY, ANCHOR],
   );
@@ -92,7 +92,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   try {
-    await pg.query(`delete from public.platform_plan_prices where source = 'quote.test.ts'`);
+    await pg.query(`delete from public.price_book_item_prices where source = 'quote.test.ts'`);
     await pg.query(`delete from public.organization_plan_assignments where plan_id in (select id from public.platform_plans where key like $1)`, [`quote_%_${RUN}`]);
     await pg.query(`delete from public.platform_plan_quotas where plan_id in (select id from public.platform_plans where key like $1)`, [`quote_%_${RUN}`]);
     await pg.query(`delete from public.platform_plans where key like $1`, [`quote_%_${RUN}`]);

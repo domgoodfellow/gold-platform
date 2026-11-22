@@ -188,7 +188,7 @@ It is not a duplicate specification.
 | ADR-040 | Opportunities close independently of Customer relationships | [`ADR-040-independent-opportunities.md`](ADR-040-independent-opportunities.md) |
 | ADR-041 | Import open-source connector packages | [`ADR-041-imported-open-source-connectors.md`](ADR-041-imported-open-source-connectors.md) |
 | ADR-042 | Studio customer Portal publication and host delivery | [`ADR-042-studio-customer-portal-publication.md`](ADR-042-studio-customer-portal-publication.md) |
-| ADR-045 | Foundational scope, terminology and voice options. **Part B flat-sidebar rendering superseded by ADR-046** | [`ADR-045-foundational-options.md`](ADR-045-foundational-options.md) |
+| ADR-045 | Foundational scope, terminology and voice options. **Part B flat-sidebar rendering superseded by ADR-046; Part A standalone /platform reversed by ADR-057** | [`ADR-045-foundational-options.md`](ADR-045-foundational-options.md) |
 | ADR-046 | Entered workspaces use contextual navigation over one canonical projection. **Point 3 (Overview) superseded by ADR-047; point 6 (header presentation) by ADR-048** | [`ADR-046-contextual-workspace-navigation.md`](ADR-046-contextual-workspace-navigation.md) |
 | ADR-047 | One page location and identity contract | [`ADR-047-page-location-and-identity.md`](ADR-047-page-location-and-identity.md) |
 | ADR-048 | The sidebar owns workspace navigation; the header owns page identity and actions. **Point 4 (header Calendar shortcut) superseded by ADR-050** | [`ADR-048-sidebar-owns-workspace-navigation.md`](ADR-048-sidebar-owns-workspace-navigation.md) |
@@ -199,8 +199,8 @@ It is not a duplicate specification.
 | ADR-053 | Organization Activity is an independently authorized global history utility, separate from page support and notifications | [`ADR-053-organization-activity-utility.md`](ADR-053-organization-activity-utility.md) |
 | ADR-054 | Imports translate sources into Businesses and People inside the existing pipeline | [`ADR-054-translated-imports.md`](ADR-054-translated-imports.md) |
 | ADR-055 | The workflow workbench draws stored rules; GildOps' own automated work is listed apart | [`ADR-055-workflow-workbench-projection.md`](ADR-055-workflow-workbench-projection.md) |
-| ADR-056 | Operations share one sidebar, Studio gathers creation, Administration stays apart; delivered first as a staff preview | [`ADR-056-unified-operations-navigation.md`](ADR-056-unified-operations-navigation.md) |
-| ADR-057 | GildOps' commercial administration is its operating Organization's Finance; supersedes ADR-051 points 6–7 and the rest of ADR-014 | [`ADR-057-gildops-sells-through-its-own-finance.md`](ADR-057-gildops-sells-through-its-own-finance.md) |
+| ADR-056 | Operations share one sidebar, Studio gathers creation, Administration stays apart; delivered first as a staff preview. **Point 4 superseded by ADR-057** (Administration drawn by the organization shell) | [`ADR-056-unified-operations-navigation.md`](ADR-056-unified-operations-navigation.md) |
+| ADR-057 | GildOps' commercial administration is its operating Organization's Finance; Administration is a context of its organization's shell; `platform.commercial` retired. Supersedes ADR-051 points 6–7, the rest of ADR-014 and ADR-056 point 4 | [`ADR-057-gildops-sells-through-its-own-finance.md`](ADR-057-gildops-sells-through-its-own-finance.md) |
 
 ## Adding a new decision
 

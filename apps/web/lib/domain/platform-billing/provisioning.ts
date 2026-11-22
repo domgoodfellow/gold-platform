@@ -85,7 +85,7 @@ export async function provisionAgreementPlanPrice(
 
   if (error) {
     if (error.code === '42501') {
-      throw new DomainError('Only platform staff can provision billing prices.', 'platform_billing.forbidden');
+      throw new DomainError('Provisioning a negotiated billing price needs the subscription permission in GildOps’ own business.', 'platform_billing.forbidden');
     }
     throw fromDatabaseError(error, 'platform_billing.provision_failed');
   }

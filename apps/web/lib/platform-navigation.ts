@@ -2,41 +2,38 @@ import type { PlatformCapability } from '@/lib/domain/platform/permissions';
 import type { WorkspaceKey } from '@/lib/navigation';
 
 /**
- * Platform Administration's destinations and what each one takes to reach. One registry for the
- * sidebar, the phone menu, breadcrumbs and the route guard, so a destination cannot be offered by
- * one and refused by another. Presentation (icons) lives with the renderer, keyed by `key`.
+ * Administration's destinations and what each one takes to reach. One registry for the sidebar,
+ * the phone menu, breadcrumbs and the route guard, so a destination cannot be offered by one and
+ * refused by another. Presentation (icons) lives with the renderer, keyed by `key`.
  *
- * Administration is a privileged scope inside GildOps' own organization, never a second identity:
- * its routes are served at `/platform/**` for the configured operating organization and its data
- * stays system-scoped. Only live platform permissions offer these destinations.
+ * Administration is a privileged context of GildOps' own organization, drawn by the same
+ * organization shell as every workspace and served at `/organizations/{goldId}/administration/**`.
+ * It runs the platform: provisioning, the feature registry, providers, runtimes and reliability.
+ * It has no financial destination: plans, prices, subscriptions, supplier costs and margins are
+ * GildOps' Finance (ADR-057), reached with Finance permissions and never with these.
  */
 export const ADMINISTRATION_LABEL = 'Administration';
 
-export type PlatformGroupKey = 'product-registry' | 'integration-registry' | 'infrastructure' | 'reliability' | 'commercial';
+export type PlatformGroupKey = 'product-registry' | 'integration-registry' | 'infrastructure' | 'reliability';
 
 /**
  * The navigation groups: headings with no page of their own, each opening its first page.
  *
  * `linkedFrom` names a workspace whose own navigation also links in, because GildOps operators
- * reach this administration from that work (AI Runtime from AI). The pages stay in Administration —
- * the link is a way in, never a second home. Commercial administration is not linked from Finance:
- * it holds the existing platform-billing records and GildOps' private provider economics, which
- * Finance must never read. Selling itself belongs to organization Finance; these records stay here
- * only until a reviewed migration moves GildOps' selling there (ADR-051).
+ * reach this administration from that work (AI answering from AI). The pages stay in
+ * Administration — the link is a way in, never a second home.
  */
 export const PLATFORM_GROUPS: readonly { key: PlatformGroupKey; label: string; linkedFrom?: WorkspaceKey }[] = [
   { key: 'product-registry', label: 'Product Registry' },
   { key: 'integration-registry', label: 'Integration Registry' },
   { key: 'infrastructure', label: 'Infrastructure' },
   { key: 'reliability', label: 'Reliability' },
-  // Not linked from Finance: transitional platform-billing records and private economics (ADR-051).
-  { key: 'commercial', label: 'Commercial administration' },
 ];
 
 export type PlatformDestination = {
   key: string;
   label: string;
-  /** Beneath `/organizations/{goldId}/platform`; the empty string is the overview. Read it with `platformHref`. */
+  /** Beneath `/organizations/{goldId}/administration`; the empty string is the overview. Read it with `platformHref`. */
   path: string;
   /** The one platform permission that reaches this destination. */
   requires: PlatformCapability;
@@ -52,24 +49,22 @@ export const PLATFORM_DESTINATIONS: readonly PlatformDestination[] = [
   { key: 'organizations', label: 'Organizations', path: 'organizations', requires: 'platform.organizations' },
   { key: 'products', label: 'Products', path: 'catalog', requires: 'platform.catalogue', under: 'product-registry' },
   { key: 'meters', label: 'Meters', path: 'catalog/meters', requires: 'platform.catalogue', under: 'product-registry' },
-  { key: 'plans', label: 'Plans', path: 'catalog/plans', requires: 'platform.catalogue', under: 'product-registry' },
   { key: 'connectors', label: 'Connectors', path: 'integrations', requires: 'platform.catalogue', under: 'integration-registry' },
   { key: 'providers', label: 'Vendors', path: 'providers', requires: 'platform.providers', under: 'infrastructure' },
   { key: 'ai-runtime', label: 'AI answering', path: 'ai-runtime', requires: 'platform.providers', under: 'infrastructure', linkedFrom: 'ai' },
   { key: 'failures', label: 'Failures', path: 'failures', requires: 'platform.health', under: 'reliability' },
-  { key: 'usage-economics', label: 'Usage & economics', path: 'usage', requires: 'platform.commercial', under: 'commercial' },
-  { key: 'vendor-rates', label: 'Vendor rates', path: 'vendor-rates', requires: 'platform.commercial', under: 'commercial' },
-  { key: 'package-economics', label: 'Package economics', path: 'package-economics', requires: 'platform.commercial', under: 'commercial' },
-  { key: 'portfolio-economics', label: 'Portfolio economics', path: 'economics', requires: 'platform.commercial', under: 'commercial' },
-  { key: 'billing', label: 'Billing', path: 'billing', requires: 'platform.commercial', under: 'commercial' },
+  { key: 'billing-deliveries', label: 'Billing deliveries', path: 'billing-deliveries', requires: 'platform.health', under: 'reliability' },
 ];
 
+/** The route segment Administration is served under, beneath GildOps' organization. */
+export const ADMINISTRATION_SEGMENT = 'administration';
+
 /**
- * The one way to spell a Platform address. `organizationId` is GildOps' operating organization —
- * the context the operator is working in — never the subject of the page.
+ * The one way to spell an Administration address. `organizationId` is GildOps' operating
+ * organization — the context the operator is working in — never the subject of the page.
  */
-export function platformHref(_organizationId: string, path = ''): string {
-  return `/platform${path ? `/${path}` : ''}`;
+export function platformHref(organizationId: string, path = ''): string {
+  return `/organizations/${organizationId}/${ADMINISTRATION_SEGMENT}${path ? `/${path}` : ''}`;
 }
 
 /** The destinations a set of permissions reaches, in registry order. */
@@ -78,10 +73,10 @@ export function platformDestinationsFor(permissions: ReadonlySet<PlatformCapabil
 }
 
 /**
- * The permission a Platform path takes, given the path **beneath the platform root**
- * (`catalog/plans/base`, not the whole URL): the longest registered prefix wins, so
- * `catalog/plans/{key}` is the catalogue's and `organizations/{id}/usage` is the organizations'. A
- * path that matches nothing takes the overview's permission — refusing is the safe answer for a
+ * The permission an Administration path takes, given the path **beneath the Administration root**
+ * (`catalog/meters`, not the whole URL): the longest registered prefix wins, so
+ * `catalog/products/{key}` is the catalogue's and `organizations/{id}/usage` is the organizations'.
+ * A path that matches nothing takes the overview's permission — refusing is the safe answer for a
  * route nobody has classified.
  */
 export function platformRouteRequires(path: string): PlatformCapability {
@@ -94,11 +89,10 @@ export function platformRouteRequires(path: string): PlatformCapability {
 
 /**
  * The ancestor trail for a destination's own page, read from this registry rather than a page
- * hand-writing a group name. `Administration` always leads, linking to its root — never the
- * workspace a link came from, because the page is Administration's. The group follows as an
- * unlinked label, since a group opens no page of its own. The destination's own page is never
- * included — `PageHeader` appends it. A page nested further (a product, a plan, a provider)
- * extends this with its own crumb.
+ * hand-writing a group name. `Administration` always leads, linking to its root. The group
+ * follows as an unlinked label, since a group opens no page of its own. The destination's own
+ * page is never included — `PageHeader` appends it. A page nested further (a product, a
+ * provider) extends this with its own crumb.
  */
 export function platformAncestry(organizationId: string, destinationKey: string): { label: string; href?: string }[] {
   const destination = PLATFORM_DESTINATIONS.find((candidate) => candidate.key === destinationKey);
@@ -108,10 +102,10 @@ export function platformAncestry(organizationId: string, destinationKey: string)
   return trail;
 }
 
-const PLATFORM_ROOT = /^\/platform(?:\/(.*))?$/i;
+const ADMINISTRATION_ROOT = /^\/organizations\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/administration(?:\/(.*))?$/i;
 
-/** The part of a pathname beneath the platform root, or `null` when the path is not a Platform address. */
+/** The part of a pathname beneath the Administration root, or `null` when the path is not an Administration address. */
 export function platformSubpath(pathname: string): string | null {
-  const match = PLATFORM_ROOT.exec(pathname.split(/[?#]/)[0].replace(/\/$/, ''));
+  const match = ADMINISTRATION_ROOT.exec(pathname.split(/[?#]/)[0].replace(/\/$/, ''));
   return match ? (match[1] ?? '') : null;
 }

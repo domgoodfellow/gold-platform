@@ -17,8 +17,8 @@ describe('configuration continuity', () => {
     location.query = '';
     rerender(<AppPage><p>Canonical editor</p></AppPage>);
     expect(screen.queryByRole('link', { name: 'Return to setup' })).toBeNull();
-    location.path = '/platform/providers'; location.query = 'setupStep=operations';
-    rerender(<AppPage><p>Platform editor</p></AppPage>);
+    location.path = '/organizations/org/administration/providers'; location.query = 'setupStep=operations';
+    rerender(<AppPage><p>Administration editor</p></AppPage>);
     expect(screen.queryByRole('link', { name: 'Return to setup' })).toBeNull();
     location.path = '/organizations/org/work/configuration'; location.query = 'setupStep=https://outside.test';
     rerender(<AppPage><p>Canonical editor</p></AppPage>);

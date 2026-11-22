@@ -3,8 +3,8 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { setModuleEnabled } from '@/lib/domain/tenancy/modules';
-import { recordCommercialTerm } from '@/lib/domain/commercial/terms';
 import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
+import { recordFixtureTerm } from '@/tests/support/plans';
 
 /**
  * `organization_launch_blockers` answers for one organization, and only to somebody who belongs
@@ -54,7 +54,7 @@ beforeAll(async () => {
   alpha = await newBusiness('lb-alpha');
   beta = await newBusiness('lb-beta');
   // Public booking with no address is a real blocker, so an answer has something to leak.
-  await recordCommercialTerm(staff, { organizationId: alpha.organizationId, productKey: 'module:booking', periodStart: '2020-01-01', periodEnd: '9999-12-31', priceMinor: 0, currency: 'EUR' });
+  await recordFixtureTerm({ organizationId: alpha.organizationId, productKey: 'module:booking', periodStart: '2020-01-01', periodEnd: '9999-12-31', priceMinor: 0, currency: 'EUR' });
   await setModuleEnabled(alpha.db, { organizationId: alpha.organizationId, key: 'booking', enabled: true });
 }, 90_000);
 

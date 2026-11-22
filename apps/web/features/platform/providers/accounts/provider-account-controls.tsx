@@ -8,8 +8,8 @@ import {
   makeProviderAccountDefaultAction,
   setProviderAccountStatusAction,
   verifyProviderAccountAction,
-} from '@/app/platform/providers/[providerKey]/actions';
-import type { AccountCommandState } from '@/app/platform/providers/[providerKey]/action-states';
+} from '@/app/organizations/[organizationId]/administration/providers/[providerKey]/actions';
+import type { AccountCommandState } from '@/app/organizations/[organizationId]/administration/providers/[providerKey]/action-states';
 
 const INITIAL: AccountCommandState = { error: null, done: false };
 

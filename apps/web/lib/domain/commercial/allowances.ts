@@ -180,8 +180,9 @@ function toState(row: StateRow): OrganizationAllowanceState {
 
 /**
  * Every allowance this organization currently has, resolved. A member reads its own business's;
- * platform staff read any — the function proves which itself rather than trusting the caller
- *, so there is nothing here for a page to filter.
+ * staff holding `platform.organizations`, and GildOps' Finance with `subscription.read`, read any —
+ * the function proves which itself rather than trusting the caller, so there is nothing here for a
+ * page to filter.
  *
  * Empty for an organization with no Plan assignment: it has no allowances, which is a different
  * answer from having allowances of nothing.

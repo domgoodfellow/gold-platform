@@ -69,7 +69,7 @@ describe('Administration inside GildOps', () => {
     route.pathname = `${base}/home`;
     const { rerender } = render(view(withAdministration(business(), org, new Set(PLATFORM_CAPABILITIES))));
     expect(screen.getAllByRole('link', { name: 'Administration' })).toHaveLength(1);
-    expect(screen.getByRole('link', { name: 'Administration' })).toHaveAttribute('href', `/platform`);
+    expect(screen.getByRole('link', { name: 'Administration' })).toHaveAttribute('href', `${base}/administration`);
     expect(screen.queryByRole('link', { name: 'Vendors' })).not.toBeInTheDocument();
     rerender(view(business()));
     expect(screen.queryByRole('link', { name: 'Administration' })).not.toBeInTheDocument();
@@ -77,7 +77,7 @@ describe('Administration inside GildOps', () => {
 
   it('opens a contextual hierarchy with a way back, the current page marked and keyboard disclosure', async () => {
     const user = userEvent.setup();
-    route.pathname = `/platform/providers/twilio`;
+    route.pathname = `${base}/administration/providers/twilio`;
     render(view(withAdministration(business(), org, new Set(PLATFORM_CAPABILITIES))));
     expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('href', `${base}/home`);
     expect(screen.queryByRole('link', { name: 'CRM' })).not.toBeInTheDocument();
@@ -86,27 +86,22 @@ describe('Administration inside GildOps', () => {
     const expand = screen.getByRole('button', { name: 'Expand Product Registry' });
     expand.focus();
     await user.keyboard('{Enter}');
-    expect(screen.getByRole('link', { name: 'Meters' })).toHaveAttribute('href', `/platform/catalog/meters`);
+    expect(screen.getByRole('link', { name: 'Meters' })).toHaveAttribute('href', `${base}/administration/catalog/meters`);
     await user.click(screen.getByRole('button', { name: 'Collapse Infrastructure' }));
     expect(screen.queryByRole('link', { name: 'Vendors' })).not.toBeInTheDocument();
-    // Plans sits in Product Registry, opened above; its prices are GildOps' Finance (ADR-057).
-    expect(screen.getByRole('link', { name: 'Plans' })).toHaveAttribute('href', `/platform/catalog/plans`);
+    // No plan, price or cost page is in Administration: they are GildOps' Finance (ADR-057).
+    for (const name of ['Plans', 'Billing', 'Vendor rates', 'Usage & economics', 'Package economics', 'Portfolio economics']) {
+      expect(screen.queryByRole('link', { name })).not.toBeInTheDocument();
+    }
   });
 
-  it('gives commercial-only staff an Administration row, never a platform link inside Finance', () => {
-    route.pathname = `${base}/home`;
-    const sections = withAdministration(business(), org, new Set(['platform.commercial']));
-    const { rerender } = render(view(sections));
-    expect(screen.getByRole('link', { name: 'Administration' })).toBeInTheDocument();
-    route.pathname = `${base}/finance`;
-    rerender(view(sections));
-    expect(screen.queryByRole('link', { name: 'Commercial administration' })).not.toBeInTheDocument();
-    route.pathname = `/platform/billing`;
-    rerender(view(sections));
-    expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument();
-    expect(screen.getByText('Administration')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Billing' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.queryByRole('link', { name: 'Invoices' })).not.toBeInTheDocument();
+  it('keeps GildOps’ money in Finance, inside the same shell as Administration', () => {
+    route.pathname = `${base}/finance/subscriptions`;
+    render(view(withAdministration(business(), org, new Set(PLATFORM_CAPABILITIES))));
+    expect(screen.getByRole('link', { name: 'Subscriptions' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Costs' })).toHaveAttribute('href', `${base}/finance/costs`);
+    expect(screen.getByRole('link', { name: 'Economics' })).toHaveAttribute('href', `${base}/finance/economics`);
+    expect(screen.queryByRole('link', { name: 'Administration' })).not.toBeInTheDocument();
   });
 });
 
@@ -239,6 +234,14 @@ describe('responsive breadcrumb interaction', () => {
     route.pathname = `${base}/resources`;
     view.rerender(<Location current="Resources" />);
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+  it('names an Administration page by its own label, never by the group heading that opens it', () => {
+    route.pathname = `${base}/administration/providers/twilio`;
+    const administration = { organizationId: org, sections: withAdministration(navigation.sections, org, new Set(PLATFORM_CAPABILITIES)) };
+    render(<WorkspaceCrumbsProvider navigation={administration}><WorkspaceCrumbSlot /><PageCrumbs crumbs={[{ label: 'Administration', href: `${base}/administration` }, { label: 'Infrastructure' }, { label: 'Vendors', href: `${base}/administration/providers` }]} current="Twilio" /></WorkspaceCrumbsProvider>);
+    const trail = screen.getByRole('navigation', { name: 'breadcrumb' });
+    expect(within(trail).getByRole('link', { name: 'Vendors' })).toHaveAttribute('href', `${base}/administration/providers`);
+    expect(within(trail).queryByRole('link', { name: 'Infrastructure' })).not.toBeInTheDocument();
   });
   it('does not render an empty dropdown or back arrow at organization Home', () => {
     route.pathname = `${base}/home`;

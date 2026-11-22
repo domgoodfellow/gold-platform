@@ -3,8 +3,6 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createCustomer } from '@/lib/domain/customers/customers';
-import { createPlan } from '@/lib/domain/catalogue/plans';
-import { recordPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
 import { getOrganizationServiceAccess } from '@/lib/domain/platform-billing/service-access';
 import {
   requireOrganization,
@@ -14,6 +12,7 @@ import {
 import { createCustomerAction } from '@/app/organizations/[organizationId]/crm/contacts/actions';
 import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
 import { applySubscriptionEvent } from '@/tests/support/subscription-events';
+import { assignFixturePlan, createFixturePlan } from '@/tests/support/plans';
 
 /**
  * Commercial service access end to end, against real RLS: the guard every page and action runs,
@@ -89,14 +88,14 @@ afterAll(async () => {
 });
 
 async function assignPlan(tenant: Tenant, billable: boolean) {
-  const planId = await createPlan(staff, {
+  const planId = await createFixturePlan({
     key: `plan_${randomUUID().replace(/-/g, '').slice(0, 12)}`,
     kind: 'plan',
     label: 'Service access plan',
     description: '',
     billable,
   });
-  await recordPlanAssignment(staff, {
+  await assignFixturePlan({
     organizationId: tenant.organizationId,
     planId,
     periodStart: '2000-01-01',

@@ -30,16 +30,16 @@ Contacts Import chooses an account and spreadsheet, CSV, Library file or saved s
 | `/organizations`: create-business form | Tenancy | **Built.** `web/app/organizations/create-business-form.tsx`; `web/app/organizations/actions.ts`. Creates business and founding Membership with location/timezone/currency inputs; no sales proposal. Then opens Choose a starting point. A person who already manages a business (`organization.manage`) reaches the same form from New business in the business switcher, as a dialog over their current business (`web/app/organizations/[organizationId]/org-shell.tsx`); `/organizations` itself stays a landing page. |
 | `/organizations/{org}/setup/proposal`: Choose a starting point | Organization Setup / configuration | **Built.** One card per published `industry_templates` row, one per other business the person manages (`organization.manage`), and Start blank; the template matching the typed industry is pre-selected. A template opens as a `template` draft on the same review screen; Apply runs `configureBusiness`, records `organization_identity.starting_template_key` and lands on Setup. Another business opens as a `copied` draft labelled "Copied from {name}": its setup read back by `readBusinessSetup` (`web/lib/domain/configuration/configure.ts`) and fitted to this business's plan; customers, jobs and money are never read. Start blank goes to Setup. Until launch, Setup links back here whenever no draft is waiting. |
 | `/organizations/{org}/setup`, optional `/setup/proposal` | Organization Setup / configuration | **Partial.** `web/app/organizations/[organizationId]/setup/page.tsx`; `setup/actions.ts`. Manual setup, starting templates and reviewed configuration draft/apply exist. Both acquisition paths reach Setup and the same review screen, but they have different founding/commercial inputs rather than one reconciled onboarding contract. |
-| Calling infrastructure, no self-serve provisioning route | Platform provider operations | **Missing** as an onboarding step. `web/app/platform/organizations/[targetOrganizationId]/page.tsx` exposes staff operations; neither creation path provisions telephony. |
+| Calling infrastructure, no self-serve provisioning route | Platform provider operations | **Missing** as an onboarding step. `web/app/organizations/[organizationId]/administration/organizations/[targetOrganizationId]/providers/page.tsx` exposes staff operations; neither creation path provisions telephony. |
 
 ## Staff-provisioned onboarding
 
 | Step / route | Owner | Status and evidence |
 | --- | --- | --- |
-| `/platform/organizations`: Provision organization | Platform provisioning | **Built.** `web/features/platform/organizations/provision-form.tsx`; `provision_organization`. An optional starting setup is stored as a `provisioned` draft in the same transaction; nothing is applied. |
+| `/organizations/{gold}/administration/organizations`: Provision organization | Administration provisioning | **Built.** `web/features/platform/organizations/provision-form.tsx`; `provision_organization`. An optional starting setup is stored as a `provisioned` draft in the same transaction; nothing is applied. |
 | Owner's first sign-in | Organization Setup / configuration | **Built.** As for sales-led onboarding: the draft opens for review, labelled "Prepared by GildOps", until applied, discarded or set aside. |
 
-A business's setup can be read back out as a setup document (`readBusinessSetup`, backed by `read_business_setup`): kinds of work with stages and what each means, moves, steps, needs and online booking; fields; roles other than the founding one; opening hours; wording and menu order; who it serves; brand colour and lettering; customer forms started from a form template; "on an event, move the job" rules; and switched-on modules. It never reads customers, jobs, invoices, payments, prices, the public address or page text, the logo, phone numbers, payment accounts or connected apps. Platform staff holding `platform.catalogue` save a business as an unpublished starting template from its page under `/platform/organizations/{org}` (Save as template), filed under a category they choose from the industry suggestions (by default the business's own industry), and publish, unpublish, rename or refile templates on `/platform/catalog` (Starting templates). A new owner whose typed industry matches a published template's name or category has it pre-selected; when two match, the earlier one in the catalogue wins. Owners only ever see published templates.
+A business's setup can be read back out as a setup document (`readBusinessSetup`, backed by `read_business_setup`): kinds of work with stages and what each means, moves, steps, needs and online booking; fields; roles other than the founding one; opening hours; wording and menu order; who it serves; brand colour and lettering; customer forms started from a form template; "on an event, move the job" rules; and switched-on modules. It never reads customers, jobs, invoices, payments, prices, the public address or page text, the logo, phone numbers, payment accounts or connected apps. Platform staff holding `platform.catalogue` save a business as an unpublished starting template from its record under Administration → Organizations (Save as template), filed under a category they choose from the industry suggestions (by default the business's own industry), and publish, unpublish, rename or refile templates on Administration → Product Registry → Products (Starting templates). A new owner whose typed industry matches a published template's name or category has it pre-selected; when two match, the earlier one in the catalogue wins. Owners only ever see published templates.
 
 Applying any setup draft is safe to repeat: every step finds what an earlier run made by name or key before creating anything. When an apply stops part-way the failed draft stays in history and the same document is offered again at once (`retry_configuration_proposal`); applying it finishes the setup with nothing made twice. Applying is not all-or-nothing. A template draft leaves out modules and features the plan does not include rather than failing.
 
@@ -56,7 +56,7 @@ Applying any setup draft is safe to repeat: every step finds what an earlier run
 
 ## Business configuration
 
-Both acquisition paths reach the same versioned business profile editor in Setup and Organization Settings → Words & navigation (`/settings/terminology`). It controls authored vocabulary, labels and the ordered workspace page labels. Missing configuration keeps neutral defaults without asserting that setup was completed. Permissions and entitlements always filter the chosen destinations. `/platform` has its own guarded shell; GildOps operating-organization Membership and exact live platform permissions remain required. Old organization Platform URLs render the organization not-found page.
+Both acquisition paths reach the same versioned business profile editor in Setup and Organization Settings → Words & navigation (`/settings/terminology`). It controls authored vocabulary, labels and the ordered workspace page labels. Missing configuration keeps neutral defaults without asserting that setup was completed. Permissions and entitlements always filter the chosen destinations. Administration is a context of GildOps' organization shell at `/organizations/{gold}/administration`; GildOps operating-organization Membership and exact live platform permissions remain required. The retired `/platform` addresses do not exist.
 
 ## Work creation
 
@@ -83,6 +83,23 @@ Finance → Catalog & Pricing owns price items and optional delivery Work types.
 ## Organization activity
 
 The organization header's Activity control opens recent authorized organization history from any workspace. Global Activity and the page's own Activity retain independent state; closing the global panel reveals an existing page panel without discarding its draft. Canonical history links open owning records, and the organization/service and source/record authorization checks run again on each read. Platform has no global Activity entry.
+
+## GildOps sells and administers GildOps
+
+GildOps runs on its own operating organization (`{gold}`), with the same shell and workspaces as any business (ADR-057).
+
+| Step / route | Owner | Status and evidence |
+| --- | --- | --- |
+| Create a plan or add-on: Finance → Catalog & Pricing → New recurring item, kind GildOps plan/add-on | Finance | **Built.** `create_plan_item` (pricing permission in GildOps); the only creation path. `web/app/organizations/[organizationId]/finance/catalog/recurring-actions.ts`. |
+| Price it, offer it, set usage prices and add-ons; prepare prices for checkout: `/finance/catalog/{item}` | Finance | **Built.** Existing recurring-item record. |
+| Say what it switches on: the same record's What it switches on section | Product Registry, inside Finance | **Built.** Editable with `platform.catalogue` as well as Finance access; `plan-switch-actions.ts`. |
+| See and change a business's subscription: `/finance/subscriptions`, `/finance/subscriptions/{business}` | Finance | **Built.** `subscription.read`/`subscription.manage`; plan, add-ons, agreed price (and Set up for checkout), allowances, terms, billing state and deliveries. Recording a plan writes the entitlement through the provisioning core. |
+| Supplier rates, usage costs, infrastructure costs: `/finance/costs` | Finance | **Built.** `cost.read`/`cost.manage`. |
+| Portfolio, cost to serve, package economics, margin targets: `/finance/economics`, `/finance/economics/{business}`, `/finance/economics/packages` | Finance | **Built.** `cost.read`/`cost.manage`. |
+| Administer the platform: GildOps sidebar → Administration (`/organizations/{gold}/administration/**`) | Administration | **Built.** Organizations, Product Registry, Integration Registry, Infrastructure, Reliability (Failures, Billing deliveries); no financial destination. A business's record links to its subscription and its CRM customer. |
+| A customer's own view of what it pays GildOps: its Settings → Plan & usage | Settings | **Built.** Unchanged; never shows GildOps' costs. |
+
+**Gaps:** GildOps' platform invoices are issued by the billing provider and are not mirrored into Finance → Invoices; a business other than GildOps cannot yet record subscriptions to its own recurring items.
 
 ## Navigation preview (GildOps staff)
 

@@ -10,14 +10,15 @@ import {
   organizationUsageDetail,
   recordUsageReconciliation,
 } from '@/lib/domain/commercial/usage';
-import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
+import { foundBusiness } from '@/tests/support/founding';
+import { designateGildOps } from '@/tests/support/plans';
 
 /**
  * The generalized usage ledger (the platform-economics separation, corrected): what a call cost GOLD, in the provider's own
  * currency, what it charged a tenant, in the tenant's own currency, and who may see which half.
  *
  * **The retail rate is written over a direct connection**, exactly as `communications.test.ts`
- * does, into `platform_retail_rates`. **The provider side goes through the real staff door**,
+ * does, into `platform_retail_rates`. **The provider side goes through the real Finance door**,
  * `recordProviderRate`, since that one is new, and now names Twilio explicitly (the platform-economics separation's
  * provider/meter split) rather than leaving it implied by the meter.
  */
@@ -35,7 +36,9 @@ const CUSTOMER_CURRENCY = 'XUS';
 const PROVIDER_CURRENCY = 'XPR';
 
 let pg: Client;
-let staff: SupabaseClient;
+// A member of GildOps' own business whose role holds the cost permissions (ADR-057).
+let seller: SupabaseClient;
+let restoreOperatingSeller: () => Promise<void> = async () => {};
 
 type Tenant = { db: SupabaseClient; organizationId: string; customerId: string };
 
@@ -123,13 +126,15 @@ beforeAll(async () => {
     [CUSTOMER_CURRENCY],
   );
 
-  staff = await asPlatformStaff();
+  const gildops = await designateGildOps(pg, 'usage-seller');
+  seller = gildops.db;
+  restoreOperatingSeller = gildops.restore;
   tenant = await newTenant('usage');
   other = await newTenant('usage-other');
 }, 60_000);
 
 afterAll(async () => {
-  await pg?.end();
+  try { await restoreOperatingSeller(); } finally { await pg?.end(); }
 });
 
 async function openAndCharge(caller: Tenant, durationSeconds: number): Promise<string> {
@@ -168,7 +173,7 @@ describe('usage, cost and charge', () => {
     expect(event?.quantity).toBe(2);
     expect(event?.customerChargeMinor).toBe(40);
 
-    const summary = await organizationCommercialSummary(staff, { organizationId: tenant.organizationId });
+    const summary = await organizationCommercialSummary(seller, { organizationId: tenant.organizationId });
     const row = summary.find((entry) => entry.meterId === 'voice_minutes');
     // No provider rate recorded yet, so GOLD's cost is not known: it is not costed, which is not
     // free. The retail charge stands, but a margin needs a cost, so none is reported.
@@ -179,7 +184,7 @@ describe('usage, cost and charge', () => {
 
   it("records GOLD's own cost, from Twilio, once a provider rate exists — independently of the retail charge and in Twilio's own currency", async () => {
     // 8000 micro-minor-units per minute, in the *provider's* currency — never the tenant's.
-    await recordProviderRate(staff, {
+    await recordProviderRate(seller, {
       providerKey: 'twilio',
       meterId: 'voice_minutes',
       currency: PROVIDER_CURRENCY,
@@ -189,7 +194,7 @@ describe('usage, cost and charge', () => {
 
     await openAndCharge(tenant, 61); // rounds up to 2 minutes
 
-    const summary = await organizationCommercialSummary(staff, { organizationId: tenant.organizationId });
+    const summary = await organizationCommercialSummary(seller, { organizationId: tenant.organizationId });
     // Two currency-pair groups now exist for voice_minutes: the first call's (unpriced,
     // provider_currency null) and this one's (PROVIDER_CURRENCY) — grouping keeps them apart
     // rather than pretending a null currency and a real one are the same fact.
@@ -222,14 +227,14 @@ describe('usage, cost and charge', () => {
       [eventId, tenant.organizationId, PROVIDER_CURRENCY, CUSTOMER_CURRENCY],
     );
 
-    const detail = await organizationUsageDetail(staff, { organizationId: tenant.organizationId });
+    const detail = await organizationUsageDetail(seller, { organizationId: tenant.organizationId });
     const row = detail.find((entry) => entry.usageEventId === eventId);
     expect(row).toBeTruthy();
     expect(row?.estimatedCurrency).toBe(PROVIDER_CURRENCY);
     expect(row?.customerCurrency).toBe(CUSTOMER_CURRENCY);
     expect(row?.estimatedCurrency).not.toBe(row?.customerCurrency);
 
-    const summary = await organizationCommercialSummary(staff, { organizationId: tenant.organizationId });
+    const summary = await organizationCommercialSummary(seller, { organizationId: tenant.organizationId });
     const sms = summary.find((entry) => entry.meterId === 'sms_segment');
     expect(sms?.providerCurrency).toBe(PROVIDER_CURRENCY);
     expect(sms?.customerCurrency).toBe(CUSTOMER_CURRENCY);
@@ -251,14 +256,14 @@ describe('usage, cost and charge', () => {
       [eventId, tenant.organizationId, PROVIDER_CURRENCY, CUSTOMER_CURRENCY],
     );
 
-    const before = await organizationCommercialSummary(staff, { organizationId: tenant.organizationId });
+    const before = await organizationCommercialSummary(seller, { organizationId: tenant.organizationId });
     const beforeRow = before.find((entry) => entry.meterId === 'call_recording_minutes');
     expect(beforeRow?.quantity).toBe(5);
     expect(beforeRow?.providerCostMinor).toBe(5); // 5,000,000 micros = 5 minor units
     expect(beforeRow?.customerChargeMinor).toBe(0); // 200 micros rounds to 0
 
     // The provider's real bill said more than GOLD estimated.
-    await recordUsageReconciliation(staff, {
+    await recordUsageReconciliation(seller, {
       usageEventId: eventId,
       reconciledProviderCostMicros: 9_000_000,
       providerCurrency: PROVIDER_CURRENCY,
@@ -266,7 +271,7 @@ describe('usage, cost and charge', () => {
       providerReference: 'INV-TEST-1',
     });
 
-    const after = await organizationCommercialSummary(staff, { organizationId: tenant.organizationId });
+    const after = await organizationCommercialSummary(seller, { organizationId: tenant.organizationId });
     const afterRow = after.find((entry) => entry.meterId === 'call_recording_minutes');
     // Quantity and customer charge are untouched — a reconciliation adds neither.
     expect(afterRow?.quantity).toBe(5);
@@ -276,7 +281,7 @@ describe('usage, cost and charge', () => {
     expect(afterRow?.providerCostMinor).toBe(9);
 
     // The original estimate is still there to be read, next to what corrected it.
-    const detail = await organizationUsageDetail(staff, { organizationId: tenant.organizationId });
+    const detail = await organizationUsageDetail(seller, { organizationId: tenant.organizationId });
     const row = detail.find((entry) => entry.usageEventId === eventId);
     expect(row?.estimatedCostMicros).toBe(5_000_000);
     expect(row?.estimatedCurrency).toBe(PROVIDER_CURRENCY);
@@ -286,7 +291,7 @@ describe('usage, cost and charge', () => {
 
     // A second reconciliation supersedes the first for reporting, and both stay on record —
     // append-only, never an edit to the first correction.
-    await recordUsageReconciliation(staff, {
+    await recordUsageReconciliation(seller, {
       usageEventId: eventId,
       reconciledProviderCostMicros: 7_000_000,
       providerCurrency: PROVIDER_CURRENCY,
@@ -299,11 +304,11 @@ describe('usage, cost and charge', () => {
     );
     expect(reconciliations[0].count).toBe(2);
 
-    const latest = await organizationCommercialSummary(staff, { organizationId: tenant.organizationId });
+    const latest = await organizationCommercialSummary(seller, { organizationId: tenant.organizationId });
     expect(latest.find((entry) => entry.meterId === 'call_recording_minutes')?.providerCostMinor).toBe(7);
   });
 
-  it('refuses a reconciliation to anyone who is not platform staff', async () => {
+  it("refuses a reconciliation to anyone without the cost permission in GildOps' own business", async () => {
     const eventId = randomUUID();
     await pg.query(
       `insert into public.usage_events
@@ -369,8 +374,8 @@ describe('usage, cost and charge', () => {
 
     // Staff's own aggregate keeps the two apart too — the other business's calls never inflate
     // this one's summary.
-    const tenantSummary = await organizationCommercialSummary(staff, { organizationId: tenant.organizationId });
-    const otherSummary = await organizationCommercialSummary(staff, { organizationId: other.organizationId });
+    const tenantSummary = await organizationCommercialSummary(seller, { organizationId: tenant.organizationId });
+    const otherSummary = await organizationCommercialSummary(seller, { organizationId: other.organizationId });
     expect(tenantSummary.some((row) => row.meterId === 'voice_minutes')).toBe(true);
     expect(otherSummary.some((row) => row.meterId === 'voice_minutes')).toBe(true);
     // Each organization's own summary is scoped by its own id — read separately above by

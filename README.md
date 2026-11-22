@@ -37,7 +37,7 @@ Settings
 Insights / reporting
 ```
 
-Platform Administration is the separate GildOps SaaS control plane and is never a customer workspace.
+Administration is GildOps' privileged control plane, a context of GildOps' own organization shell, and is never a customer workspace. GildOps' plans, subscriptions, costs and economics are its own Finance.
 
 See:
 

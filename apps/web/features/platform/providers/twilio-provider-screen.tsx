@@ -36,7 +36,7 @@ export function TwilioProviderScreen({ goldId, tab, model }: { goldId: string; t
     <AppPage>
       <PageHeader
         title="Twilio"
-        crumbs={[...platformAncestry(goldId, 'providers'), { label: 'Providers', href: platformHref(goldId, 'providers') }]}
+        crumbs={[...platformAncestry(goldId, 'providers'), { label: 'Vendors', href: platformHref(goldId, 'providers') }]}
         meta={
           <span className="inline-flex items-center gap-2">
             <ReadinessBadge state={readiness.state} />

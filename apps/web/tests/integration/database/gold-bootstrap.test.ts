@@ -2,12 +2,11 @@ import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { recordPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
-import { createPlan } from '@/lib/domain/catalogue/plans';
 import { bootstrapOperatingOrganization } from '@/lib/domain/platform/operating-organization';
 import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import { FOUNDING_ROLE } from '@/lib/domain/tenancy/organizations';
 import { operatingOrganizationId, setAsideOperatingOrganization } from '@/tests/support/operating-organization';
+import { assignFixturePlan, createFixturePlan } from '@/tests/support/plans';
 
 const CONNECTION =
   process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
@@ -64,7 +63,7 @@ async function currentPlanKey(organizationId: string): Promise<string | null> {
 }
 
 async function otherPlan(): Promise<string> {
-  return createPlan(staff.db, {
+  return createFixturePlan({
     key: `plan_${randomUUID().replace(/-/g, '').slice(0, 12)}`,
     kind: 'plan',
     label: 'Ordinary customer plan',
@@ -106,7 +105,7 @@ afterAll(async () => {
 describe('bootstrap_gold_internal_workspace', () => {
   it('refuses to make a business already on another base Plan the operating organization', async () => {
     const customer = await emptyOrganization('Customer on a plan');
-    await recordPlanAssignment(staff.db, { organizationId: customer, planId: await otherPlan(), periodStart: '2000-01-01', periodEnd: '9999-12-31' });
+    await assignFixturePlan({ organizationId: customer, planId: await otherPlan(), periodStart: '2000-01-01', periodEnd: '9999-12-31' });
 
     await expect(bootstrapOperatingOrganization(staff.db, { organizationId: customer })).rejects.toMatchObject({
       code: 'operating_organization.bootstrap_plan_conflict',
@@ -179,7 +178,7 @@ describe('bootstrap_gold_internal_workspace', () => {
       [operating],
     );
     const replacement = await otherPlan();
-    await recordPlanAssignment(staff.db, { organizationId: operating, planId: replacement, periodStart: '2000-01-01', periodEnd: '9999-12-31' });
+    await assignFixturePlan({ organizationId: operating, planId: replacement, periodStart: '2000-01-01', periodEnd: '9999-12-31' });
     await pg.query('delete from public.memberships where organization_id = $1 and user_id = $2', [operating, staff.userId]);
 
     await expect(bootstrapOperatingOrganization(staff.db, { organizationId: operating })).resolves.toBeTruthy();

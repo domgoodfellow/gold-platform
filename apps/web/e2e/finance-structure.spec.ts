@@ -87,8 +87,8 @@ test.describe.serial('Finance structural correction', () => {
     test.use({ storageState: OWNER_STORAGE_STATE });
 
     test('the guard refuses a page the owner may not open, and a wrong address', async ({ page }) => {
-      await page.goto('/platform/plans');
-      await expect(assertCapturable(page, { url: '/platform/plans', content: page.getByRole('heading', { name: 'Plans & Add-ons' }) })).rejects.toThrow(/Refusing to capture|expected content/);
+      await page.goto(`/organizations/${loadDemoContext().goldOrganizationId}/finance/subscriptions`);
+      await expect(assertCapturable(page, { url: `/organizations/${loadDemoContext().goldOrganizationId}/finance/subscriptions`, content: page.getByRole('heading', { name: 'Subscriptions' }) })).rejects.toThrow(/Refusing to capture|expected content/);
       await page.goto(`/organizations/${fx.organizationId}/finance/catalog`);
       await expect(assertCapturable(page, { url: `/organizations/${empty}/finance/catalog`, content: page.getByRole('main') })).rejects.toThrow(/Refusing to capture/);
     });
@@ -103,7 +103,7 @@ test.describe.serial('Finance structural correction', () => {
         await expect(nav.getByRole('link', { name: 'Dashboard', exact: true })).toBeVisible();
         await expect(nav.getByRole('link', { name: 'Configuration', exact: true })).toHaveCount(0);
         await expect(nav.getByRole('button', { name: 'Configuration', exact: true })).toHaveCount(0);
-        await expect(nav.getByRole('link', { name: 'Commercial administration' })).toHaveCount(0);
+        await expect(nav.getByRole('link', { name: 'Subscriptions' })).toHaveCount(0);
         await expect(page.getByRole('navigation', { name: 'breadcrumb' }).getByText('Configuration', { exact: true })).toHaveCount(0);
         await expect(page.getByRole('main').getByRole('button', { name: 'Configure', exact: true })).toHaveCount(0);
       }

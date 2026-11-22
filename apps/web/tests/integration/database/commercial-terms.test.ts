@@ -1,10 +1,23 @@
+import { Client } from 'pg';
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, afterAll } from 'vitest';
 import { connectPaymentAccount } from '@/lib/domain/billing/payment-accounts';
 import { listOrganizationTerms, moduleCommercialState, recordCommercialTerm } from '@/lib/domain/commercial/terms';
 import { setModuleEnabled } from '@/lib/domain/tenancy/modules';
-import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
+import { foundBusiness } from '@/tests/support/founding';
+import { designateGildOps } from '@/tests/support/plans';
+
+let restoreOperatingSeller: () => Promise<void> = async () => {};
+let sellerPg: Client | undefined;
+async function connectSellerPg(): Promise<Client> {
+  const client = new Client({ connectionString: process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' });
+  await client.connect();
+  return client;
+}
+afterAll(async () => {
+  try { await restoreOperatingSeller(); } finally { await sellerPg?.end(); }
+});
 
 /**
  * The wanted-versus-paid entitlement rule, built: the wanted∩paid intersection, and the four states it produces.
@@ -51,14 +64,18 @@ async function newTenant(label: string): Promise<{ db: SupabaseClient; organizat
 }
 
 describe('the wanted-versus-paid entitlement rule: wanted, paid, and their intersection', () => {
-  let staff: SupabaseClient;
+  /** GildOps' Finance (ADR-057): subscriptions, prices, costs and economics take its permissions. */
+  let seller: SupabaseClient;
+  
   let tenant: { db: SupabaseClient; organizationId: string };
 
   beforeAll(async () => {
     if (!ANON_KEY || !SERVICE_ROLE_KEY) {
       throw new Error('SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY must be set.');
     }
-    staff = await asPlatformStaff();
+    const gildopsSeller = await designateGildOps(sellerPg ??= await connectSellerPg());
+    seller = gildopsSeller.db;
+    restoreOperatingSeller = gildopsSeller.restore;
     tenant = await newTenant('term-states');
   });
 
@@ -75,7 +92,7 @@ describe('the wanted-versus-paid entitlement rule: wanted, paid, and their inter
     await setModuleEnabled(tenant.db, { organizationId: tenant.organizationId, key: 'assets', enabled: true });
 
     // Paid, not wanted: staff records a term for a module this business never switched on.
-    await recordCommercialTerm(staff, {
+    await recordCommercialTerm(seller, {
       organizationId: tenant.organizationId,
       productKey: 'module:reporting',
       periodStart: '2026-01-01',
@@ -107,7 +124,7 @@ describe('the wanted-versus-paid entitlement rule: wanted, paid, and their inter
       }),
     ).rejects.toBeTruthy();
 
-    await recordCommercialTerm(staff, {
+    await recordCommercialTerm(seller, {
       organizationId: tenant.organizationId,
       productKey: 'module:card_payments',
       periodStart: '2026-01-01',
@@ -135,7 +152,7 @@ describe('the wanted-versus-paid entitlement rule: wanted, paid, and their inter
     });
     expect(tenantError).toBeTruthy();
 
-    const { error: staffError } = await staff.from('organization_commercial_terms').insert({
+    const { error: staffError } = await seller.from('organization_commercial_terms').insert({
       organization_id: tenant.organizationId,
       product_key: 'module:billing',
       period_start: '2026-01-01',
@@ -146,7 +163,7 @@ describe('the wanted-versus-paid entitlement rule: wanted, paid, and their inter
   });
 
   it('refuses an overlapping term for the same product and business', async () => {
-    await recordCommercialTerm(staff, {
+    await recordCommercialTerm(seller, {
       organizationId: tenant.organizationId,
       productKey: 'module:automations',
       periodStart: '2026-03-01',
@@ -156,7 +173,7 @@ describe('the wanted-versus-paid entitlement rule: wanted, paid, and their inter
     });
 
     await expect(
-      recordCommercialTerm(staff, {
+      recordCommercialTerm(seller, {
         organizationId: tenant.organizationId,
         productKey: 'module:automations',
         periodStart: '2026-03-15',

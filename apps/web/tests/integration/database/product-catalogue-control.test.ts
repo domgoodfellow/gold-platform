@@ -3,16 +3,12 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
   getProduct,
-  listProductPrices,
   listProducts,
   productKeyFromUrlSegment,
   productKeyToUrlSegment,
-  recordProductPrice,
   updateProduct,
 } from '@/lib/domain/commercial/catalogue';
-import { listOrganizationTerms, recordCommercialTerm } from '@/lib/domain/commercial/terms';
-import { provisionOrganization } from '@/lib/domain/platform/provision';
-import { asPlatformStaff, newAccountEmail } from '@/tests/support/founding';
+import { asPlatformStaff } from '@/tests/support/founding';
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
 const ANON_KEY = process.env.SUPABASE_ANON_KEY ?? '';
@@ -36,14 +32,6 @@ describe('staff-managed product catalogue', () => {
   beforeAll(async () => {
     if (!ANON_KEY || !SERVICE_ROLE_KEY) throw new Error('Local Supabase credentials are required.');
     [staff, stranger] = await Promise.all([asPlatformStaff(), signedInStranger()]);
-  });
-
-  it('keeps a tenant agreement unchanged when the global list price changes', async () => {
-    const organizationId = await provisionOrganization(staff, { ownerEmail: await newAccountEmail('nextfund'), name: 'NextFund', displayName: 'NextFund Owner', currency: 'CAD', timezone: 'America/Toronto' });
-    const termId = await recordCommercialTerm(staff, { organizationId, productKey: 'module:reporting', periodStart: '2026-09-01', periodEnd: '2027-08-31', priceMinor: 12500, currency: 'CAD' });
-    await recordProductPrice(staff, { productKey: 'module:reporting', currency: 'CAD', amountMinor: 14900, billingInterval: 'month', effectiveFrom: new Date().toISOString(), source: 'Current rate card' });
-    expect((await listOrganizationTerms(staff, { organizationId })).find((term) => term.id === termId)).toMatchObject({ priceMinor: 12500, currency: 'CAD' });
-    expect((await listProductPrices(staff)).some((price) => price.amountMinor === 14900)).toBe(true);
   });
 
   it('allows only staff to change mutable product metadata', async () => {

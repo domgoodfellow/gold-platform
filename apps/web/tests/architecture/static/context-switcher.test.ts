@@ -14,18 +14,19 @@ const switcher = read('components/navigation/context-switcher.tsx');
 
 const GOLD = '11111111-1111-4111-8111-111111111111';
 
-describe('the Platform sub-scope', () => {
-  it('is a path beneath GOLD’s own organization, read from the path exactly as a business is read', () => {
-    expect(organizationIdFromPath(platformHref(GOLD, 'providers'))).toBeNull();
+describe('the Administration sub-scope', () => {
+  it('is a path beneath GildOps’ own organization, read from the path exactly as a business is read', () => {
+    expect(organizationIdFromPath(platformHref(GOLD, 'providers'))).toBe(GOLD);
     expect(platformSubpath(platformHref(GOLD))).toBe('');
-    expect(platformSubpath(platformHref(GOLD, 'catalog/plans/base'))).toBe('catalog/plans/base');
+    expect(platformSubpath(platformHref(GOLD, 'catalog/products/module:billing'))).toBe('catalog/products/module:billing');
     expect(platformSubpath(`${platformHref(GOLD, 'providers')}?tab=accounts`)).toBe('providers');
     expect(inPlatformScope(platformHref(GOLD, 'organizations'))).toBe(true);
   });
 
-  it('is not the old /platform namespace, nor anything that merely resembles it', () => {
-    expect(inPlatformScope('/platform')).toBe(true);
-    expect(inPlatformScope('/platform/providers')).toBe(true);
+  it('is not the retired /platform namespace, nor anything that merely resembles it', () => {
+    expect(inPlatformScope('/platform')).toBe(false);
+    expect(inPlatformScope('/platform/providers')).toBe(false);
+    expect(inPlatformScope(`/organizations/${GOLD}/administrationx`)).toBe(false);
     expect(inPlatformScope(`/organizations/${GOLD}/home`)).toBe(false);
     expect(inPlatformScope(`/platformer`)).toBe(false);
     expect(inPlatformScope(`/organizations/not-an-id/platform`)).toBe(false);
@@ -65,9 +66,9 @@ describe('the switcher', () => {
     expect(read('lib/route/person-context.ts')).not.toMatch(/platformAdministration/);
     expect(read('features/account/personal-settings-shell.tsx')).toContain('loadPersonContext()');
     expect(read('features/account/global-fallback-shell.tsx')).toContain('loadPersonContext()');
-    // One shell, drawn once by the organization layout. Platform is beneath it and draws no frame of its own.
+    // One shell, drawn once by the organization layout. Administration is beneath it and draws no frame of its own.
     expect(read('app/organizations/[organizationId]/layout.tsx')).toContain('<OrganizationShell');
-    expect(read('app/platform/layout.tsx')).not.toMatch(/OrganizationShell|<Sidebar|WorkspaceShell/);
+    expect(read('app/organizations/[organizationId]/administration/layout.tsx')).not.toMatch(/OrganizationShell|<Sidebar|WorkspaceShell/);
   });
 });
 

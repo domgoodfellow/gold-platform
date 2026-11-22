@@ -1,0 +1,10 @@
+export type ProvisionTwilioState = { error: string | null; provisioned: boolean };
+export const PROVISION_TWILIO_INITIAL: ProvisionTwilioState = { error: null, provisioned: false };
+export type RegisterResourceState = { error: string | null; recorded: boolean };
+export const REGISTER_RESOURCE_INITIAL: RegisterResourceState = { error: null, recorded: false };
+export type SetResourceStatusState = RegisterResourceState;
+export const SET_RESOURCE_STATUS_INITIAL: SetResourceStatusState = { error: null, recorded: false };
+export type SupportSessionState = { error: string | null };
+export const SUPPORT_SESSION_INITIAL: SupportSessionState = { error: null };
+export type SaveTemplateState = { error: string | null; saved: string | null };
+export const SAVE_TEMPLATE_INITIAL: SaveTemplateState = { error: null, saved: null };

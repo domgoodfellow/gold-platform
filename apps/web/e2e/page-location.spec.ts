@@ -1,3 +1,4 @@
+import { platformUrl } from './helpers';
 import { randomUUID } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -13,9 +14,9 @@ import { createOpportunity } from '../lib/domain/opportunities/opportunities';
 import { followUpsAvailable } from '../lib/application/crm/follow-ups';
 import { RESOLVED_LOCATION_ROUTES } from '../lib/route/page-location';
 import { setModuleEnabled } from '../lib/domain/tenancy/modules';
-import { createPlan, grantPlanProduct } from '../lib/domain/catalogue/plans';
-import { recordPlanAssignment } from '../lib/domain/catalogue/organization-plans';
+import { grantPlanProduct } from '../lib/domain/catalogue/plans';
 import { DEMO_PASSWORD } from '../scripts/demo/businesses';
+import { assignFixturePlan, createFixturePlan } from '../tests/support/plans';
 
 /**
  * Rendered evidence for the page-location pilot (ADR-047, Slice 1B): the CRM Customers collection
@@ -81,12 +82,12 @@ test.beforeAll(async () => {
   const other = await provisionOrganization(db, { ownerEmail: otherEmail, name: 'Location other business', currency: 'CAD', timezone: 'America/Toronto', displayName: 'Someone Else' });
   organizations.push(plain, vocabulary, other);
   // Calling and pipeline, so the Dialer regression control renders its real page.
-  const planId = await createPlan(db, { key: planKey, kind: 'plan', label: 'Local page-location', description: 'Local browser fixture only', billable: false });
+  const planId = await createFixturePlan({ key: planKey, kind: 'plan', label: 'Local page-location', description: 'Local browser fixture only', billable: false });
   for (const productKey of ['comms', 'sales']) await grantPlanProduct(db, { planId, productKey });
   for (const organizationId of [plain, vocabulary]) {
     await setModuleEnabled(db, { organizationId, key: 'reception', enabled: true });
     await pg.query("insert into organization_commercial_terms(organization_id,product_key,period_start,period_end,quantity,price_minor,currency,recorded_by,note) values($1,'module:reception','2020-01-01','9999-12-31',1,0,'CAD',$2,'Local page-location fixture')", [organizationId, made.data.user.id]);
-    await recordPlanAssignment(db, { organizationId, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
+    await assignFixturePlan({ organizationId, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
   }
   const acme = await createCustomer(db, { organizationId: plain, name: 'Acme Ltd' });
   const bravo = await createCustomer(db, { organizationId: plain, name: 'Bravo Services' });
@@ -273,9 +274,9 @@ async function platformControl(browser: Browser) {
     const out: Record<string, unknown> = {};
     for (const width of [390, 1440]) {
       await page.setViewportSize({ width, height: 900 });
-      await page.goto('/platform/plans');
+      await page.goto(platformUrl());
       await page.waitForLoadState('networkidle');
-      out[`platform-plans@${width}`] = await capture(page, `control-platform-plans-${width}`);
+      out[`administration@${width}`] = await capture(page, `control-administration-${width}`);
     }
     return out;
   } catch (error) {

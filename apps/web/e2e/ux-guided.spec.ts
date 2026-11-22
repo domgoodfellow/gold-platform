@@ -1,9 +1,9 @@
 import path from 'node:path';
 import { Client } from 'pg';
 import { test, expect } from '@playwright/test';
-import { OWNER_STORAGE_STATE, COLLEAGUE_STORAGE_STATE, loadDemoContext } from './helpers';
+import { OWNER_STORAGE_STATE, COLLEAGUE_STORAGE_STATE, loadDemoContext, platformUrl } from './helpers';
 import { provisionFinanceBusiness, signInOwner } from './finance-fixtures';
-import { currentPlanAssignment, recordPlanAssignment, organizationResolvedFeatureStates, disableOrganizationFeature } from '../lib/domain/catalogue/organization-plans';
+import { currentPlanAssignment, organizationResolvedFeatureStates, disableOrganizationFeature } from '../lib/domain/catalogue/organization-plans';
 import { createPriceBookItem } from '../lib/domain/pricing/price-book';
 import { createWorkItemType } from '../lib/domain/work-items/types';
 import { computeSetupOverview, launchOrganization } from '../lib/domain/tenancy/lifecycle';
@@ -11,6 +11,7 @@ import { guardedShot } from './visual-guard';
 import { getOrganization } from '../lib/domain/tenancy/organizations';
 import { listCustomerStages } from '../lib/domain/customers/stages';
 import { chooseOption } from './select-field';
+import { seedPlanAssignment } from '../tests/support/plans';
 
 const before = process.env.UX_GUIDED_PHASE === 'before';
 const output = path.join(__dirname, '../../../.artifacts/ux-guided', before ? 'before' : 'after');
@@ -26,10 +27,8 @@ async function emptyBusiness(name: string) {
   const pg = new Client(process.env.SUPABASE_DB_URL!);
   await pg.connect();
   try {
-    await pg.query('insert into platform_staff(user_id,name) values($1,$2)', [owner.userId, 'Guided empty fixture']);
-    await recordPlanAssignment(owner.db, { organizationId: id, planId: plan.planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
+    await seedPlanAssignment(pg, { organizationId: id, planId: plan.planId, periodStart: '2020-01-01', periodEnd: '9999-12-31', actorId: owner.userId });
   } finally {
-    await pg.query('delete from platform_staff where user_id=$1', [owner.userId]);
     await pg.end();
   }
   return { ...owner, organizationId: id };
@@ -46,10 +45,8 @@ test.describe.serial('UX drift and guided configuration', () => {
     const pg = new Client(process.env.SUPABASE_DB_URL!);
     await pg.connect();
     try {
-      await pg.query('insert into platform_staff(user_id,name) values($1,$2)', [owner.userId, 'Guided configuration fixture']);
-      await recordPlanAssignment(owner.db, { organizationId, planId: plan.planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
+      await seedPlanAssignment(pg, { organizationId, planId: plan.planId, periodStart: '2020-01-01', periodEnd: '9999-12-31', actorId: owner.userId });
     } finally {
-      await pg.query('delete from platform_staff where user_id=$1', [owner.userId]);
       await pg.end();
     }
     typeId = await createWorkItemType(owner.db, { organizationId, name: 'Guided service', schedulable: false });
@@ -242,7 +239,7 @@ test.describe.serial('UX drift and guided configuration', () => {
     }
     await page.goto(`${base}/setup?step=operations`);
     await expect(page.getByRole('link', { name: /Work types/ })).toHaveCount(0);
-    await page.goto('/platform/providers');
+    await page.goto(platformUrl('providers'));
     await expect(page.getByRole('heading', { name: /not available|does not exist/i })).toBeVisible();
     await context.close();
   });
@@ -288,27 +285,27 @@ test.describe.serial('UX drift and guided configuration', () => {
       await expect.poll(destinations).toEqual(linksBefore);
       expect((await getOrganization(owner.db, own))!.capabilities).toEqual(roleBefore);
       expect(await computeSetupOverview(owner.db, { organizationId: own })).toEqual(overviewBefore);
-      await page.goto('/platform/providers');
+      await page.goto(platformUrl('providers'));
       await expect(page.getByRole('heading', { name: /not available|does not exist/i })).toBeVisible();
       await pg.query('insert into platform_staff(user_id,name,capabilities) values($1,$2,$3)', [owner.userId, 'Disposable authorized operator', ['platform.providers', 'platform.catalogue']]);
-      await page.goto('/platform/providers');
+      await page.goto(platformUrl('providers'));
       await expect(page.getByRole('heading', { name: 'Providers', exact: true })).toBeVisible();
-      await guardedShot(page, { url: '/platform/providers', content: page.getByRole('heading', { name: 'Providers', exact: true }) }, { path: path.join(output, 'platform-providers.png'), fullPage: true });
-      await page.goto('/platform/ai-runtime');
+      await guardedShot(page, { url: platformUrl('providers'), content: page.getByRole('heading', { name: 'Providers', exact: true }) }, { path: path.join(output, 'platform-providers.png'), fullPage: true });
+      await page.goto(platformUrl('ai-runtime'));
       await expect(page.getByText(/Assignments select a service, account and model/)).toBeVisible();
-      await guardedShot(page, { url: '/platform/ai-runtime', content: page.getByText(/Assignments select a service, account and model/) }, { path: path.join(output, 'platform-ai-runtime.png'), fullPage: true });
-      await page.goto('/platform/integrations');
+      await guardedShot(page, { url: platformUrl('ai-runtime'), content: page.getByText(/Assignments select a service, account and model/) }, { path: path.join(output, 'platform-ai-runtime.png'), fullPage: true });
+      await page.goto(platformUrl('integrations'));
       await expect(page.getByRole('heading', { name: 'Connectors', exact: true })).toBeVisible();
       await page.goto(`${base}/setup?step=operations`);
       await expect.poll(destinations).toEqual(linksBefore);
       await pg.query('update platform_staff set capabilities=$2 where user_id=$1', [owner.userId, ['platform.catalogue']]);
-      await page.goto('/platform/providers');
+      await page.goto(platformUrl('providers'));
       await expect(page.getByRole('heading', { name: /not available|does not exist/i })).toBeVisible();
       const context = await browser.newContext({ storageState: COLLEAGUE_STORAGE_STATE });
       const limited = await context.newPage();
       await limited.goto(`${base}/work/configuration`);
       await expect(limited.getByRole('heading', { name: /^This page does not exist/ })).toBeVisible();
-      await limited.goto('/platform/providers');
+      await limited.goto(platformUrl('providers'));
       await expect(limited.getByRole('heading', { name: /not available|does not exist/i })).toBeVisible();
       await context.close();
     } finally {

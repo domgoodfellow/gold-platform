@@ -29,7 +29,7 @@ export async function seedLegacyPlanProposal(input: {
       const { rows } = await pg.query<{ label: string; amount_minor: string }>(
         `select p.label, pp.amount_minor
            from public.platform_plans p
-           join public.platform_plan_prices pp on pp.plan_id = p.id
+           join public.price_book_item_prices pp on pp.plan_id = p.id
           where p.id = $1 and pp.currency = $2 and pp.billing_interval = $3
             and pp.approval_state = 'approved' and pp.effective_from <= now()
             and (pp.effective_to is null or pp.effective_to > now())

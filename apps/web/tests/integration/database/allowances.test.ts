@@ -2,12 +2,25 @@ import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createPlan, setPlanQuota } from '@/lib/domain/catalogue/plans';
+import { setPlanQuota } from '@/lib/domain/catalogue/plans';
 import { recordPlanAssignment, recordPlanQuotaOverride } from '@/lib/domain/catalogue/organization-plans';
 import { allowanceDecision, organizationAllowanceStates } from '@/lib/domain/commercial/allowances';
 import { listUsageEvents, organizationUsageDetail } from '@/lib/domain/commercial/usage';
 import { createCustomer } from '@/lib/domain/customers/customers';
 import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
+import { assignFixturePlan, createFixturePlan } from '@/tests/support/plans';
+import { designateGildOps } from '@/tests/support/plans';
+
+let restoreOperatingSeller: () => Promise<void> = async () => {};
+let sellerPg: Client | undefined;
+async function connectSellerPg(): Promise<Client> {
+  const client = new Client({ connectionString: process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' });
+  await client.connect();
+  return client;
+}
+afterAll(async () => {
+  try { await restoreOperatingSeller(); } finally { await sellerPg?.end(); }
+});
 
 /**
  * One runtime answer to "what is this business allowed to consume right now", and one to "how much
@@ -49,6 +62,9 @@ type Tenant = { db: SupabaseClient; organizationId: string; userId: string; emai
 
 let pg: Client;
 let staff: SupabaseClient;
+/** GildOps' Finance (ADR-057): subscriptions, prices, costs and economics take its permissions. */
+let seller: SupabaseClient;
+
 let tenant: Tenant;
 let other: Tenant;
 let basePlanId: string;
@@ -99,7 +115,7 @@ async function state(organizationId: string, allowanceKey: string) {
 }
 
 async function assign(organizationId: string, planId: string, periodStart?: string) {
-  return recordPlanAssignment(staff, {
+  return assignFixturePlan({
     organizationId,
     planId,
     periodStart: periodStart ?? new Date().toISOString().slice(0, 10),
@@ -113,11 +129,14 @@ beforeAll(async () => {
   pg = new Client({ connectionString: CONNECTION });
   await pg.connect();
   staff = await asPlatformStaff();
+  const gildopsSeller = await designateGildOps(sellerPg ??= await connectSellerPg());
+  seller = gildopsSeller.db;
+  restoreOperatingSeller = gildopsSeller.restore;
 
   tenant = await newTenant('alw-tenant', 'America/Toronto');
   other = await newTenant('alw-other');
 
-  basePlanId = await createPlan(staff, {
+  basePlanId = await createFixturePlan({
     key: `alw_base_${RUN}`,
     kind: 'plan',
     label: 'Allowance Base',
@@ -125,7 +144,7 @@ beforeAll(async () => {
     billable: true,
     saleStatus: 'unlisted',
   });
-  addonPlanId = await createPlan(staff, {
+  addonPlanId = await createFixturePlan({
     key: `alw_addon_${RUN}`,
     kind: 'addon',
     label: 'Allowance Add-on',
@@ -185,7 +204,7 @@ async function retailRate(meter: string, micros: number, offsetMs: number) {
 
 // ---------------------------------------------------------------------------
 
-describe('a commercial mutation needs the commercial permission', () => {
+describe('a commercial mutation needs GildOps’ Finance permission, never platform authority (ADR-057)', () => {
   let inspector: { db: SupabaseClient; userId: string; email: string };
 
   beforeAll(async () => {
@@ -207,7 +226,7 @@ describe('a commercial mutation needs the commercial permission', () => {
     expect(await organizationAllowanceStates(inspector.db, { organizationId: tenant.organizationId })).toBeDefined();
   });
 
-  it('refuses every commercial mutation to platform.organizations alone', async () => {
+  it('refuses every commercial mutation to platform.organizations, which grants no Finance authority', async () => {
     const refusals = await Promise.all([
       inspector.db.rpc('record_plan_assignment', {
         p_organization_id: tenant.organizationId, p_plan_id: basePlanId,
@@ -227,15 +246,11 @@ describe('a commercial mutation needs the commercial permission', () => {
         p_period_start: '2026-01-01', p_period_end: '9999-12-31', p_price_minor: 0,
         p_currency: null, p_quantity: 1, p_note: '',
       }),
-      inspector.db.rpc('record_plan_agreement', {
-        p_organization_id: tenant.organizationId, p_plan_id: basePlanId, p_currency: CURRENCY,
-        p_amount_minor: 1, p_effective_from: new Date().toISOString(), p_note: '',
-      }),
     ]);
 
     for (const refusal of refusals) {
       expect(refusal.error?.code).toBe('42501');
-      expect(refusal.error?.message ?? '').toMatch(/platform\.commercial/);
+      expect(refusal.error?.message ?? '').toMatch(/subscription\.manage permission in GildOps/);
     }
   });
 
@@ -253,10 +268,11 @@ describe('a commercial mutation needs the commercial permission', () => {
     expect(rows[0]).toEqual({ assignments: 0, agreements: 0, overrides: 0 });
   });
 
-  it('lets platform.commercial perform the same mutations', async () => {
-    const assignmentId = await assign(tenant.organizationId, basePlanId);
+  it('lets a GildOps member who manages subscriptions perform the same mutations', async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const assignmentId = await recordPlanAssignment(seller, { organizationId: tenant.organizationId, planId: basePlanId, periodStart: today, periodEnd: '9999-12-31', note: 'allowances.test.ts' });
     expect(assignmentId).toBeTruthy();
-    await assign(tenant.organizationId, addonPlanId);
+    await recordPlanAssignment(seller, { organizationId: tenant.organizationId, planId: addonPlanId, periodStart: today, periodEnd: '9999-12-31', note: 'allowances.test.ts' });
   });
 
   it('refuses a non-staff caller too, by the same door', async () => {
@@ -265,7 +281,7 @@ describe('a commercial mutation needs the commercial permission', () => {
       p_period_start: '2026-01-01', p_period_end: '2026-02-01', p_note: '',
     });
     expect(error?.code).toBe('42501');
-    expect(error?.message ?? '').toMatch(/only platform staff/);
+    expect(error?.message ?? '').toMatch(/GildOps/);
   });
 });
 
@@ -284,7 +300,7 @@ describe('composition', () => {
   });
 
   it('applies an organization override and keeps the Plan default beside it', async () => {
-    await recordPlanQuotaOverride(staff, {
+    await recordPlanQuotaOverride(seller, {
       organizationId: tenant.organizationId, planId: basePlanId,
       allowanceKey: `alw_voice_${RUN}`, includedQuantity: 6, hardLimit: 20,
       effectiveFrom: at(-60_000), note: 'allowances.test.ts',
@@ -297,7 +313,7 @@ describe('composition', () => {
   });
 
   it('sums hard limits only when every contribution states one', async () => {
-    await recordPlanQuotaOverride(staff, {
+    await recordPlanQuotaOverride(seller, {
       organizationId: tenant.organizationId, planId: addonPlanId,
       allowanceKey: `alw_voice_${RUN}`, includedQuantity: 5, hardLimit: 8,
       effectiveFrom: at(-60_000), note: 'allowances.test.ts',
@@ -322,7 +338,7 @@ describe('composition', () => {
     expect(voice.sourceContributions).toHaveLength(2);
 
     // A configuration error permits rather than stopping a business working.
-    const decision = await allowanceDecision(staff, {
+    const decision = await allowanceDecision(seller, {
       organizationId: tenant.organizationId, allowanceKey: `alw_voice_${RUN}`, quantity: 1,
     });
     expect([decision.result, decision.permitted]).toEqual(['configuration_error', true]);
@@ -340,7 +356,7 @@ describe('composition', () => {
     const bare = await newTenant('alw-bare');
     expect(await organizationAllowanceStates(staff, { organizationId: bare.organizationId })).toEqual([]);
     // Which is not a refusal: no allowance governs it, so the operation is allowed and ungoverned.
-    const decision = await allowanceDecision(staff, {
+    const decision = await allowanceDecision(seller, {
       organizationId: bare.organizationId, allowanceKey: `alw_voice_${RUN}`, quantity: 100,
     });
     expect([decision.result, decision.permitted, decision.governed]).toEqual(['allowed', true, false]);
@@ -430,7 +446,7 @@ describe('consumption', () => {
     expect(seats.remaining).toBe(2);
 
     // `technicians` has no counter: it resolves its definition and declines to report consumption.
-    const unenforced = await createPlan(staff, {
+    const unenforced = await createFixturePlan({
       key: `alw_unenf_${RUN}`, kind: 'plan', label: 'Unenforced', description: 'x',
       billable: false, saleStatus: 'unlisted',
     });
@@ -446,7 +462,7 @@ describe('consumption', () => {
       'unenforced', null, null,
     ]);
     // Nothing counts it, so nothing can be said to be used up.
-    const decision = await allowanceDecision(staff, {
+    const decision = await allowanceDecision(seller, {
       organizationId: bare.organizationId, allowanceKey: 'technicians', quantity: 99,
     });
     expect([decision.result, decision.enforcement]).toEqual(['allowed', 'unenforced']);
@@ -456,7 +472,7 @@ describe('consumption', () => {
     const walk = await newTenant('alw-walk');
     await assign(walk.organizationId, basePlanId); // 10 included, metered overage, no hard limit
     const key = `alw_voice_${RUN}`;
-    const decide = (n: number) => allowanceDecision(staff, { organizationId: walk.organizationId, allowanceKey: key, quantity: n });
+    const decide = (n: number) => allowanceDecision(seller, { organizationId: walk.organizationId, allowanceKey: key, quantity: n });
 
     expect((await state(walk.organizationId, key)).consumed).toBe(0);
     expect((await decide(10)).result).toBe('allowed');
@@ -480,7 +496,7 @@ describe('consumption', () => {
     await record(crossing.organizationId, 'voice_minutes', 7);
     const split = await decide(0);
     expect(split).toBeTruthy();
-    const crossingDecision = await allowanceDecision(staff, {
+    const crossingDecision = await allowanceDecision(seller, {
       organizationId: crossing.organizationId, allowanceKey: key, quantity: 8,
     });
     expect([crossingDecision.includedApplied, crossingDecision.overageApplied]).toEqual([3, 5]);
@@ -489,7 +505,7 @@ describe('consumption', () => {
 
 describe('enforcement', () => {
   it('returns each supported decision, and permits exactly three of them', async () => {
-    const limits = await createPlan(staff, {
+    const limits = await createFixturePlan({
       key: `alw_limits_${RUN}`, kind: 'plan', label: 'Limits', description: 'x',
       billable: false, saleStatus: 'unlisted',
     });
@@ -512,7 +528,7 @@ describe('enforcement', () => {
     const org = await newTenant('alw-limits');
     await assign(org.organizationId, limits);
     const decide = (key: string, n: number) =>
-      allowanceDecision(staff, { organizationId: org.organizationId, allowanceKey: key, quantity: n });
+      allowanceDecision(seller, { organizationId: org.organizationId, allowanceKey: key, quantity: n });
 
     expect((await decide(`alw_hard_${RUN}`, 5)).result).toBe('allowed');
     expect((await decide(`alw_hard_${RUN}`, 6)).result).toBe('hard_limit_reached');
@@ -530,7 +546,7 @@ describe('enforcement', () => {
   });
 
   it('refuses a call at a hard limit through the mutation boundary, not a disabled button', async () => {
-    const limited = await createPlan(staff, {
+    const limited = await createFixturePlan({
       key: `alw_voicecap_${RUN}`, kind: 'plan', label: 'Capped voice', description: 'x',
       billable: false, saleStatus: 'unlisted',
     });
@@ -719,7 +735,7 @@ describe('a rated event is history', () => {
       overageBehavior: 'metered', meterId: 'voice_minutes',
     });
     // This organization's own allowance changes.
-    await recordPlanQuotaOverride(staff, {
+    await recordPlanQuotaOverride(seller, {
       organizationId: historical.organizationId, planId: basePlanId,
       allowanceKey: `alw_voice_${RUN}`, includedQuantity: 1,
       effectiveFrom: at(-60_000), note: 'allowances.test.ts',
@@ -812,7 +828,7 @@ describe('what a business may read of this', () => {
     ).rejects.toMatchObject({ code: 'commercial.forbidden' });
 
     await record(tenant.organizationId, 'voice_minutes', 3);
-    const detail = await organizationUsageDetail(staff, { organizationId: tenant.organizationId });
+    const detail = await organizationUsageDetail(seller, { organizationId: tenant.organizationId });
     expect(detail.length).toBeGreaterThan(0);
     // Both accounts, on one row, never blended.
     expect(detail[0]).toHaveProperty('allowanceApplication');

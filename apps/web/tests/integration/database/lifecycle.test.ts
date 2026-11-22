@@ -11,8 +11,8 @@ import {
 } from '@/lib/domain/tenancy/lifecycle';
 import { setModuleEnabled } from '@/lib/domain/tenancy/modules';
 import { createOrganization, getOrganization } from '@/lib/domain/tenancy/organizations';
-import { asPlatformStaff, foundBusiness, newAccountEmail } from '@/tests/support/founding';
-import { recordCommercialTerm } from '@/lib/domain/commercial/terms';
+import { foundBusiness, newAccountEmail } from '@/tests/support/founding';
+import { recordFixtureTerm } from '@/tests/support/plans';
 
 /**
  * ORGANIZATION CREATED → SETUP → BUSINESS SETUP OVERVIEW → COMPUTED READINESS →
@@ -70,7 +70,7 @@ async function freshOrganization(): Promise<{ db: SupabaseClient; organizationId
 }
 
 async function enableEntitledBooking(db: SupabaseClient, organizationId: string) {
-  await recordCommercialTerm(await asPlatformStaff(), { organizationId, productKey: 'module:booking', periodStart: '2020-01-01', periodEnd: '9999-12-31', priceMinor: 0, currency: 'EUR' });
+  await recordFixtureTerm({ organizationId, productKey: 'module:booking', periodStart: '2020-01-01', periodEnd: '9999-12-31', priceMinor: 0, currency: 'EUR' });
   await setModuleEnabled(db, { organizationId, key: 'booking', enabled: true });
 }
 

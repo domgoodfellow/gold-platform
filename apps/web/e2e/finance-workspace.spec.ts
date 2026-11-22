@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { financeUrl, loadDemoContext, OWNER_STORAGE_STATE, platformUrl, STAFF_STORAGE_STATE } from './helpers';
+import { financeUrl, loadDemoContext, OWNER_STORAGE_STATE, STAFF_STORAGE_STATE } from './helpers';
 
 /**
  * Finance is tenant Financial Operations: the business's own prices, quotes, invoices and payments
@@ -77,22 +77,21 @@ test.describe('GildOps staff', () => {
     await page.goto(financeUrl());
     // ADR-049: the workspace root is named Dashboard; Finance is the workspace identity in the sidebar.
     await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeAttached();
-    await expect(page.locator('main').getByRole('link', { name: 'Plans & Add-ons' })).toHaveCount(0);
-    await expect(page.getByRole('link', { name: 'Economics' })).toHaveCount(0);
-    // Commercial administration is reached from Administration, never from inside Finance (ADR-051).
-    await expect(page.getByRole('link', { name: 'Commercial administration' })).toHaveCount(0);
+    // GildOps' money is its Finance (ADR-057): Subscriptions, Costs and Economics sit beside Catalog & Pricing.
+    for (const name of ['Subscriptions', 'Costs', 'Economics']) await expect(page.getByRole('link', { name, exact: true }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Administration' })).toHaveCount(0);
     await page.screenshot({ path: `${ARTIFACTS}/finance-workspace-gildops-home.png`, fullPage: true });
   });
 
-  test('Plans & Add-ons is reached in Platform under Commercial, and the old Finance address redirects', async ({ page }) => {
-    await page.goto(platformUrl('plans'));
-    await expect(page.getByRole('heading', { name: 'Plans & Add-ons', level: 1 })).toBeVisible();
-    await page.screenshot({ path: `${ARTIFACTS}/platform-plans-desktop.png`, fullPage: true });
-
-    await page.goto(financeUrl('plans'));
-    await expect(page).toHaveURL(platformUrl('plans'));
-    await page.goto(financeUrl('economics'));
-    await expect(page).toHaveURL(platformUrl('economics'));
-    await expect(page.getByRole('heading', { name: 'Portfolio economics', level: 1 })).toBeVisible();
+  test('subscriptions, costs and economics open in Finance, and no Platform address remains', async ({ page }) => {
+    for (const [path, heading] of [['subscriptions', 'Subscriptions'], ['costs', 'Costs'], ['economics', 'Economics']]) {
+      await page.goto(financeUrl(path));
+      await expect(page.getByRole('heading', { name: heading, level: 1 })).toBeVisible();
+    }
+    await page.screenshot({ path: `${ARTIFACTS}/finance-economics-desktop.png`, fullPage: true });
+    for (const retired of ['/platform', '/platform/plans', '/platform/economics', financeUrl('plans')]) {
+      await page.goto(retired);
+      await expect(page.getByRole('heading', { name: /^This page does not exist/ }), retired).toBeVisible();
+    }
   });
 });

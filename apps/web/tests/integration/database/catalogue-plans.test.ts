@@ -12,17 +12,16 @@ import {
   updateCatalogProduct,
 } from '@/lib/domain/catalogue/catalogue';
 import {
-  createPlan,
+  createPlanItem,
   getPlan,
   grantPlanProduct,
   listPlanPrices,
   listPlanQuotas,
   planEntitledFeatureIds,
   planEntitledFeatureIdsForPlans,
-  recordPlanPrice,
   setPlanFeatureOverride,
   setPlanQuota,
-  updatePlan,
+  updatePlanSwitches,
 } from '@/lib/domain/catalogue/plans';
 import {
   activeModuleKeys,
@@ -39,6 +38,8 @@ import {
 } from '@/lib/domain/catalogue/organization-plans';
 import { moduleCommercialState } from '@/lib/domain/commercial/terms';
 import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
+import { setAsideOperatingOrganization } from '@/tests/support/operating-organization';
+import { createFixturePlan, priceFixturePlan } from '@/tests/support/plans';
 import { CATALOGUE_SURFACE_COVERAGE } from '@/lib/catalogue-surface-coverage';
 
 /**
@@ -81,7 +82,7 @@ afterAll(async () => {
   }
 });
 
-async function newTenant(label: string): Promise<{ db: SupabaseClient; organizationId: string }> {
+async function newTenant(label: string): Promise<{ db: SupabaseClient; organizationId: string; email: string }> {
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
@@ -102,7 +103,7 @@ async function newTenant(label: string): Promise<{ db: SupabaseClient; organizat
     currency: 'EUR',
   });
 
-  return { db, organizationId };
+  return { db, organizationId, email };
 }
 
 describe('the canonical catalogue', () => {
@@ -196,34 +197,53 @@ describe('the canonical catalogue', () => {
 });
 
 describe('Plans and Add-ons', () => {
+  /** Platform staff: what a plan switches on (`platform.catalogue`). */
   let staff: SupabaseClient;
+  /** The owner of GildOps' operating organization: what businesses subscribe to, in its Finance (ADR-057). */
+  let seller: SupabaseClient;
+  let gildops: string;
   let tenant: { db: SupabaseClient; organizationId: string };
   let other: { db: SupabaseClient; organizationId: string };
+  let pg: Client;
+  let restore: () => Promise<void>;
 
   beforeAll(async () => {
+    pg = new Client({ connectionString: CONNECTION });
+    await pg.connect();
+    restore = await setAsideOperatingOrganization(pg);
     staff = await asPlatformStaff();
+    const owner = await newTenant('plan-gildops');
+    seller = owner.db;
+    gildops = owner.organizationId;
+    await pg.query('update public.platform_settings set operating_organization_id = $1 where singleton', [gildops]);
     tenant = await newTenant('plan-tenant');
     other = await newTenant('plan-other');
   });
 
-  it('lets staff create a Plan and an Add-on as distinct kinds, and refuses a tenant', async () => {
+  afterAll(async () => {
+    try { await restore?.(); } finally { await pg?.end(); }
+  });
+
+  it('creates a Plan and an Add-on as distinct kinds in GildOps’ Finance, and refuses a tenant', async () => {
     await expect(
-      createPlan(tenant.db, { key: `refused_${randomUUID().slice(0, 8)}`, kind: 'plan', label: 'Nope', description: '', billable: true }),
+      createPlanItem(tenant.db, { organizationId: tenant.organizationId, kind: 'plan', name: 'Nope' }),
     ).rejects.toMatchObject({ code: 'plans.create_failed' });
 
-    const planKey = `growth_${randomUUID().slice(0, 8)}`;
-    const planId = await createPlan(staff, { key: planKey, kind: 'plan', label: 'Growth', description: 'Test plan', billable: true });
-    const addonKey = `intelligence_${randomUUID().slice(0, 8)}`;
-    const addonId = await createPlan(staff, { key: addonKey, kind: 'addon', label: 'GOLD Intelligence', description: 'Test add-on', billable: true });
-
-    expect((await getPlan(staff, planKey))?.kind).toBe('plan');
-    expect((await getPlan(staff, addonKey))?.kind).toBe('addon');
-    expect(planId).not.toBe(addonId);
+    const planItem = await createPlanItem(seller, { organizationId: gildops, kind: 'plan', name: `Growth ${randomUUID().slice(0, 6)}`, description: 'Test plan' });
+    const addonItem = await createPlanItem(seller, { organizationId: gildops, kind: 'addon', name: `GOLD Intelligence ${randomUUID().slice(0, 6)}`, description: 'Test add-on' });
+    const { rows } = await pg.query<{ item: string; key: string; kind: string }>(
+      'select price_book_item_id as item, key, kind from public.platform_plans where price_book_item_id = any($1::uuid[])',
+      [[planItem, addonItem]],
+    );
+    const byItem = new Map(rows.map((row) => [row.item, row]));
+    expect((await getPlan(seller, byItem.get(planItem)!.key))?.kind).toBe('plan');
+    expect((await getPlan(seller, byItem.get(addonItem)!.key))?.kind).toBe('addon');
+    expect(planItem).not.toBe(addonItem);
   });
 
   it('resolves entitlement as override > module grant > product grant, restricted to available Features', async () => {
     const planKey = `resolve_${randomUUID().slice(0, 8)}`;
-    const planId = await createPlan(staff, { key: planKey, kind: 'plan', label: 'Resolve test', description: '', billable: true });
+    const planId = await createFixturePlan({ key: planKey, kind: 'plan', label: 'Resolve test', description: '', billable: true });
 
     await grantPlanProduct(staff, { planId, productKey: 'comms' });
 
@@ -252,8 +272,8 @@ describe('Plans and Add-ons', () => {
     // doors agree rather than re-testing override > module grant > product grant itself.
     const planKeyA = `bulk_a_${randomUUID().slice(0, 8)}`;
     const planKeyB = `bulk_b_${randomUUID().slice(0, 8)}`;
-    const planIdA = await createPlan(staff, { key: planKeyA, kind: 'plan', label: 'Bulk A', description: '', billable: true });
-    const planIdB = await createPlan(staff, { key: planKeyB, kind: 'plan', label: 'Bulk B', description: '', billable: true });
+    const planIdA = await createFixturePlan({ key: planKeyA, kind: 'plan', label: 'Bulk A', description: '', billable: true });
+    const planIdB = await createFixturePlan({ key: planKeyB, kind: 'plan', label: 'Bulk B', description: '', billable: true });
 
     await grantPlanProduct(staff, { planId: planIdA, productKey: 'comms' });
     const voiceModule = (await listCatalogModules(staff)).find((m) => m.key === 'voice')!;
@@ -280,34 +300,36 @@ describe('Plans and Add-ons', () => {
   it('lets an Add-on stack alongside a base Plan, but refuses two overlapping base Plans', async () => {
     const org = await newTenant('stack');
     const planKey = `base_${randomUUID().slice(0, 8)}`;
-    const planId = await createPlan(staff, { key: planKey, kind: 'plan', label: 'Base', description: '', billable: true });
+    const planId = await createFixturePlan({ key: planKey, kind: 'plan', label: 'Base', description: '', billable: true });
     const addonKey = `addon_${randomUUID().slice(0, 8)}`;
-    const addonId = await createPlan(staff, { key: addonKey, kind: 'addon', label: 'Addon', description: '', billable: true });
+    const addonId = await createFixturePlan({ key: addonKey, kind: 'addon', label: 'Addon', description: '', billable: true });
 
-    await recordPlanAssignment(staff, { organizationId: org.organizationId, planId, periodStart: '2026-01-01', periodEnd: '9999-12-31' });
+    await recordPlanAssignment(seller, { organizationId: org.organizationId, planId, periodStart: '2026-01-01', periodEnd: '9999-12-31' });
     // An add-on for the same organization, same open period, must not collide with the base plan.
     await expect(
-      recordPlanAssignment(staff, { organizationId: org.organizationId, planId: addonId, periodStart: '2026-01-01', periodEnd: '9999-12-31' }),
+      recordPlanAssignment(seller, { organizationId: org.organizationId, planId: addonId, periodStart: '2026-01-01', periodEnd: '9999-12-31' }),
     ).resolves.toBeTruthy();
 
     const secondPlanKey = `second_base_${randomUUID().slice(0, 8)}`;
-    const secondPlanId = await createPlan(staff, { key: secondPlanKey, kind: 'plan', label: 'Second base', description: '', billable: true });
+    const secondPlanId = await createFixturePlan({ key: secondPlanKey, kind: 'plan', label: 'Second base', description: '', billable: true });
     // A second base Plan overlapping the first must be refused.
     await expect(
-      recordPlanAssignment(staff, { organizationId: org.organizationId, planId: secondPlanId, periodStart: '2026-06-01', periodEnd: '9999-12-31' }),
+      recordPlanAssignment(seller, { organizationId: org.organizationId, planId: secondPlanId, periodStart: '2026-06-01', periodEnd: '9999-12-31' }),
     ).rejects.toMatchObject({ code: 'organization_plans.assignment_overlap' });
   });
 
   it('never lets a Plan edit rewrite a historical organization assignment', async () => {
     const org = await newTenant('stable-history');
     const planKey = `stable_${randomUUID().slice(0, 8)}`;
-    const planId = await createPlan(staff, { key: planKey, kind: 'plan', label: 'Before edit', description: 'v1', billable: true });
-    await recordPlanAssignment(staff, { organizationId: org.organizationId, planId, periodStart: '2026-01-01', periodEnd: '9999-12-31' });
+    const planId = await createFixturePlan({ key: planKey, kind: 'plan', label: 'Before edit', description: 'v1', billable: true });
+    await recordPlanAssignment(seller, { organizationId: org.organizationId, planId, periodStart: '2026-01-01', periodEnd: '9999-12-31' });
 
     const before = await currentPlanAssignment(org.db, { organizationId: org.organizationId });
     expect(before?.planId).toBe(planId);
 
-    await updatePlan(staff, { planId, label: 'After edit', description: 'v2', billable: false, saleStatus: 'unlisted', displayOrder: 9 });
+    await updatePlanSwitches(staff, { planId, billable: false, displayOrder: 9 });
+    await seller.from('price_book_items').update({ name: `After edit ${randomUUID().slice(0, 6)}`, description: 'v2', sale_status: 'unlisted' })
+      .eq('id', (await getPlan(seller, planKey))!.priceBookItemId!);
 
     const after = await currentPlanAssignment(org.db, { organizationId: org.organizationId });
     expect(after?.planId).toBe(planId);
@@ -317,7 +339,7 @@ describe('Plans and Add-ons', () => {
 
   it('stores quotas as structured fields, with no free-text parsing required', async () => {
     const planKey = `quota_${randomUUID().slice(0, 8)}`;
-    const planId = await createPlan(staff, { key: planKey, kind: 'plan', label: 'Quota test', description: '', billable: true });
+    const planId = await createFixturePlan({ key: planKey, kind: 'plan', label: 'Quota test', description: '', billable: true });
 
     await setPlanQuota(staff, {
       planId,
@@ -330,7 +352,7 @@ describe('Plans and Add-ons', () => {
       overagePolicy: 'allowed',
     });
 
-    const quotas = await listPlanQuotas(staff, planId);
+    const quotas = await listPlanQuotas(seller, planId);
     const aiTokens = quotas.find((q) => q.allowanceKey === 'ai_tokens')!;
     expect(aiTokens).toMatchObject({ includedQuantity: 2000, period: 'month', hardLimit: 3000, overagePolicy: 'allowed' });
 
@@ -343,16 +365,16 @@ describe('Plans and Add-ons', () => {
   it('resolves an organization override on top of the Plan default', async () => {
     const org = await newTenant('quota-override');
     const planKey = `override_${randomUUID().slice(0, 8)}`;
-    const planId = await createPlan(staff, { key: planKey, kind: 'plan', label: 'Override test', description: '', billable: true });
+    const planId = await createFixturePlan({ key: planKey, kind: 'plan', label: 'Override test', description: '', billable: true });
     await setPlanQuota(staff, { planId, allowanceKey: 'voice_minutes', label: 'Voice minutes', unit: 'minute', includedQuantity: 500, period: 'month', overagePolicy: 'allowed' });
-    await recordPlanAssignment(staff, { organizationId: org.organizationId, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31', note: 'quota override test' });
+    await recordPlanAssignment(seller, { organizationId: org.organizationId, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31', note: 'quota override test' });
 
     let effective = await organizationEffectiveQuotas(org.db, { organizationId: org.organizationId });
     let voice = effective.find((q) => q.allowanceKey === 'voice_minutes' && q.planKey === planKey)!;
     expect(voice.includedQuantity).toBe(500);
     expect(voice.overridden).toBe(false);
 
-    await recordPlanQuotaOverride(staff, { organizationId: org.organizationId, planId, allowanceKey: 'voice_minutes', includedQuantity: 5000 });
+    await recordPlanQuotaOverride(seller, { organizationId: org.organizationId, planId, allowanceKey: 'voice_minutes', includedQuantity: 5000 });
 
     effective = await organizationEffectiveQuotas(org.db, { organizationId: org.organizationId });
     voice = effective.find((q) => q.allowanceKey === 'voice_minutes' && q.planKey === planKey)!;
@@ -363,45 +385,45 @@ describe('Plans and Add-ons', () => {
   it('keeps Plan price separate from Plan entitlements, and never sums Feature prices', async () => {
     const org = await newTenant('plan-price');
     const planKey = `price_${randomUUID().slice(0, 8)}`;
-    const planId = await createPlan(staff, { key: planKey, kind: 'plan', label: 'Price test', description: '', billable: true });
+    const planId = await createFixturePlan({ key: planKey, kind: 'plan', label: 'Price test', description: '', billable: true });
 
-    await recordPlanPrice(staff, { planId, currency: 'EUR', amountMinor: 29900, billingInterval: 'month', effectiveFrom: '2026-01-01T00:00:00Z', source: 'test' });
-    await recordPlanPrice(staff, { planId, currency: 'EUR', amountMinor: 34900, billingInterval: 'month', effectiveFrom: '2026-06-01T00:00:00Z', source: 'test' });
+    await priceFixturePlan({ planId, currency: 'EUR', amountMinor: 29900, billingInterval: 'month', effectiveFrom: '2026-01-01T00:00:00Z', source: 'test' });
+    await priceFixturePlan({ planId, currency: 'EUR', amountMinor: 34900, billingInterval: 'month', effectiveFrom: '2026-06-01T00:00:00Z', source: 'test' });
 
-    const prices = await listPlanPrices(staff, planId);
+    const prices = await listPlanPrices(seller, planId);
     expect(prices).toHaveLength(2);
     expect(prices.map((p) => p.amountMinor).sort()).toEqual([29900, 34900]);
 
-    await recordPlanAssignment(staff, { organizationId: org.organizationId, planId, periodStart: '2026-01-01', periodEnd: '9999-12-31' });
+    await recordPlanAssignment(seller, { organizationId: org.organizationId, planId, periodStart: '2026-01-01', periodEnd: '9999-12-31' });
 
-    const standard = await organizationPlanPrice(staff, { organizationId: org.organizationId, planId, at: '2026-03-01T00:00:00Z' });
+    const standard = await organizationPlanPrice(seller, { organizationId: org.organizationId, planId, at: '2026-03-01T00:00:00Z' });
     expect(standard).toMatchObject({ amountMinor: 29900, currency: 'EUR', source: 'standard' });
 
     // A negotiated agreement overrides the standard price without touching its history.
-    await recordPlanAgreement(staff, { organizationId: org.organizationId, planId, currency: 'EUR', amountMinor: 24900, effectiveFrom: '2026-10-01T00:00:00Z', note: 'negotiated' });
+    await recordPlanAgreement(seller, { organizationId: org.organizationId, planId, currency: 'EUR', amountMinor: 24900, effectiveFrom: '2026-10-01T00:00:00Z', note: 'negotiated' });
 
-    const agreed = await organizationPlanPrice(staff, { organizationId: org.organizationId, planId, at: '2026-11-01T00:00:00Z' });
+    const agreed = await organizationPlanPrice(seller, { organizationId: org.organizationId, planId, at: '2026-11-01T00:00:00Z' });
     expect(agreed).toMatchObject({ amountMinor: 24900, currency: 'EUR', source: 'agreement' });
 
     // Still effective before the agreement started, and the standard price rows are untouched.
-    const beforeAgreement = await organizationPlanPrice(staff, { organizationId: org.organizationId, planId, at: '2026-07-01T00:00:00Z' });
+    const beforeAgreement = await organizationPlanPrice(seller, { organizationId: org.organizationId, planId, at: '2026-07-01T00:00:00Z' });
     expect(beforeAgreement).toMatchObject({ amountMinor: 34900, source: 'standard' });
 
-    const stillTwo = await listPlanPrices(staff, planId);
+    const stillTwo = await listPlanPrices(seller, planId);
     expect(stillTwo).toHaveLength(2);
 
-    const agreements = await listOrganizationPlanAgreements(staff, { organizationId: org.organizationId, planId });
+    const agreements = await listOrganizationPlanAgreements(seller, { organizationId: org.organizationId, planId });
     expect(agreements).toHaveLength(1);
   });
 
   it('assigns GOLD Internal to an ordinary organization through the same door as any other Plan — no tenancy bypass', async () => {
     const org = await newTenant('dogfood-check');
     goldInternalHolders.push(org.organizationId);
-    const goldInternal = await getPlan(staff, 'gold_internal');
+    const goldInternal = await getPlan(seller, 'gold_internal');
     expect(goldInternal).toBeTruthy();
     expect(goldInternal?.billable).toBe(false);
 
-    await recordPlanAssignment(staff, { organizationId: org.organizationId, planId: goldInternal!.id, periodStart: '2026-01-01', periodEnd: '9999-12-31', note: 'dogfooding test' });
+    await recordPlanAssignment(seller, { organizationId: org.organizationId, planId: goldInternal!.id, periodStart: '2026-01-01', periodEnd: '9999-12-31', note: 'dogfooding test' });
 
     const entitlements = await organizationEffectiveEntitlements(org.db, { organizationId: org.organizationId });
     // GOLD Internal grants every Product's currently-available Features — this organization now sees a real, non-empty resolved set through the identical RPC any tenant's Plan uses.
@@ -412,8 +434,8 @@ describe('Plans and Add-ons', () => {
   it('resolves GOLD Internal available Features through the canonical Plan resolver', async () => {
     const org = await newTenant('gold-internal-resolver');
     goldInternalHolders.push(org.organizationId);
-    const goldInternal = await getPlan(staff, 'gold_internal');
-    await recordPlanAssignment(staff, {
+    const goldInternal = await getPlan(seller, 'gold_internal');
+    await recordPlanAssignment(seller, {
       organizationId: org.organizationId,
       planId: goldInternal!.id,
       periodStart: '2020-01-01',
@@ -460,9 +482,9 @@ describe('Plans and Add-ons', () => {
 
   it('never lets a tenant read another organization\'s Plan assignments, agreements or overrides', async () => {
     const planKey = `isolation_${randomUUID().slice(0, 8)}`;
-    const planId = await createPlan(staff, { key: planKey, kind: 'plan', label: 'Isolation test', description: '', billable: true });
-    await recordPlanAssignment(staff, { organizationId: tenant.organizationId, planId, periodStart: '2026-01-01', periodEnd: '9999-12-31' });
-    await recordPlanAgreement(staff, { organizationId: tenant.organizationId, planId, currency: 'EUR', amountMinor: 100, note: 'secret to this tenant' });
+    const planId = await createFixturePlan({ key: planKey, kind: 'plan', label: 'Isolation test', description: '', billable: true });
+    await recordPlanAssignment(seller, { organizationId: tenant.organizationId, planId, periodStart: '2026-01-01', periodEnd: '9999-12-31' });
+    await recordPlanAgreement(seller, { organizationId: tenant.organizationId, planId, currency: 'EUR', amountMinor: 100, note: 'secret to this tenant' });
 
     const crossAssignments = await currentPlanAssignment(other.db, { organizationId: tenant.organizationId });
     expect(crossAssignments).toBeNull();
