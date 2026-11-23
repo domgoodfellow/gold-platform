@@ -99,8 +99,8 @@ export function MarketingActions() {
       >
         Log in
       </Link>
-      <ButtonLink href="/demo" tone="primary" size="small" className="rounded-full px-4">
-        Request a consultation
+      <ButtonLink href="/pricing" tone="primary" size="small" className="rounded-full px-4">
+        Get started
       </ButtonLink>
 
       <Sheet>
@@ -148,7 +148,7 @@ export function MarketingActions() {
               <ButtonLink href="/login" tone="secondary" className="w-full">Log in</ButtonLink>
             </SheetClose>
             <SheetClose asChild>
-              <ButtonLink href="/demo" tone="primary" className="w-full">Request a consultation</ButtonLink>
+              <ButtonLink href="/pricing" tone="primary" className="w-full">Get started</ButtonLink>
             </SheetClose>
           </SheetFooter>
         </SheetContent>

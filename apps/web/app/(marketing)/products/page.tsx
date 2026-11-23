@@ -5,7 +5,7 @@ import { ArrowRight } from 'lucide-react';
 import { AvailabilityLabel } from '@/components/marketing/availability-label';
 import { CtaBand } from '@/features/marketing-site/closing';
 import { FOCUS_RING, cx } from '@/components/class-names';
-import { AVAILABILITY, OFFERING_GROUPS, consultationHref, offeringsIn } from '@/lib/marketing/content';
+import { AVAILABILITY, OFFERING_GROUPS, consultationHref, offeringsIn, pricingHref } from '@/lib/marketing/content';
 
 const DESCRIPTION = 'Every GildOps product: tools you can use on their own, AI and automation set up with you, and connected applications. What each does and what you need to start.';
 
@@ -34,8 +34,8 @@ export default function ProductsPage() {
           </h1>
           <p className="max-w-xl text-pretty text-lg leading-relaxed text-muted">
             Every product below works on its own. Each says whether you can have it today, what you
-            need to start, and what it works with if you add more later. Each is set up with you after
-            a consultation.
+            need to start, and what it works with if you add more later. Start on a plan that includes
+            it, or ask us about it first.
           </p>
           <nav aria-label="Product groups" className="flex flex-wrap gap-2 text-sm">
             {OFFERING_GROUPS.map((group) => (
@@ -83,6 +83,11 @@ export default function ProductsPage() {
                           <ArrowRight aria-hidden size={14} className="transition-transform motion-safe:group-hover:translate-x-0.5" />
                         </Link>
                       ) : null}
+                      {offering.availability === 'not_yet' ? null : (
+                        <Link href={pricingHref(offering)} className={cx('rounded font-medium underline underline-offset-4', FOCUS_RING)}>
+                          Get started
+                        </Link>
+                      )}
                       <Link href={consultationHref(offering)} className={cx('rounded text-muted underline underline-offset-4 hover:text-foreground', FOCUS_RING)}>
                         Ask about {offering.inSentence}
                       </Link>
@@ -107,9 +112,7 @@ export default function ProductsPage() {
 
       <CtaBand
         heading="Not sure which fits?"
-        body="Tell us the task you want help with. We'll say which product fits, what setting it up involves and what it costs."
-        secondaryHref="/how-it-works"
-        secondaryLabel="See how a project runs"
+        body="Compare the plans, or tell us the task you want help with and we'll say which fits."
       />
     </MarketingPage>
   );

@@ -11,8 +11,8 @@
  * **Never more than the catalogue says.** Each offering names the catalogue features its
  * description depends on and states its availability; `marketing-availability.test.ts` derives
  * that state from GildOps' commercial catalogue and fails when this file claims more. A claim that
- * rests on a feature the catalogue lists as planned is not made here. Prices are not published:
- * they are agreed in a quote, after a consultation.
+ * rests on a feature the catalogue lists as planned is not made here. Prices are not written here:
+ * `/pricing` reads them from GildOps' Finance through the public plan catalogue.
  */
 
 /**
@@ -24,8 +24,8 @@
 export type Availability = 'available' | 'testing' | 'not_yet';
 
 export const AVAILABILITY: Record<Availability, { label: string; note: string }> = {
-  available: { label: 'Available', note: 'We set it up with you after a consultation.' },
-  testing: { label: 'In testing', note: 'It works today and is still being tested. We set it up with you after a consultation.' },
+  available: { label: 'Available', note: 'Start on a plan that includes it, or talk to us first.' },
+  testing: { label: 'In testing', note: 'It works today and is still being tested.' },
   not_yet: { label: 'Not yet available', note: 'Not yet available to new businesses. Ask now and we’ll tell you when it can be set up for you.' },
 };
 
@@ -253,6 +253,17 @@ export function consultationHref(offering?: Pick<Offering, 'id'>): string {
   return offering ? `/demo?product=${offering.id}` : '/demo';
 }
 
+/** Where a visitor starts with an offering: the plans that include it. */
+export function pricingHref(offering?: Pick<Offering, 'id'>): string {
+  return offering ? `/pricing?product=${offering.id}` : '/pricing';
+}
+
+/** Whether a plan includes every catalogue product an offering's description depends on. */
+export function planIncludesOffering(plan: { products: { key: string }[] }, offering: Pick<Offering, 'catalogue'>): boolean {
+  const included = new Set(plan.products.map((product) => product.key));
+  return offering.catalogue.every((feature) => included.has(feature.split('.')[0]!));
+}
+
 /** Where an offering is read about: its own page, or its entry on `/products`. */
 export function offeringHref(offering: Offering): string {
   return offering.page ?? `/products#${offering.id}`;
@@ -439,32 +450,9 @@ export function productBySlug(slug: string): Product | undefined {
 }
 
 export const HOW_IT_WORKS_STEPS: { title: string; body: string }[] = [
-  { title: 'Tell us what needs fixing', body: 'A short conversation about the task you want help with, the tools you use today, and where they fall short.' },
-  { title: 'We set it up for your business', body: 'The products you chose, set up with your own numbers, wording, hours, prices and roles. Not a template.' },
+  { title: 'Choose a plan', body: 'Pick one on Pricing and create your account, or talk to us first if you would rather.' },
+  { title: 'Describe your business', body: 'A few lines about what you do. GildOps drafts your kinds of work, stages, prices and forms from it, and you change anything before it is applied.' },
   { title: 'Test it with your team', body: 'The people who will use it try it on real work, and anything an AI assistant says is reviewed, before customers see it.' },
-  { title: 'Launch', body: 'You decide when it’s ready. Nothing goes live before you’ve reviewed it.' },
+  { title: 'Launch', body: 'Pay for your plan and go live when you decide it’s ready. Nothing goes live before you’ve reviewed it.' },
   { title: 'Add more when it helps', body: 'Add another product when the business needs it. What is already set up stays as it is.' },
-];
-
-export interface PricingPackage {
-  key: 'start' | 'operate' | 'scale' | 'enterprise';
-  name: string;
-  summary: string;
-}
-
-export const PRICING_PACKAGES: PricingPackage[] = [
-  { key: 'start', name: 'Start', summary: 'For a smaller business beginning to run meaningful parts of its operation through GildOps.' },
-  { key: 'operate', name: 'Operate', summary: 'For an established small business running sales, work and finance together.' },
-  { key: 'scale', name: 'Scale', summary: 'For higher volume: more users, more automation and more included usage.' },
-  { key: 'enterprise', name: 'Enterprise', summary: 'Volume, allowances, onboarding, support and terms agreed with you.' },
-];
-
-export const PRICING_FACTORS: { title: string; body: string }[] = [
-  { title: 'Which products', body: 'A single tool such as online booking, AI and automation set up with you, or several connected applications.' },
-  { title: 'Which plan', body: 'Start, Operate, Scale or Enterprise. Enterprise is priced by agreement.' },
-  { title: 'Add-ons', body: 'Extra users and calling users, local phone numbers, AI Standard or AI Pro, advanced routing, premium support, and one-time implementation or migration.' },
-  { title: 'Team size', body: 'How many people need a seat in the workspace.' },
-  { title: 'Usage', body: 'Call minutes, messages and email volume.' },
-  { title: 'Managed setup', body: 'Whether GildOps sets up the workspace for you or your team does it directly.' },
-  { title: 'Integrations', body: 'Which of your existing tools and channels need connecting.' },
 ];

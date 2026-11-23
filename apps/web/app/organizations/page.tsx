@@ -3,6 +3,7 @@ import { PageHeading } from '@/components/surfaces/section';
 import { Button } from '@/components/controls/button';
 import { redirect } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
+import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { signOut } from '@/lib/domain/identity/credentials';
 import { requireActor } from '@/lib/domain/tenancy/actor';
@@ -10,7 +11,10 @@ import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
 import { callerOperatingOrganization } from '@/lib/domain/platform/operating-organization';
 import { organizationHomeHref } from '@/lib/navigation';
 import { firstReviewHref, readLastOrganizationId, resolveOrganizationsLanding } from '@/lib/route/landing';
-import { CreateBusinessForm } from './create-business-form';
+import { CreateBusinessForm, type FoundingPlan } from './create-business-form';
+import { publicPlanCatalog } from '@/lib/domain/catalogue/public-catalog';
+import { formatMoney } from '@/lib/domain/work-items/consumption';
+import { readChosenPlan } from '@/lib/route/chosen-plan';
 import { AccountAppearance } from '@/features/appearance/account-appearance';
 
 export const dynamic = 'force-dynamic';
@@ -55,7 +59,10 @@ export default async function OrganizationsPage() {
     lastOrganizationId: await readLastOrganizationId(),
   });
 
-  if (landing.kind === 'enter') {
+  const plan = await foundingPlan(db);
+
+  // A plan chosen on Pricing founds a new business here, even for someone who already runs one.
+  if (landing.kind === 'enter' && !plan) {
     redirect(await firstReviewHref(db, landing) ?? organizationHomeHref(landing.organizationId, landing.operationalState));
   }
 
@@ -81,7 +88,7 @@ export default async function OrganizationsPage() {
           moves, what you charge — comes next, and none of it is set in stone.
         </p>
 
-        <CreateBusinessForm />
+        <CreateBusinessForm plan={plan} />
 
         {/* Quieter than the form and below it, because it applies to a minority of readers and
             the ones it does not apply to should not have to read past it to reach the fields. */}
@@ -92,4 +99,14 @@ export default async function OrganizationsPage() {
       </div>
     </main></AccountAppearance>
   );
+}
+
+/** The plan chosen on Pricing, while it is still offered at a list price for its interval. */
+async function foundingPlan(db: Db): Promise<FoundingPlan | null> {
+  const chosen = await readChosenPlan();
+  if (!chosen) return null;
+  const plan = (await publicPlanCatalog(db)).find((entry) => entry.key === chosen.planKey && entry.kind === 'plan');
+  const price = plan?.prices.find((entry) => entry.billingInterval === chosen.billingInterval);
+  if (!plan || !price) return null;
+  return { ...chosen, label: plan.label, price: formatMoney(price.amountMinor, price.currency) };
 }

@@ -4,6 +4,7 @@ import { organizationHomeHref } from '@/lib/navigation';
 import { cookies } from 'next/headers';
 import { LAST_ORGANIZATION_COOKIE } from '@/lib/route/last-organization';
 import { consumePendingInviteDestination } from '@/lib/route/pending-invite';
+import { readChosenPlan } from '@/lib/route/chosen-plan';
 import type { Db } from '@/lib/db/types';
 import type { OperationalState } from '@/lib/domain/tenancy/lifecycle';
 import { awaitsFirstReview, currentConfigurationProposal } from '@/lib/domain/configuration/proposals';
@@ -84,6 +85,8 @@ export async function readLastOrganizationId(): Promise<string | null> {
 export async function resolvePostAuthDestination(db: Db): Promise<string> {
   const invite = await consumePendingInviteDestination();
   if (invite) return invite;
+  // A plan chosen on Pricing founds a new business, even for someone who already runs one.
+  if (await readChosenPlan()) return '/organizations';
 
   const [organizations, preferredOrganization] = await Promise.all([listMyOrganizations(db), callerOperatingOrganization(db)]);
   return entryDestination(

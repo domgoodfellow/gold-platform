@@ -1,9 +1,11 @@
 import { AppPage } from '@/components/layout/app-page';
 import { PageHeader } from '@/components/headers/page-header';
-import { EmptyState } from '@/components/surfaces/section';
+import { EmptyState, SectionHeading } from '@/components/surfaces/section';
 import { requireOrganization } from '@/lib/route/organization';
 import {
+  canDraftConfiguration,
   currentConfigurationProposal,
+  mayDraftSetup,
   listCopySources,
   listIndustryTemplates,
   suggestedTemplateKey,
@@ -14,6 +16,7 @@ import { organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organi
 import { listCatalogFeatures, listCatalogModules, listCatalogProducts } from '@/lib/domain/catalogue/catalogue';
 import { getOrganizationIdentity } from '@/lib/domain/tenancy/identity';
 import { ProposalReview, StartingPointChooser } from '@/features/setup/proposal-review';
+import { DescribeForm } from '@/features/setup/describe-form';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,12 +48,28 @@ export default async function ConfigurationProposalPage({ params }: PageProps<'/
         <EmptyState>No proposed setup is waiting.</EmptyState>
       </AppPage>;
     }
-    const [templates, identity, businesses] = await Promise.all([
+    const [templates, identity, businesses, drafting, mayDraft] = await Promise.all([
       listIndustryTemplates(db), getOrganizationIdentity(db, organizationId), listCopySources(db, { organizationId }),
+      canDraftConfiguration(), mayDraftSetup(db, { organizationId }),
     ]);
+    const chooser = <StartingPointChooser organizationId={organizationId} templates={templates} businesses={businesses} suggested={suggestedTemplateKey(templates, identity.industry)} />;
+    // Describing the business comes first wherever drafting will work; the templates stay beside it.
+    if (!drafting || !mayDraft) {
+      return <AppPage>
+        <PageHeader title="Choose a starting point" crumbs={crumbs} />
+        {chooser}
+      </AppPage>;
+    }
     return <AppPage>
       <PageHeader title="Choose a starting point" crumbs={crumbs} />
-      <StartingPointChooser organizationId={organizationId} templates={templates} businesses={businesses} suggested={suggestedTemplateKey(templates, identity.industry)} />
+      <section aria-labelledby="describe-heading">
+        <SectionHeading id="describe-heading">Describe your business</SectionHeading>
+        <DescribeForm organizationId={organizationId} refining={false} disabled={false} />
+      </section>
+      <section aria-labelledby="templates-heading" className="mt-10">
+        <SectionHeading id="templates-heading">Or start from</SectionHeading>
+        {chooser}
+      </section>
     </AppPage>;
   }
 

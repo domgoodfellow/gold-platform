@@ -2,12 +2,12 @@ import { MarketingPage, MarketingSection } from '@/components/marketing/marketin
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
-import { ButtonLink } from '@/components/controls/button';
 import { AvailabilityLabel } from '@/components/marketing/availability-label';
 import { CtaBand } from '@/features/marketing-site/closing';
+import { StartActions } from '@/features/marketing-site/start-actions';
 import { FaqSection, faqStructuredData } from '@/components/marketing/faq-section';
 import { FOCUS_RING, cx } from '@/components/class-names';
-import { AVAILABILITY, DIALER, OFFERINGS, consultationHref, offeringById, offeringHref } from '@/lib/marketing/content';
+import { AVAILABILITY, DIALER, OFFERINGS, offeringById, offeringHref } from '@/lib/marketing/content';
 import { canonicalUrl } from '@/lib/seo/site';
 
 const DESCRIPTION = 'Make and take business calls in the browser, work through a call list, transfer calls and record how each one went. Use it on its own or with other GildOps products.';
@@ -57,7 +57,7 @@ export default function DialerPage() {
             <p className="max-w-xl text-pretty text-sm leading-relaxed text-muted">{AVAILABILITY[OFFERING.availability].note}</p>
           )}
           <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-center">
-            <ButtonLink href={consultationHref(OFFERING)} tone="primary">Ask about {OFFERING.inSentence}</ButtonLink>
+            <StartActions offering={OFFERING} />
             <a href="#compare" className={cx('rounded text-sm font-medium text-muted hover:text-foreground', FOCUS_RING)}>
               How it differs from the AI receptionist
             </a>

@@ -42,10 +42,8 @@ export default function HowItWorksPage() {
       </MarketingSection>
 
       <CtaBand
-        heading="Ready to see it against your own business?"
-        body="Tell us how you run today — we'll show you the parts of GildOps that fit."
-        secondaryHref="/pricing"
-        secondaryLabel="See pricing"
+        heading="Ready to set it up for your own business?"
+        body="Choose a plan, describe your business and check the setup GildOps drafts. Or tell us how you run today."
       />
     </MarketingPage>
   );

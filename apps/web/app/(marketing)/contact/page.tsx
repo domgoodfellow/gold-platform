@@ -73,7 +73,7 @@ export default async function ContactPage() {
 
       <CtaBand
         heading="Want to see GildOps on your business?"
-        body="Tell us how you run today and we’ll show you the parts of GildOps that fit it."
+        body="Choose a plan and start today, or tell us how you run and we’ll show you the parts that fit."
       />
     </MarketingPage>
   );

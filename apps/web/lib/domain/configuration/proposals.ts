@@ -172,6 +172,16 @@ export async function canDraftConfiguration(): Promise<boolean> {
 }
 
 /**
+ * Whether this business holds setup drafting (every business is founded with it), so a screen
+ * offers the description box only where the drafting runtime will accept it.
+ */
+export async function mayDraftSetup(db: Db, input: { organizationId: string }): Promise<boolean> {
+  const { data, error } = await db.rpc('organization_module_entitled', { p_organization_id: input.organizationId, p_module_key: 'drafting' });
+  if (error) throw fromDatabaseError(error, 'proposals.may_draft_failed');
+  return data === true;
+}
+
+/**
  * Ask for a proposal, and write down what came back. The description is stored exactly as
  * written — a paraphrase couldn't answer "did it understand me". `previous` makes this a
  * refinement rather than a restart: answering a question the last proposal asked carries the

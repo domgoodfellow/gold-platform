@@ -16411,6 +16411,14 @@ export type Database = {
         Args: { p_status_id: string; p_work_item_id: string }
         Returns: undefined
       }
+      choose_platform_plan: {
+        Args: {
+          p_billing_interval?: string
+          p_organization_id: string
+          p_plan_key: string
+        }
+        Returns: string
+      }
       claim_conversation: {
         Args: { p_conversation_id: string; p_organization_id: string }
         Returns: boolean
@@ -18693,16 +18701,6 @@ export type Database = {
           p_scenario: string
           p_source: string
           p_utilization: number
-        }
-        Returns: string
-      }
-      record_platform_billing_notice: {
-        Args: {
-          p_customer_reference: string
-          p_environment?: string
-          p_event_reference: string
-          p_event_type: string
-          p_provider?: string
         }
         Returns: string
       }

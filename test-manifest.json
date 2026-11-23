@@ -2082,6 +2082,14 @@
         "security"
       ]
     },
+    "apps/web/tests/integration/database/self-serve-plans.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "billing",
+        "pricing",
+        "security"
+      ]
+    },
     "apps/web/tests/integration/database/finance-recurring-items.test.ts": {
       "category": "database-integration",
       "concerns": [
@@ -2918,6 +2926,13 @@
     "apps/web/tests/architecture/static/invoice-document-writer.test.ts": {"category": "architecture-static", "concerns": ["billing", "documents", "security", "architecture"], "note": "The trusted invoice-document boundary (Work Order 2G.1): apps/api's writer bundle is regenerated from apps/web's composition and layout and is not stale; apps/web source names no writer role, writer identity, service or secret key, writer recording function or storage write into finance-documents; the signing secret stays in apps/api's writer with a 60-second token, and the HTTP handler never reads it."},
     "apps/web/tests/unit/invoice-document.test.ts": {"category": "unit", "concerns": ["billing", "documents", "branding"], "note": "The invoice document and built-in PDF layout (Work Order 2G): amounts through the one price calculation with no tax invented, no payment status on the document, so it states the invoice as issued whenever it is drawn, dates in the business clock, seller and bill-to as recorded, a too-light brand colour darkened to readable contrast, a plain layout without today's brand for an invoice with no presentation, PNG/JPEG-only logos by bytes; a valid readable PDF with French accents, a DRAFT mark with no number, a 120-line invoice across pages with repeated line headings, wrapped long descriptions and page totals, a name fallback with no logo, and no personal Appearance dependency."},
     "apps/web/tests/unit/subscriptions.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "billing",
+        "pricing"
+      ]
+    },
+    "apps/web/tests/unit/self-serve.test.ts": {
       "category": "unit",
       "concerns": [
         "billing",

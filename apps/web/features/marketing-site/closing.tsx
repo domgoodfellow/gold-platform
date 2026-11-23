@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { ButtonLink } from '@/components/controls/button';
-import { consultationHref, type Offering } from '@/lib/marketing/content';
+import { consultationHref, pricingHref, type Offering } from '@/lib/marketing/content';
 import { FragmentGroup } from '@/features/visual-composition/fragment-group';
 import { CLOSING } from './compositions';
 import { MarketingSection } from '@/components/marketing/marketing-page';
@@ -55,29 +55,42 @@ export function ClosingComposition({ id, heading, body, primary, secondary }: {
 }
 
 /**
- * The repeated final conversion band, the same visual weight everywhere it appears. On a product's
- * page it names that product, so the consultation form opens with it already chosen.
+ * The repeated final conversion band, the same visual weight everywhere it appears. Its main
+ * action starts: the plans, narrowed to a product's on that product's page. Talking to GildOps is
+ * the quieter link, with the product already chosen. A product not yet available is only asked
+ * about.
  */
 export function CtaBand({
   heading,
   body,
   product,
-  secondaryHref = '/how-it-works',
-  secondaryLabel = 'See how it works',
+  primaryHref,
+  primaryLabel,
+  secondaryHref,
+  secondaryLabel,
 }: {
   heading: string;
   body: string;
-  product?: Pick<Offering, 'id' | 'inSentence'>;
+  product?: Pick<Offering, 'id' | 'inSentence' | 'availability'>;
+  primaryHref?: string;
+  primaryLabel?: string;
   secondaryHref?: string;
   secondaryLabel?: string;
 }) {
+  const ask = { href: consultationHref(product), label: product ? `Ask about ${product.inSentence}` : 'Talk to us' };
+  const primary = primaryHref && primaryLabel
+    ? { href: primaryHref, label: primaryLabel }
+    : product?.availability === 'not_yet' ? ask : { href: pricingHref(product), label: 'Get started' };
+  const secondary = secondaryHref && secondaryLabel
+    ? { href: secondaryHref, label: secondaryLabel }
+    : primary.href === ask.href ? { href: '/how-it-works', label: 'See how it works' } : ask;
   return (
     <ClosingComposition
       id={`closing-${product?.id ?? 'page'}`}
       heading={heading}
       body={body}
-      primary={{ href: consultationHref(product), label: product ? `Ask about ${product.inSentence}` : 'Request a consultation' }}
-      secondary={{ href: secondaryHref, label: secondaryLabel }}
+      primary={primary}
+      secondary={secondary}
     />
   );
 }

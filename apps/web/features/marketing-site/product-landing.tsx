@@ -1,10 +1,10 @@
 import { MarketingPage, MarketingSection } from '@/components/marketing/marketing-page';
 import { CtaBand } from './closing';
+import { StartActions } from './start-actions';
 import { FaqSection, faqStructuredData } from '@/components/marketing/faq-section';
-import { ButtonLink } from '@/components/controls/button';
 import { AvailabilityLabel } from '@/components/marketing/availability-label';
 import { canonicalUrl } from '@/lib/seo/site';
-import { AVAILABILITY, consultationHref, offeringById, type Product } from '@/lib/marketing/content';
+import { AVAILABILITY, offeringById, type Product } from '@/lib/marketing/content';
 
 /**
  * The shared skeleton for the connected applications, `/sales`, `/operations` and
@@ -43,7 +43,7 @@ export function ProductLanding({ product }: { product: Product }) {
             {offering.availability === 'available' ? null : (
               <p className="max-w-xl text-pretty text-sm leading-relaxed text-muted">{AVAILABILITY[offering.availability].note}</p>
             )}
-            <ButtonLink href={consultationHref(offering)} tone="primary">Ask about {offering.inSentence}</ButtonLink>
+            <StartActions offering={offering} />
           </div>
         </section>
       </MarketingSection>
@@ -106,8 +106,10 @@ export function ProductLanding({ product }: { product: Product }) {
       </MarketingSection> : null}
 
       <CtaBand
-        heading={`Talk to us about ${product.name}.`}
-        body={`Tell us how your business works today. We'll say what setting up ${product.name} involves, what it costs and when it can be ready.`}
+        heading={offering.availability === 'not_yet' ? `Talk to us about ${product.name}.` : `Start with ${product.name}.`}
+        body={offering.availability === 'not_yet'
+          ? `Tell us how your business works today. We'll say what setting up ${product.name} involves, what it costs and when it can be ready.`
+          : 'Choose a plan that includes it, describe your business, and check the setup GildOps drafts before it is applied.'}
         product={offering}
       />
     </MarketingPage>

@@ -27,10 +27,11 @@ const seededSections = JSON.parse(/select \$json\$([\s\S]*?)\$json\$::jsonb/.exe
 const sections = seededSections.map((section) => WebsiteSectionSchema.parse({ ...section, id: '00000000-0000-4000-8000-000000000000' }));
 
 describe('the homepage has one conversion priority', () => {
-  it('uses the real demo intake for every primary marketing action', () => {
-    expect(nav).toMatch(/ButtonLink href="\/demo"/);
+  // Buying starts on Pricing (owner decision, 2026-11-23); talking to GildOps first stays one link away.
+  it('starts from Pricing in the header, and every primary homepage action leads to starting or talking', () => {
+    expect(nav).toMatch(/ButtonLink href="\/pricing"/);
     for (const section of sections) {
-      if (section.kind === 'hero' || section.kind === 'cta') expect(section.primaryCta.href).toBe('/demo');
+      if (section.kind === 'hero' || section.kind === 'cta') expect(['/pricing', '/demo']).toContain(section.primaryCta.href);
     }
   });
 

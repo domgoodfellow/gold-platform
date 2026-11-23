@@ -32,6 +32,8 @@ const PUBLIC_PATHS = [
   '/how-it-works',
   '/integrations',
   '/pricing',
+  // A plan's Start on Pricing: remembers the plan and sends the visitor on to sign up.
+  '/start',
   '/demo',
   '/contact',
   '/privacy',

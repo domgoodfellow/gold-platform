@@ -22,7 +22,8 @@ export const LEGAL_LINKS = [
 
 export const ACCOUNT_LINKS = [
   { href: '/login', label: 'Log in' },
-  { href: '/demo', label: 'Request a consultation' },
+  { href: '/pricing', label: 'Get started' },
+  { href: '/demo', label: 'Talk to us' },
 ] as const;
 
 /** The overview of everything GildOps offers; the Products menu and the footer both lead to it. */

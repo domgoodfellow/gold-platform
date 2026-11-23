@@ -89,7 +89,7 @@ A second business goes from enquiry to making calls with no code changes, no dat
 
 Done when:
 
-1. A consultation request becomes a contact in GildOps' CRM.
+1. A consultation request becomes a contact in GildOps' CRM, and a business that chooses a plan on Pricing becomes one when it is founded.
 2. An accepted deal creates the customer's business with the Dialer plan from one action.
 3. The business gets its calling account and a number from inside GildOps, including searching for and buying the number.
 4. The owner is invited, signs in and lands in the Dialer.

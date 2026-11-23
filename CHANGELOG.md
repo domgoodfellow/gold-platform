@@ -32,6 +32,11 @@ Entries describe the product or operational change, not every file touched.
 
 ---
 
+## 2026-11-23
+
+- GildOps can be bought without a consultation. Pricing lists GildOps' plans and add-ons at the prices Finance holds; a plan's Start leads to sign-up and founding a business, which is put on that plan as a GildOps subscription and customer. Paying stays the checkout in Plan & usage, required before launch. The header and product pages lead with Get started; asking about a product stays one link away.
+- A new business's starting point opens with Describe your business, which drafts its setup for review; templates and copying another business stay beside it.
+
 ## 2026-11-22
 
 - Every business can sell subscriptions. Finance → Subscriptions is now part of Gild Finance: New subscription chooses one of the business's customers, a recurring item from Catalog & Pricing, monthly or yearly billing, the start and an optional end, the quantity and an optional agreed price. A subscription's record shows what it is for and pays, and changes it from a date (change item, add or end an add-on, agree a price or return to the list price, end the subscription); Invoice next period issues an ordinary invoice for each period once. GildOps sells its plans with the same subscriptions; subscribing a business's GildOps customer to a plan switches the plan on for that business and follows the subscription's dates. Existing plan holders and agreed prices became subscriptions and agreed prices with nothing recalculated.
