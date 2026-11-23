@@ -16,6 +16,7 @@ const APPLICATION_LABEL: Record<string, string> = {
   applied: 'Applied',
   stale: 'Older than state held',
   ambiguous: 'Conflicting, not applied',
+  unmatched: 'No subscription to match',
 };
 
 /**

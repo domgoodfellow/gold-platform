@@ -119,20 +119,16 @@ describe('schema conformance', () => {
     //     customer reference: a signed processor event arrives holding a price reference and its
     //     environment, with no business in hand, and must resolve it to exactly one price. Scoping it
     //     by `organization_id` would let two businesses map one processor price.
-    //   * `platform_retail_rates_id_meter_currency_unique` is the inverse case: not an outsider's
-    //     secret, but a row that may belong to *no* tenant at all. `platform_retail_rates` gained
-    //     an optional `organization_id` in `20261018000001` for a negotiated override; most rows
-    //     are still the platform-default rate, shared by every business, with `organization_id`
-    //     null. This constraint exists only so `usage_events_retail_rate_matches` (the same-organization reference rule's own named
-    //     exception, below) has a composite key to point at, and `id` already makes it globally
-    //     collision-proof regardless of tenant — leading it with `organization_id` would buy
-    //     nothing tenant isolation exists to prevent, since no two tenants' rows can collide here either way.
-    //     `20261022000007` records why forcing the alternative would actually be wrong: it would
-    //     require every usage event to match a retail-rate row carrying its *own* organization_id,
-    //     but the row nearly every usage event prices against is the shared default, whose
-    //     `organization_id` is null by construction — a composite FK on that shape could never
-    //     match a real tenant id against a null, so it would refuse to record usage the moment no
-    //     negotiated rate existed for that tenant, which is the common case.
+    //   * `price_book_item_usage_prices_id_meter_currency_unique` (formerly
+    //     `platform_retail_rates_id_meter_currency_unique`) exists only so
+    //     `usage_events_retail_rate_matches` (the same-organization reference rule's own named
+    //     exception, below) has a composite key to point at. A usage price belongs to the business
+    //     that sells the plan, while the usage event belongs to the business that used it, so the
+    //     two never share an `organization_id`; `id` already makes the key collision-proof.
+    //   * `organization_plan_assignments_line_unique`: a subscription line of the business that sells
+    //     GildOps provisions at most one entitlement, in whichever business bought it (ADR-057). The
+    //     line belongs to the seller and the entitlement to the buyer, so the uniqueness is the
+    //     line's own and cannot be scoped by the buyer's `organization_id`.
     //
     // Named individually rather than excluded by a pattern, so a tenth cannot arrive quietly
     // by matching a rule somebody loosened. A new entry here should have to argue for itself.
@@ -168,19 +164,24 @@ describe('schema conformance', () => {
         first: 'token_hash',
       },
       {
+        table_name: 'organization_plan_assignments',
+        index_name: 'organization_plan_assignments_line_unique',
+        first: 'subscription_line_id',
+      },
+      {
         table_name: 'platform_billing_customers',
         index_name: 'platform_billing_customers_finalized_reference',
         first: 'provider',
       },
       {
-        table_name: 'platform_retail_rates',
-        index_name: 'platform_retail_rates_id_meter_currency_unique',
-        first: 'id',
-      },
-      {
         table_name: 'price_book_item_provider_prices',
         index_name: 'platform_plan_provider_prices_reference_unique',
         first: 'environment',
+      },
+      {
+        table_name: 'price_book_item_usage_prices',
+        index_name: 'price_book_item_usage_prices_id_meter_currency_unique',
+        first: 'id',
       },
     ]);
   });
@@ -362,23 +363,27 @@ describe('schema conformance', () => {
         order by c.conname`,
     );
 
-    // **One exception, for the reason `platform_retail_rates_id_meter_currency_unique` is named
-    // above, the same fact seen from the referencing side.** `usage_events_retail_rate_matches`
-    // points at a row that may belong to no tenant at all — the shared platform-default rate —
-    // not at another tenant's own row. Composite-with-`organization_id` would require that shared
-    // row's `organization_id` (null) to equal the usage event's own (never null), which can never
-    // be true; every usage event once no negotiated rate exists for its organization — the common
-    // case — would then be refused rather than recorded. `20261022000007` records the full
-    // reasoning and the real bug its investigation found (`app.retail_rate_at` resolving with no
-    // regard to organization at all, which is what RLS cannot catch on this side either, since the
-    // function runs as its own definer rather than through a row a policy could refuse).
+    // **One exception, for the reason `price_book_item_usage_prices_id_meter_currency_unique` is
+    // named above, the same fact seen from the referencing side.** `usage_events_retail_rate_matches`
+    // points from the business that used a meter to the usage price of the plan that business
+    // holds, which belongs to the business that sells the plan (ADR-057). The two
+    // `organization_id`s differ by construction, so a composite key could never match. The price
+    // is chosen by `app.usage_price_at`, which runs as its definer and finds it only through the
+    // plans the using business holds.
     //
-    // **A second, for the buyer and the seller of GildOps.** `platform_billing_checkout_sessions`
-    // belongs to the business buying a plan; the plan price it captured belongs to the business
-    // that sells GildOps (ADR-057), so the two `organization_id`s differ by construction. No
-    // signed-in role can write a session (only the billing service does, through the API), and a
-    // price is resolved by the operating Organization's own price book before the session exists.
+    // **The buyer and the seller of GildOps, three times.** Each of these points from a record
+    // of the business buying a plan to a record of the business that sells GildOps (ADR-057), so
+    // the two `organization_id`s differ by construction:
+    //   * `platform_billing_checkout_sessions` belongs to the buyer; the plan price it captured to
+    //     the seller. No signed-in role can write a session (only the billing service does).
+    //   * `organization_plan_assignments.subscription_line_id`: the buyer's entitlement names the
+    //     seller's subscription line it carries out. Only the platform integration writes it.
+    //   * `organization_plan_agreement_provider_prices.agreement_id`: the billing provider's price
+    //     for the buyer names the seller's agreed subscription price it charges. Only the seller's
+    //     subscription managers record it, through a definer door.
     expect(rows).toEqual([
+      { constraint_name: 'organization_plan_agreement_provider_prices_agreed_price_fkey', table_name: 'organization_plan_agreement_provider_prices' },
+      { constraint_name: 'organization_plan_assignments_subscription_line_id_fkey', table_name: 'organization_plan_assignments' },
       { constraint_name: 'platform_billing_checkout_sessions_plan_price_id_fkey', table_name: 'platform_billing_checkout_sessions' },
       { constraint_name: 'usage_events_retail_rate_matches', table_name: 'usage_events' },
     ]);

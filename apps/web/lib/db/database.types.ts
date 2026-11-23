@@ -6216,8 +6216,17 @@ export type Database = {
           issued_at: string
           number: number
           organization_id: string
+          period_end: string | null
+          period_start: string | null
           proposal_id: string | null
+          provider: string | null
+          provider_environment: string | null
+          provider_number: string | null
+          provider_reference: string | null
+          provider_url: string | null
           source: string
+          subscription_id: string | null
+          voided_at: string | null
           work_item_id: string | null
         }
         Insert: {
@@ -6232,8 +6241,17 @@ export type Database = {
           issued_at?: string
           number: number
           organization_id: string
+          period_end?: string | null
+          period_start?: string | null
           proposal_id?: string | null
+          provider?: string | null
+          provider_environment?: string | null
+          provider_number?: string | null
+          provider_reference?: string | null
+          provider_url?: string | null
           source?: string
+          subscription_id?: string | null
+          voided_at?: string | null
           work_item_id?: string | null
         }
         Update: {
@@ -6248,8 +6266,17 @@ export type Database = {
           issued_at?: string
           number?: number
           organization_id?: string
+          period_end?: string | null
+          period_start?: string | null
           proposal_id?: string | null
+          provider?: string | null
+          provider_environment?: string | null
+          provider_number?: string | null
+          provider_reference?: string | null
+          provider_url?: string | null
           source?: string
+          subscription_id?: string | null
+          voided_at?: string | null
           work_item_id?: string | null
         }
         Relationships: [
@@ -6293,6 +6320,13 @@ export type Database = {
             columns: ["organization_id", "proposal_id"]
             isOneToOne: false
             referencedRelation: "customer_commercial_proposals"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "invoices_subscription_same_org"
+            columns: ["organization_id", "subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
             referencedColumns: ["organization_id", "id"]
           },
           {
@@ -8145,71 +8179,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "organization_plan_agreement_provider_prices_agreement_fk"
-            columns: ["organization_id", "agreement_id"]
+            foreignKeyName: "organization_plan_agreement_provider_prices_agreed_price_fkey"
+            columns: ["agreement_id"]
             isOneToOne: false
-            referencedRelation: "organization_plan_agreements"
-            referencedColumns: ["organization_id", "id"]
-          },
-        ]
-      }
-      organization_plan_agreements: {
-        Row: {
-          amount_minor: number
-          currency: string
-          effective_from: string
-          effective_to: string | null
-          id: string
-          note: string
-          organization_id: string
-          plan_id: string
-          recorded_at: string
-          recorded_by: string
-        }
-        Insert: {
-          amount_minor: number
-          currency: string
-          effective_from?: string
-          effective_to?: string | null
-          id?: string
-          note?: string
-          organization_id: string
-          plan_id: string
-          recorded_at?: string
-          recorded_by: string
-        }
-        Update: {
-          amount_minor?: number
-          currency?: string
-          effective_from?: string
-          effective_to?: string | null
-          id?: string
-          note?: string
-          organization_id?: string
-          plan_id?: string
-          recorded_at?: string
-          recorded_by?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "organization_plan_agreements_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "organization_plan_agreements_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "platform_tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "organization_plan_agreements_plan_id_fkey"
-            columns: ["plan_id"]
-            isOneToOne: false
-            referencedRelation: "platform_plans"
+            referencedRelation: "subscription_agreed_prices"
             referencedColumns: ["id"]
           },
         ]
@@ -8225,6 +8198,7 @@ export type Database = {
           period_start: string
           plan_id: string
           plan_kind: string
+          subscription_line_id: string | null
         }
         Insert: {
           assigned_at?: string
@@ -8236,6 +8210,7 @@ export type Database = {
           period_start: string
           plan_id: string
           plan_kind: string
+          subscription_line_id?: string | null
         }
         Update: {
           assigned_at?: string
@@ -8247,6 +8222,7 @@ export type Database = {
           period_start?: string
           plan_id?: string
           plan_kind?: string
+          subscription_line_id?: string | null
         }
         Relationships: [
           {
@@ -8268,6 +8244,13 @@ export type Database = {
             columns: ["plan_id"]
             isOneToOne: false
             referencedRelation: "platform_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_plan_assignments_subscription_line_id_fkey"
+            columns: ["subscription_line_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_lines"
             referencedColumns: ["id"]
           },
         ]
@@ -10711,89 +10694,6 @@ export type Database = {
         }
         Relationships: []
       }
-      platform_retail_rates: {
-        Row: {
-          approval_state: string
-          billing_interval: string | null
-          captured_at: string
-          currency: string
-          effective_from: string
-          effective_to: string | null
-          id: string
-          meter_id: string
-          note: string
-          organization_id: string | null
-          plan_id: string | null
-          recorded_by: string | null
-          source: string
-          source_url: string | null
-          unit_amount_micros: number
-        }
-        Insert: {
-          approval_state?: string
-          billing_interval?: string | null
-          captured_at?: string
-          currency: string
-          effective_from?: string
-          effective_to?: string | null
-          id?: string
-          meter_id: string
-          note?: string
-          organization_id?: string | null
-          plan_id?: string | null
-          recorded_by?: string | null
-          source: string
-          source_url?: string | null
-          unit_amount_micros: number
-        }
-        Update: {
-          approval_state?: string
-          billing_interval?: string | null
-          captured_at?: string
-          currency?: string
-          effective_from?: string
-          effective_to?: string | null
-          id?: string
-          meter_id?: string
-          note?: string
-          organization_id?: string | null
-          plan_id?: string | null
-          recorded_by?: string | null
-          source?: string
-          source_url?: string | null
-          unit_amount_micros?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "platform_retail_rates_meter_id_fkey"
-            columns: ["meter_id"]
-            isOneToOne: false
-            referencedRelation: "platform_meters"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "platform_retail_rates_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "platform_retail_rates_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "platform_tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "platform_retail_rates_plan_id_fkey"
-            columns: ["plan_id"]
-            isOneToOne: false
-            referencedRelation: "platform_plans"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       platform_settings: {
         Row: {
           gold_public_organization_id: string | null
@@ -11358,6 +11258,96 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "price_book_item_prices"
             referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      price_book_item_usage_prices: {
+        Row: {
+          approval_state: string
+          captured_at: string
+          currency: string
+          effective_from: string
+          effective_to: string | null
+          id: string
+          item_id: string | null
+          meter_id: string
+          note: string
+          organization_id: string | null
+          recorded_by: string | null
+          source: string
+          source_url: string | null
+          subscription_line_id: string | null
+          unit_amount_micros: number
+        }
+        Insert: {
+          approval_state?: string
+          captured_at?: string
+          currency: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          item_id?: string | null
+          meter_id: string
+          note?: string
+          organization_id?: string | null
+          recorded_by?: string | null
+          source: string
+          source_url?: string | null
+          subscription_line_id?: string | null
+          unit_amount_micros: number
+        }
+        Update: {
+          approval_state?: string
+          captured_at?: string
+          currency?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          item_id?: string | null
+          meter_id?: string
+          note?: string
+          organization_id?: string | null
+          recorded_by?: string | null
+          source?: string
+          source_url?: string | null
+          subscription_line_id?: string | null
+          unit_amount_micros?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_book_item_usage_prices_item_same_org"
+            columns: ["organization_id", "item_id"]
+            isOneToOne: false
+            referencedRelation: "price_book_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "price_book_item_usage_prices_line_same_org"
+            columns: ["organization_id", "subscription_line_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_lines"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "price_book_item_usage_prices_meter_id_fkey"
+            columns: ["meter_id"]
+            isOneToOne: false
+            referencedRelation: "platform_meters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_book_item_usage_prices_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_book_item_usage_prices_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -12814,6 +12804,225 @@ export type Database = {
           },
         ]
       }
+      subscription_agreed_prices: {
+        Row: {
+          amount_minor: number
+          currency: string
+          effective_from: string
+          effective_to: string | null
+          id: string
+          line_id: string
+          note: string
+          organization_id: string
+          recorded_at: string
+          recorded_by: string
+        }
+        Insert: {
+          amount_minor: number
+          currency: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          line_id: string
+          note?: string
+          organization_id: string
+          recorded_at?: string
+          recorded_by: string
+        }
+        Update: {
+          amount_minor?: number
+          currency?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          line_id?: string
+          note?: string
+          organization_id?: string
+          recorded_at?: string
+          recorded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_agreed_prices_line_same_org"
+            columns: ["organization_id", "line_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_lines"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "subscription_agreed_prices_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_agreed_prices_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_lines: {
+        Row: {
+          ends_on: string | null
+          id: string
+          item_id: string
+          note: string
+          organization_id: string
+          quantity: number
+          recorded_at: string
+          recorded_by: string
+          role: string
+          starts_on: string
+          subscription_id: string
+        }
+        Insert: {
+          ends_on?: string | null
+          id?: string
+          item_id: string
+          note?: string
+          organization_id: string
+          quantity?: number
+          recorded_at?: string
+          recorded_by: string
+          role: string
+          starts_on: string
+          subscription_id: string
+        }
+        Update: {
+          ends_on?: string | null
+          id?: string
+          item_id?: string
+          note?: string
+          organization_id?: string
+          quantity?: number
+          recorded_at?: string
+          recorded_by?: string
+          role?: string
+          starts_on?: string
+          subscription_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_lines_item_same_org"
+            columns: ["organization_id", "item_id"]
+            isOneToOne: false
+            referencedRelation: "price_book_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "subscription_lines_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_lines_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_lines_subscription_same_org"
+            columns: ["organization_id", "subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          billing_interval: string
+          cancel_reason: string
+          canceled_at: string | null
+          canceled_by: string | null
+          collection: string
+          created_at: string
+          created_by: string
+          currency: string
+          customer_id: string
+          ends_on: string | null
+          id: string
+          note: string
+          organization_id: string
+          starts_on: string
+        }
+        Insert: {
+          billing_interval: string
+          cancel_reason?: string
+          canceled_at?: string | null
+          canceled_by?: string | null
+          collection?: string
+          created_at?: string
+          created_by: string
+          currency: string
+          customer_id: string
+          ends_on?: string | null
+          id?: string
+          note?: string
+          organization_id: string
+          starts_on: string
+        }
+        Update: {
+          billing_interval?: string
+          cancel_reason?: string
+          canceled_at?: string | null
+          canceled_by?: string | null
+          collection?: string
+          created_at?: string
+          created_by?: string
+          currency?: string
+          customer_id?: string
+          ends_on?: string | null
+          id?: string
+          note?: string
+          organization_id?: string
+          starts_on?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "subscriptions_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "subscriptions_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "subscriptions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_case_counters: {
         Row: {
           last_number: number
@@ -13730,7 +13939,7 @@ export type Database = {
             foreignKeyName: "usage_events_retail_rate_matches"
             columns: ["retail_rate_id", "meter_id", "customer_currency"]
             isOneToOne: false
-            referencedRelation: "platform_retail_rates"
+            referencedRelation: "price_book_item_usage_prices"
             referencedColumns: ["id", "meter_id", "currency"]
           },
         ]
@@ -15255,9 +15464,13 @@ export type Database = {
           overdue: boolean | null
           paid_minor: number | null
           proposal_id: string | null
+          provider: string | null
+          provider_number: string | null
           settled: boolean | null
           source: string | null
+          subscription_id: string | null
           total_minor: number | null
+          voided_at: string | null
           work_item_id: string | null
         }
         Relationships: [
@@ -15301,6 +15514,13 @@ export type Database = {
             columns: ["organization_id", "proposal_id"]
             isOneToOne: false
             referencedRelation: "customer_commercial_proposals"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "invoices_subscription_same_org"
+            columns: ["organization_id", "subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
             referencedColumns: ["organization_id", "id"]
           },
           {
@@ -15714,6 +15934,17 @@ export type Database = {
         }
         Returns: string
       }
+      add_subscription_addon: {
+        Args: {
+          p_agreed_amount_minor?: number
+          p_item_id: string
+          p_note?: string
+          p_quantity?: number
+          p_starts_on: string
+          p_subscription_id: string
+        }
+        Returns: string
+      }
       add_type_checklist_item: {
         Args: {
           p_label: string
@@ -15793,6 +16024,17 @@ export type Database = {
       apply_import_run: {
         Args: { p_organization_id: string; p_run_id: string }
         Returns: undefined
+      }
+      apply_platform_invoice_event: {
+        Args: {
+          p_customer_reference: string
+          p_environment?: string
+          p_event_reference: string
+          p_event_type: string
+          p_invoice: Json
+          p_provider?: string
+        }
+        Returns: string
       }
       apply_platform_subscription_event: {
         Args: {
@@ -16118,6 +16360,14 @@ export type Database = {
         Args: { p_organization_id: string }
         Returns: boolean
       }
+      cancel_subscription: {
+        Args: {
+          p_ends_on: string
+          p_reason?: string
+          p_subscription_id: string
+        }
+        Returns: undefined
+      }
       change_customer_stage: {
         Args: {
           p_customer_id: string
@@ -16146,6 +16396,16 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      change_subscription_item: {
+        Args: {
+          p_agreed_amount_minor?: number
+          p_effective_on: string
+          p_item_id: string
+          p_note?: string
+          p_subscription_id: string
+        }
+        Returns: string
       }
       change_work_item_status: {
         Args: { p_status_id: string; p_work_item_id: string }
@@ -16571,6 +16831,21 @@ export type Database = {
         }
         Returns: string
       }
+      create_subscription: {
+        Args: {
+          p_agreed_amount_minor?: number
+          p_billing_interval: string
+          p_currency: string
+          p_customer_id: string
+          p_ends_on?: string
+          p_item_id: string
+          p_note?: string
+          p_organization_id: string
+          p_quantity?: number
+          p_starts_on: string
+        }
+        Returns: string
+      }
       create_work_from_proposal: {
         Args: {
           p_asset_id: string
@@ -16823,11 +17098,12 @@ export type Database = {
           resource_id: string
         }[]
       }
-      effective_retail_rates: {
+      effective_usage_prices: {
         Args: { p_at?: string; p_currency: string; p_organization_id: string }
         Returns: {
           currency: string
           meter_id: string
+          source_scope: string
           unit_amount_micros: number
         }[]
       }
@@ -16862,6 +17138,10 @@ export type Database = {
       }
       end_client_tenant_relationship: {
         Args: { p_organization_id: string; p_relationship_id: string }
+        Returns: undefined
+      }
+      end_subscription_addon: {
+        Args: { p_ends_on: string; p_line_id: string }
         Returns: undefined
       }
       end_support_session: { Args: { p_id: string }; Returns: undefined }
@@ -17135,6 +17415,14 @@ export type Database = {
           p_issuance_key: string
           p_issued_at: string
           p_proposal_id: string
+        }
+        Returns: string
+      }
+      issue_subscription_invoice: {
+        Args: {
+          p_due_at: string
+          p_issuance_key: string
+          p_subscription_id: string
         }
         Returns: string
       }
@@ -17594,6 +17882,22 @@ export type Database = {
       platform_health_summary: {
         Args: { p_recent_limit?: number }
         Returns: Json
+      }
+      platform_invoices_for_buyer: {
+        Args: { p_organization_id: string }
+        Returns: {
+          currency: string
+          due_at: string
+          id: string
+          issued_at: string
+          number: string
+          paid_minor: number
+          pay_url: string
+          period_end: string
+          period_start: string
+          total_minor: number
+          voided: boolean
+        }[]
       }
       platform_meter_observations: {
         Args: never
@@ -18344,18 +18648,6 @@ export type Database = {
         Args: { p_domain: string; p_organization_id: string }
         Returns: string
       }
-      record_organization_plan_agreement: {
-        Args: {
-          p_amount_minor: number
-          p_currency: string
-          p_effective_from: string
-          p_effective_to?: string
-          p_note?: string
-          p_organization_id: string
-          p_plan_id: string
-        }
-        Returns: string
-      }
       record_payment: {
         Args: {
           p_amount_minor: number
@@ -18364,16 +18656,6 @@ export type Database = {
           p_provider: string
           p_provider_reference: string
           p_received_at: string
-        }
-        Returns: string
-      }
-      record_plan_assignment: {
-        Args: {
-          p_note?: string
-          p_organization_id: string
-          p_period_end: string
-          p_period_start: string
-          p_plan_id: string
         }
         Returns: string
       }
@@ -18715,22 +18997,6 @@ export type Database = {
           provider_account_id: string
           provider_key: string
           provider_service_key: string
-        }[]
-      }
-      resolve_commercial_retail_rate: {
-        Args: {
-          p_at: string
-          p_billing_interval?: string
-          p_currency: string
-          p_meter_id: string
-          p_organization_id?: string
-          p_plan_id?: string
-        }
-        Returns: {
-          rate_id: string
-          source: string
-          source_scope: string
-          unit_amount_micros: number
         }[]
       }
       resolve_operator_agent: {
@@ -19305,6 +19571,24 @@ export type Database = {
         }
         Returns: undefined
       }
+      set_subscription_price: {
+        Args: {
+          p_amount_minor: number
+          p_effective_from?: string
+          p_line_id: string
+          p_note?: string
+        }
+        Returns: string
+      }
+      set_subscription_usage_price: {
+        Args: {
+          p_effective_from?: string
+          p_line_id: string
+          p_meter_id: string
+          p_unit_amount_micros: number
+        }
+        Returns: string
+      }
       set_type_bookable: {
         Args: {
           p_duration_minutes: number
@@ -19426,6 +19710,17 @@ export type Database = {
       submit_public_site_revision: {
         Args: { p_organization_id: string; p_revision_id: string }
         Returns: undefined
+      }
+      subscription_line_prices: {
+        Args: { p_at?: string; p_subscription_id: string }
+        Returns: {
+          amount_minor: number
+          billing_interval: string
+          currency: string
+          line_id: string
+          source: string
+          source_id: string
+        }[]
       }
       support_command: {
         Args: { p_command: string; p_input: Json; p_organization_id: string }

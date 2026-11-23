@@ -3,10 +3,10 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { getPlan, listPlanQuotas, setPlanQuota } from '@/lib/domain/catalogue/plans';
-import { recordPlanAgreement } from '@/lib/domain/catalogue/organization-plans';
+import { organizationPlanPrice } from '@/lib/domain/catalogue/organization-plans';
 import { listDraftScenarios, saveDraftScenario, simulatePackageEconomics } from '@/lib/domain/commercial/package-economics';
 import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
-import { assignFixturePlan, designateGildOps } from '@/tests/support/plans';
+import { designateGildOps, sellFixturePlan } from '@/tests/support/plans';
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
 const ANON_KEY = process.env.SUPABASE_ANON_KEY ?? '';
@@ -111,16 +111,13 @@ describe('commercial packaging and package economics', () => {
     })).rejects.toMatchObject({ code: 'package_economics.save_draft_failed' });
   });
 
-  it('requires a real Plan assignment before recording an organization agreement and honors its end date', async () => {
-    await expect(recordPlanAgreement(seller, {
-      organizationId: ordinary.organizationId, planId, currency: 'CAD', amountMinor: 69900,
-      effectiveFrom: '2026-11-01T00:00:00Z', effectiveTo: '2026-12-01T00:00:00Z',
-    })).rejects.toMatchObject({ code: 'organization_plans.record_agreement_failed' });
-    await assignFixturePlan({ organizationId: ordinary.organizationId, planId, periodStart: '2026-01-01', periodEnd: '2027-01-01' });
-    await expect(recordPlanAgreement(seller, {
-      organizationId: ordinary.organizationId, planId, currency: 'CAD', amountMinor: 69900,
-      effectiveFrom: '2026-11-01T00:00:00Z', effectiveTo: '2026-12-01T00:00:00Z',
-    })).resolves.toBeTruthy();
+  it('agrees a business’s price only on a subscription it holds, and ends it with the subscription', async () => {
+    // A price is agreed for a subscription line; there is none to agree one on before the sale.
+    expect((await seller.rpc('set_subscription_price', { p_line_id: randomUUID(), p_amount_minor: 69900 })).error?.code).toBe('42501');
+    await sellFixturePlan(seller, { organizationId: ordinary.organizationId, planId, periodStart: '2026-01-01', periodEnd: '2027-01-01', agreedAmountMinor: 69900 });
+    expect(await organizationPlanPrice(seller, { organizationId: ordinary.organizationId, planId, at: '2026-11-15T00:00:00Z' })).toMatchObject({ amountMinor: 69900, source: 'agreement' });
+    const { data } = await seller.from('organization_plan_assignments').select('period_end').eq('organization_id', ordinary.organizationId).eq('plan_id', planId);
+    expect(data).toEqual([{ period_end: '2027-01-01' }]);
   });
 });
 
@@ -129,7 +126,7 @@ async function tableCounts() {
   await pg.connect();
   try {
     const { rows } = await pg.query(`select
-      (select count(*)::int from public.organization_plan_agreements) agreements,
+      (select count(*)::int from public.subscription_agreed_prices) agreements,
       (select count(*)::int from public.usage_events) usage_events,
       (select count(*)::int from public.organization_provider_resources) provider_resources,
       (select count(*)::int from public.invoices) invoices`);

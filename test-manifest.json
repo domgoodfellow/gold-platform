@@ -2074,6 +2074,14 @@
         "pricing"
       ]
     },
+    "apps/web/tests/integration/database/finance-subscriptions.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "billing",
+        "pricing",
+        "security"
+      ]
+    },
     "apps/web/tests/integration/database/finance-recurring-items.test.ts": {
       "category": "database-integration",
       "concerns": [
@@ -2909,6 +2917,13 @@
     "apps/web/tests/unit/finance-dashboard.test.ts": {"category": "unit", "concerns": ["finance", "billing", "payments"], "note": "Finance V2.0 Dashboard: overdue per currency from aging bands, exact big sums, due-soon window disjoint from overdue, Due soon collection view equal to the Dashboard window, payment entry/source and sort parsing."},
     "apps/web/tests/architecture/static/invoice-document-writer.test.ts": {"category": "architecture-static", "concerns": ["billing", "documents", "security", "architecture"], "note": "The trusted invoice-document boundary (Work Order 2G.1): apps/api's writer bundle is regenerated from apps/web's composition and layout and is not stale; apps/web source names no writer role, writer identity, service or secret key, writer recording function or storage write into finance-documents; the signing secret stays in apps/api's writer with a 60-second token, and the HTTP handler never reads it."},
     "apps/web/tests/unit/invoice-document.test.ts": {"category": "unit", "concerns": ["billing", "documents", "branding"], "note": "The invoice document and built-in PDF layout (Work Order 2G): amounts through the one price calculation with no tax invented, no payment status on the document, so it states the invoice as issued whenever it is drawn, dates in the business clock, seller and bill-to as recorded, a too-light brand colour darkened to readable contrast, a plain layout without today's brand for an invoice with no presentation, PNG/JPEG-only logos by bytes; a valid readable PDF with French accents, a DRAFT mark with no number, a 120-line invoice across pages with repeated line headings, wrapped long descriptions and page totals, a name fallback with no logo, and no personal Appearance dependency."},
+    "apps/web/tests/unit/subscriptions.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "billing",
+        "pricing"
+      ]
+    },
     "apps/web/tests/unit/finance-projections.test.ts": {
       "category": "unit",
       "concerns": [

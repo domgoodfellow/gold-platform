@@ -158,13 +158,15 @@ beforeAll(async () => {
      values ($1,$2,2500,'one_time',$3,'approved','cc.test.ts',$3)`,
     [oneTimeAddonPlanId, CURRENCY, ANCHOR],
   );
-  // Appended over a direct connection, as `allowances.test.ts` already does: `record_retail_rate`
-  // refuses an effective date in the past, which is the operator door's own rule about rewriting
-  // a price backwards, and this suite needs rate history pre-dating every billing period it tests.
+  // The base plan's own usage price (ADR-057: usage is priced by the plans a business holds).
+  // Appended over a direct connection, as `allowances.test.ts` does: `record_item_usage_price`
+  // refuses an effective date in the past, which is Finance's own rule about rewriting a price
+  // backwards, and this suite needs price history pre-dating every billing period it tests.
   await pg.query(
-    `insert into public.platform_retail_rates (meter_id, currency, unit_amount_micros, approval_state, effective_from, source)
-     values ('voice_minutes', $1, 50000, 'approved', $2::timestamptz, 'cc.test.ts')`,
-    [CURRENCY, ANCHOR],
+    `insert into public.price_book_item_usage_prices (organization_id, item_id, meter_id, currency, unit_amount_micros, approval_state, effective_from, source)
+     select i.organization_id, i.id, 'voice_minutes', $1, 50000, 'approved', $2::timestamptz, 'cc.test.ts'
+       from public.platform_plans p join public.price_book_items i on i.id = p.price_book_item_id where p.id = $3`,
+    [CURRENCY, ANCHOR, basePlanId],
   );
 });
 

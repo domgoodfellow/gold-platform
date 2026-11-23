@@ -1,6 +1,6 @@
 import { platformParams } from '@/lib/route/platform';
 import { notFound } from 'next/navigation';
-import { requirePlatformArea } from '@/lib/route/platform';
+import { requirePlatformArea, requirePlatformScope } from '@/lib/route/platform';
 import { getDb } from '@/lib/db/server';
 import { loadCatalogFamily } from '@/lib/application/platform/catalog-family';
 import { CatalogFamilyScreen } from '@/features/platform/catalog/catalog-family-screen';
@@ -10,7 +10,9 @@ export const dynamic = 'force-dynamic';
 export default async function ProductFamilyPage({ params }: PageProps<'/organizations/[organizationId]/administration/catalog/families/[familyKey]'>) {
   const { organizationId: goldId, familyKey } = await platformParams(params);
   await requirePlatformArea(goldId, 'platform.catalogue');
+  const { organization } = await requirePlatformScope(goldId);
   const model = await loadCatalogFamily(await getDb(), familyKey);
   if (!model) notFound();
-  return <CatalogFamilyScreen goldId={goldId} model={model} />;
+  // A plan's record is GildOps' Finance; it is linked only for a member who prices there.
+  return <CatalogFamilyScreen goldId={goldId} model={model} mayOpenPlans={organization.capabilities.includes('price.manage')} />;
 }

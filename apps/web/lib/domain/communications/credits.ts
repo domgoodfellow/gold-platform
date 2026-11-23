@@ -72,11 +72,11 @@ export async function creditBalance(
 /**
  * What this deployment charges for reaching people, in a business's own currency.
  *
- * **The database resolves the rate** (`effective_retail_rates`), the same resolution a usage
- * event is priced with; this only picks the meters that are communications.
+ * **The database resolves the price** (`effective_usage_prices`), the same resolution a usage
+ * event is priced with: the business's agreed usage price, else its add-on's, else its plan's; this only picks the meters that are communications.
  *
- * **Empty is a complete answer and the most common one.** A deployment that has priced nothing
- * charges nothing and draws nothing down, which is what makes credit opt-in rather than a thing
+ * **Empty is a complete answer and the most common one.** A business whose plans price nothing
+ * is charged nothing and draws nothing down, which is what makes credit opt-in rather than a thing
  * that stops every existing tenant working on the day it ships.
  */
 export async function listRates(
@@ -85,7 +85,7 @@ export async function listRates(
 ): Promise<Rate[]> {
   if (!input.currency) return [];
 
-  const { data, error } = await db.rpc('effective_retail_rates', {
+  const { data, error } = await db.rpc('effective_usage_prices', {
     p_currency: input.currency,
     p_organization_id: input.organizationId,
   });

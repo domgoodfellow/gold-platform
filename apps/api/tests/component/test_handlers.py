@@ -420,7 +420,7 @@ class TestProcessorWebhooks:
         ("module", "loader", "sinks"),
         [
             (stripe_webhook, "load_settings", ["record_provider_payment"]),
-            (platform_billing_webhook, "load_platform_billing_settings", ["apply_platform_subscription_event", "record_platform_billing_notice"]),
+            (platform_billing_webhook, "load_platform_billing_settings", ["apply_platform_subscription_event", "apply_platform_invoice_event"]),
         ],
         ids=["tenant_payments", "platform_billing"],
     )

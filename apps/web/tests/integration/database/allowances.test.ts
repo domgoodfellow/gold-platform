@@ -3,7 +3,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { setPlanQuota } from '@/lib/domain/catalogue/plans';
-import { recordPlanAssignment, recordPlanQuotaOverride } from '@/lib/domain/catalogue/organization-plans';
+import { recordPlanQuotaOverride } from '@/lib/domain/catalogue/organization-plans';
 import { allowanceDecision, organizationAllowanceStates } from '@/lib/domain/commercial/allowances';
 import { listUsageEvents, organizationUsageDetail } from '@/lib/domain/commercial/usage';
 import { createCustomer } from '@/lib/domain/customers/customers';
@@ -64,6 +64,8 @@ let pg: Client;
 let staff: SupabaseClient;
 /** GildOps' Finance (ADR-057): subscriptions, prices, costs and economics take its permissions. */
 let seller: SupabaseClient;
+/** GildOps' operating organization, which sells the suite's plans. */
+let sellerId: string;
 
 let tenant: Tenant;
 let other: Tenant;
@@ -131,6 +133,7 @@ beforeAll(async () => {
   staff = await asPlatformStaff();
   const gildopsSeller = await designateGildOps(sellerPg ??= await connectSellerPg());
   seller = gildopsSeller.db;
+  sellerId = gildopsSeller.organizationId;
   restoreOperatingSeller = gildopsSeller.restore;
 
   tenant = await newTenant('alw-tenant', 'America/Toronto');
@@ -178,9 +181,11 @@ afterAll(async () => {
   try {
     // A shared database: everything this run invented goes back out again.
     await pg.query("delete from public.usage_events where note in ('allowances.test.ts', 'race')");
-    await pg.query("delete from public.platform_retail_rates where source = 'allowances.test.ts'");
+    await pg.query("delete from public.price_book_item_usage_prices where source = 'allowances.test.ts'");
+    await pg.query('delete from public.organization_plan_assignments where organization_id = $1', [tenant.organizationId]);
     await pg.query('delete from public.organization_plan_quota_overrides where note = $1', ['allowances.test.ts']);
     await pg.query('delete from public.organization_plan_assignments where note = $1', ['allowances.test.ts']);
+    await pg.query('delete from public.price_book_item_addons where plan_id in (select id from public.platform_plans where key like $1) or addon_plan_id in (select id from public.platform_plans where key like $1)', [`alw_%_${RUN}`]);
     await pg.query('delete from public.platform_plans where key like $1', [`alw_%_${RUN}`]);
   } finally {
     await pg?.end();
@@ -188,18 +193,49 @@ afterAll(async () => {
 });
 
 /**
- * Appended over a direct connection on purpose: `record_retail_rate` refuses an effective date in
- * the past, which is the operator door's rule about rewriting a price backwards. This suite needs
- * rate *history* to prove an old reading keeps its own rate, so it writes the history the
- * migrations' own seeds do.
+ * The base plan's own usage price for a meter (ADR-057: usage is priced by the plans a business
+ * holds). Appended over a direct connection on purpose: `record_item_usage_price` refuses an
+ * effective date in the past, which is Finance's rule about rewriting a price backwards. This suite
+ * needs price *history* to prove an old reading keeps its own price.
  */
 async function retailRate(meter: string, micros: number, offsetMs: number) {
   await pg.query(
-    `insert into public.platform_retail_rates
-       (meter_id, currency, unit_amount_micros, approval_state, effective_from, source)
-     values ($1, $2, $3, 'approved', $4::timestamptz, 'allowances.test.ts')`,
-    [meter, CURRENCY, micros, at(offsetMs)],
+    `insert into public.price_book_item_usage_prices
+       (organization_id, item_id, meter_id, currency, unit_amount_micros, approval_state, effective_from, source)
+     select i.organization_id, i.id, $1, $2, $3, 'approved', $4::timestamptz, 'allowances.test.ts'
+       from public.platform_plans p join public.price_book_items i on i.id = p.price_book_item_id
+      where p.id = $5`,
+    [meter, CURRENCY, micros, at(offsetMs), basePlanId],
   );
+}
+
+/** GildOps sells a plan as a subscription: its customer for the business, linked, then subscribed. */
+async function sell(organizationId: string, planIds: string[]) {
+  const { rows } = await pg.query<{ id: string }>(
+    `insert into public.contacts (organization_id, name, contact_type, lifecycle, custom, created_by)
+     values ($1, 'Allowance customer', 'company', 'customer', '{}'::jsonb, (select user_id from public.memberships where organization_id = $1 limit 1)) returning id`,
+    [sellerId],
+  );
+  await pg.query(
+    `insert into public.client_tenant_relationships (organization_id, customer_id, tenant_organization_id, origin, authority_basis, created_by)
+     values ($1, $2, $3, 'existing_tenant_link', 'allowances.test.ts', (select user_id from public.memberships where organization_id = $1 limit 1))`,
+    [sellerId, rows[0].id, organizationId],
+  );
+  const items = await pg.query<{ id: string; item: string }>('select id, price_book_item_id as item from public.platform_plans where id = any($1)', [planIds]);
+  const item = (planId: string) => items.rows.find((row) => row.id === planId)!.item;
+  const today = new Date().toISOString().slice(0, 10);
+  const created = await seller.rpc('create_subscription', {
+    p_organization_id: sellerId, p_customer_id: rows[0].id, p_item_id: item(planIds[0]), p_currency: CURRENCY,
+    p_billing_interval: 'month', p_starts_on: today, p_agreed_amount_minor: 0, p_note: 'allowances.test.ts',
+  });
+  if (created.error) throw created.error;
+  for (const addon of planIds.slice(1)) {
+    const attached = await seller.rpc('set_item_addon', { p_organization_id: sellerId, p_item_id: item(planIds[0]), p_addon_item_id: item(addon), p_attached: true, p_included_by_default: false });
+    if (attached.error) throw attached.error;
+    const added = await seller.rpc('add_subscription_addon', { p_subscription_id: created.data, p_item_id: item(addon), p_starts_on: today, p_agreed_amount_minor: 0 });
+    if (added.error) throw added.error;
+  }
+  return created.data as string;
 }
 
 // ---------------------------------------------------------------------------
@@ -228,14 +264,6 @@ describe('a commercial mutation needs GildOps’ Finance permission, never platf
 
   it('refuses every commercial mutation to platform.organizations, which grants no Finance authority', async () => {
     const refusals = await Promise.all([
-      inspector.db.rpc('record_plan_assignment', {
-        p_organization_id: tenant.organizationId, p_plan_id: basePlanId,
-        p_period_start: '2026-01-01', p_period_end: '2026-02-01', p_note: '',
-      }),
-      inspector.db.rpc('record_organization_plan_agreement', {
-        p_organization_id: tenant.organizationId, p_plan_id: basePlanId, p_currency: CURRENCY,
-        p_amount_minor: 1, p_effective_from: new Date().toISOString(), p_effective_to: null, p_note: '',
-      }),
       inspector.db.rpc('record_plan_quota_override', {
         p_organization_id: tenant.organizationId, p_plan_id: basePlanId,
         p_allowance_key: `alw_voice_${RUN}`, p_included_quantity: 9999,
@@ -252,6 +280,12 @@ describe('a commercial mutation needs GildOps’ Finance permission, never platf
       expect(refusal.error?.code).toBe('42501');
       expect(refusal.error?.message ?? '').toMatch(/subscription\.manage permission in GildOps/);
     }
+    // Selling a plan is a subscription in GildOps' Finance, refused the same way.
+    const sale = await inspector.db.rpc('create_subscription', {
+      p_organization_id: sellerId, p_customer_id: randomUUID(), p_item_id: randomUUID(), p_currency: CURRENCY,
+      p_billing_interval: 'month', p_starts_on: '2026-01-01', p_note: 'alw-refused',
+    });
+    expect(sale.error?.code).toBe('42501');
   });
 
   it('nothing the refused calls would have written exists', async () => {
@@ -259,8 +293,7 @@ describe('a commercial mutation needs GildOps’ Finance permission, never platf
       `select
          (select count(*) from public.organization_plan_assignments
            where organization_id = $1 and plan_id = $2 and period_start = '2026-01-01')::int as assignments,
-         (select count(*) from public.organization_plan_agreements
-           where organization_id = $1 and amount_minor = 1)::int as agreements,
+         (select count(*) from public.subscriptions where note = 'alw-refused')::int as agreements,
          (select count(*) from public.organization_plan_quota_overrides
            where organization_id = $1 and included_quantity = 9999)::int as overrides`,
       [tenant.organizationId, basePlanId],
@@ -268,20 +301,18 @@ describe('a commercial mutation needs GildOps’ Finance permission, never platf
     expect(rows[0]).toEqual({ assignments: 0, agreements: 0, overrides: 0 });
   });
 
-  it('lets a GildOps member who manages subscriptions perform the same mutations', async () => {
-    const today = new Date().toISOString().slice(0, 10);
-    const assignmentId = await recordPlanAssignment(seller, { organizationId: tenant.organizationId, planId: basePlanId, periodStart: today, periodEnd: '9999-12-31', note: 'allowances.test.ts' });
-    expect(assignmentId).toBeTruthy();
-    await recordPlanAssignment(seller, { organizationId: tenant.organizationId, planId: addonPlanId, periodStart: today, periodEnd: '9999-12-31', note: 'allowances.test.ts' });
+  it('lets a GildOps member who manages subscriptions sell the plan and its add-on, which provisions both', async () => {
+    expect(await sell(tenant.organizationId, [basePlanId, addonPlanId])).toBeTruthy();
+    const { rows } = await pg.query('select plan_id from public.organization_plan_assignments where organization_id = $1 and subscription_line_id is not null order by plan_kind desc', [tenant.organizationId]);
+    expect(rows.map((row) => row.plan_id)).toEqual([basePlanId, addonPlanId]);
   });
 
   it('refuses a non-staff caller too, by the same door', async () => {
-    const { error } = await tenant.db.rpc('record_plan_assignment', {
-      p_organization_id: tenant.organizationId, p_plan_id: basePlanId,
-      p_period_start: '2026-01-01', p_period_end: '2026-02-01', p_note: '',
+    const { error } = await tenant.db.rpc('create_subscription', {
+      p_organization_id: sellerId, p_customer_id: randomUUID(), p_item_id: randomUUID(), p_currency: CURRENCY,
+      p_billing_interval: 'month', p_starts_on: '2026-01-01',
     });
     expect(error?.code).toBe('42501');
-    expect(error?.message ?? '').toMatch(/GildOps/);
   });
 });
 
@@ -615,11 +646,10 @@ describe('an allowance and the purse are two gates', () => {
     expect(tooMuch[0].allowed).toBe(false);
   });
 
-  it('leaves a business with no Plan exactly where it was', async () => {
+  it('prices nothing for a business with no plan, so it draws no credit (ADR-057: no platform-wide price)', async () => {
     const legacy = await newTenant('alw-legacy');
-    // No assignment at all: the purse is the only gate, as it was before allowances existed.
-    const { rows } = await pg.query(`select app.may_spend_on($1, 'voice_minutes', 1) as ok`, [legacy.organizationId]);
-    expect(rows[0].ok).toBe(false); // priced, nothing bought
+    const { rows } = await pg.query(`select * from app.spend_decision($1, 'voice_minutes', 1)`, [legacy.organizationId]);
+    expect([rows[0].allowed, rows[0].reason]).toEqual([true, 'unpriced']);
   });
 });
 
@@ -697,7 +727,8 @@ describe('rating', () => {
 
   it('rates by the rate in force when the usage occurred, across a rate change', async () => {
     const transition = await newTenant('alw-transition');
-    await assign(transition.organizationId, basePlanId);
+    // Held from before every reading below: usage is priced only by a plan held when it happened.
+    await assign(transition.organizationId, basePlanId, at(-30 * DAY).slice(0, 10));
     // Use the whole allowance up first, so every reading below is entirely chargeable.
     await record(transition.organizationId, 'voice_minutes', 10, at(-20 * DAY));
 

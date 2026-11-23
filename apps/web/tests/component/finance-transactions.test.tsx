@@ -30,7 +30,7 @@ const items = [
   { id: 'labour', name: 'Labour', unit: 'hour', unitAmountMinor: 9550, currency: 'CAD', createdAt: '' },
   { id: 'consult', name: 'Consultation', unit: 'hour', unitAmountMinor: 18000, currency: 'USD', createdAt: '' },
 ];
-const invoice = (payments: { id: string; amountMinor: number }[] = []) => ({ id: 'i1', source: 'work_item' as const, number: 7, currency: 'CAD', billedTo: 'North Shore Plumbing', workItemId: 'w1', issuedAt: '2026-10-01T00:00:00Z', dueAt: null, lines: [{ ...line('l1', 'Emergency callout', 27500, 1, 'callout'), position: 0 }], payments: payments.map(p => ({ ...p, currency: 'CAD', receivedAt: '2026-10-10T12:00:00Z', provider: null, providerReference: null, note: null })) });
+const invoice = (payments: { id: string; amountMinor: number }[] = []) => ({ id: 'i1', source: 'work_item' as const, subscriptionId: null, periodStart: null, periodEnd: null, provider: null, providerNumber: null, providerUrl: null, voidedAt: null, number: 7, currency: 'CAD', billedTo: 'North Shore Plumbing', workItemId: 'w1', issuedAt: '2026-10-01T00:00:00Z', dueAt: null, lines: [{ ...line('l1', 'Emergency callout', 27500, 1, 'callout'), position: 0 }], payments: payments.map(p => ({ ...p, currency: 'CAD', receivedAt: '2026-10-10T12:00:00Z', provider: null, providerReference: null, note: null })) });
 
 beforeEach(() => {
   for (const fn of Object.values(finance)) fn.mockReset();
@@ -354,7 +354,7 @@ describe('Invoice documents', () => {
     expect(screen.getByText(/The invoice is issued, but its PDF was not created: The invoice PDF could not be drawn/)).toBeVisible();
   });
 
-  const row = { id: 'i1', source: 'work_item' as const, workItemId: 'w1', proposalId: null, number: 7, billedTo: 'North Shore Plumbing', customerId: 'c1', currency: 'CAD', issuedAt: '2026-10-01T00:00:00Z', dueAt: null, total: { totalMinor: 27500, currency: 'CAD' }, paidMinor: 0, outstandingMinor: 27500, settled: false, overdue: false };
+  const row = { id: 'i1', source: 'work_item' as const, workItemId: 'w1', proposalId: null, number: 7, billedTo: 'North Shore Plumbing', customerId: 'c1', currency: 'CAD', issuedAt: '2026-10-01T00:00:00Z', dueAt: null, total: { totalMinor: 27500, currency: 'CAD' }, paidMinor: 0, outstandingMinor: 27500, settled: false, overdue: false, subscriptionId: null, providerNumber: null, voided: false };
   const inspector = (document: { available: boolean; mayCreate: boolean }, email: Parameters<typeof InvoiceInspector>[0]['email'] = { may: false, inboxOpen: true, senderProblem: null, sends: [] }) => render(<WorkspaceRailProvider><InvoiceInspector organizationId="org" row={row} invoice={{ ...invoice(), customerId: 'c1', proposalId: null }} timezone="America/Toronto" today="2026-10-25" closeHref="/organizations/org/finance/invoices" mayRecord={false} document={document} email={email} /><PagePanel /></WorkspaceRailProvider>);
 
   it('offers the stored PDF as a download from the invoice', async () => {
@@ -385,7 +385,7 @@ describe('Invoice documents', () => {
 });
 
 describe('emailing an issued invoice from its inspector', () => {
-  const row = { id: 'i1', source: 'direct' as const, workItemId: null, proposalId: null, number: 7, billedTo: 'North Shore Plumbing', customerId: 'c1', currency: 'CAD', issuedAt: '2026-10-01T00:00:00Z', dueAt: null, total: { totalMinor: 27500, currency: 'CAD' }, paidMinor: 0, outstandingMinor: 27500, settled: false, overdue: false };
+  const row = { id: 'i1', source: 'direct' as const, workItemId: null, proposalId: null, number: 7, billedTo: 'North Shore Plumbing', customerId: 'c1', currency: 'CAD', issuedAt: '2026-10-01T00:00:00Z', dueAt: null, total: { totalMinor: 27500, currency: 'CAD' }, paidMinor: 0, outstandingMinor: 27500, settled: false, overdue: false, subscriptionId: null, providerNumber: null, voided: false };
   const open = (email: Parameters<typeof InvoiceInspector>[0]['email']) => render(<WorkspaceRailProvider><InvoiceInspector organizationId="org" row={row} invoice={{ ...invoice(), customerId: 'c1', proposalId: null }} timezone="America/Toronto" today="2026-10-25" closeHref="/organizations/org/finance/invoices" mayRecord={false} document={{ available: true, mayCreate: true }} email={email} /><PagePanel /></WorkspaceRailProvider>);
   const draft = (preview: Partial<Record<string, unknown>> = {}) => ({ draft: {
     number: 7, customer: 'North Shore Plumbing', amount: 'CA$275.00', subject: 'Invoice #7 from Harbour Ltd', text: 'Hello North Shore Plumbing,',

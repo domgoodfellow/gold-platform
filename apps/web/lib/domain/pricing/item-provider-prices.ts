@@ -88,13 +88,13 @@ export async function listMeteredAllowances(db: Db, input: { planId: string }): 
   return (data ?? []).map((row) => ({ allowanceKey: row.allowance_key, label: row.label, unit: row.unit, meterId: row.meter_id as string }));
 }
 
-/** Standard usage prices of a plan item, newest first. */
-export async function listUsagePrices(db: Db, input: { planId: string }): Promise<UsagePrice[]> {
+/** A plan item's own usage prices (not those agreed for one subscription), newest first. */
+export async function listUsagePrices(db: Db, input: { itemId: string }): Promise<UsagePrice[]> {
   const { data, error } = await db
-    .from('platform_retail_rates')
+    .from('price_book_item_usage_prices')
     .select('id, meter_id, currency, unit_amount_micros, effective_from')
-    .eq('plan_id', input.planId)
-    .is('organization_id', null)
+    .eq('item_id', input.itemId)
+    .is('subscription_line_id', null)
     .eq('approval_state', 'approved')
     .order('effective_from', { ascending: false });
   if (error) throw fromDatabaseError(error, 'usage_prices.read_failed');

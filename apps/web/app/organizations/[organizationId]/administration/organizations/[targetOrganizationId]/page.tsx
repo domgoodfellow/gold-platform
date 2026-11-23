@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@gold/ui/components/ca
 import { MetricTile, StatePill } from '@/components/operational/primitives';
 import { getDb } from '@/lib/db/server';
 import { getTenant } from '@/lib/domain/platform/tenants';
+import { subscriptionsForTenants } from '@/lib/domain/catalogue/organization-plans';
 import { activeSupportSession, listMembersForSupport } from '@/lib/domain/platform/support';
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
 import { TenantWorkspaceHeader } from '@/features/platform/tenant-workspace';
@@ -37,7 +38,7 @@ export default async function AdministrationOrganization({ params }: PageProps<'
   if (!tenant) redirect(platformHref(goldId, 'organizations'));
 
   const may = (capability: (typeof gold.capabilities)[number]) => gold.capabilities.includes(capability);
-  const [session, myOrganizations, currentPlan, operating, customerId, access] = await Promise.all([
+  const [session, myOrganizations, currentPlan, operating, customerId, access, subscriptionByTenant] = await Promise.all([
     activeSupportSession(db, { organizationId }),
     listMyOrganizations(db),
     currentPlanAssignment(db, { organizationId }),
@@ -45,7 +46,9 @@ export default async function AdministrationOrganization({ params }: PageProps<'
     may('customer.read') ? customerForTenant(db, { organizationId: goldId, tenantId: organizationId }) : Promise.resolve(null),
     // The resolver the business's own guard runs — read, never reinterpreted from a billing status.
     getOrganizationServiceAccess(db, { organizationId, environment: platformBillingEnvironment(), operationalState: tenant.operationalState }),
+    may('subscription.read') ? subscriptionsForTenants(db, { organizationId: goldId, tenantIds: [organizationId] }) : Promise.resolve(new Map<string, string>()),
   ]);
+  const subscriptionId = subscriptionByTenant.get(organizationId);
   const members = session ? await listMembersForSupport(db, { organizationId }) : [];
   // Real membership only, never staff authority standing in for one (see tenant-workspace.tsx).
   const canOpenBusiness = myOrganizations.some((organization) => organization.id === organizationId);
@@ -62,7 +65,7 @@ export default async function AdministrationOrganization({ params }: PageProps<'
         canOpenBusiness={canOpenBusiness}
         actions={
           <>
-            {may('subscription.read') ? <ButtonLink href={`/organizations/${goldId}/finance/subscriptions/${organizationId}`} tone="secondary" size="small">Subscription</ButtonLink> : null}
+            {subscriptionId ? <ButtonLink href={`/organizations/${goldId}/finance/subscriptions/${subscriptionId}`} tone="secondary" size="small">Subscription</ButtonLink> : null}
             {customerId ? <ButtonLink href={`/organizations/${goldId}/crm/contacts/${customerId}`} tone="secondary" size="small">Customer</ButtonLink> : null}
             {permissions.has('platform.catalogue') ? <SaveTemplateDialog organizationId={organizationId} businessName={tenant.name} industry={await businessIndustry(db, organizationId)} /> : null}
           </>

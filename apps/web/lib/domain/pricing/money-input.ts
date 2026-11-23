@@ -21,7 +21,7 @@ function currencyDigits(currency: string): number {
 
 /**
  * A usage price typed in the currency's major unit (0.0125 for 1.25 cents), as micros: millionths
- * of the currency's minor unit, the precision `platform_retail_rates` stores. At most six decimal
+ * of the currency's minor unit, the precision `price_book_item_usage_prices` stores. At most six decimal
  * places beyond the currency's own.
  */
 export function parseMicrosInput(raw: string, currency: string): number {

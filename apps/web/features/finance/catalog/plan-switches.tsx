@@ -144,11 +144,11 @@ export function PlanSubscribers({ organizationId, model }: { organizationId: str
               key: 'business',
               header: 'Business',
               emphasis: 'primary',
-              cell: ({ assignment, tenant }) => (
-                <Link href={`/organizations/${organizationId}/finance/subscriptions/${assignment.organizationId}`} className="font-medium underline-offset-4 hover:underline">
+              cell: ({ assignment, tenant, subscriptionId }) => (subscriptionId ? (
+                <Link href={`/organizations/${organizationId}/finance/subscriptions/${subscriptionId}`} className="font-medium underline-offset-4 hover:underline">
                   {tenant?.name ?? assignment.organizationId}
                 </Link>
-              ),
+              ) : (tenant?.name ?? assignment.organizationId)),
             },
             { key: 'period', header: 'Held', cell: ({ assignment }) => <>{assignment.periodStart} – {assignment.periodEnd === '9999-12-31' ? 'ongoing' : assignment.periodEnd}</> },
           ]}

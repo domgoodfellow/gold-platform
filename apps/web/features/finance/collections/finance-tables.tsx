@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { AlertTriangle, CheckCircle2, CircleDot, PanelRight, Undo2 } from 'lucide-react';
+import { AlertTriangle, Ban, CheckCircle2, CircleDot, PanelRight, Undo2 } from 'lucide-react';
 import { Badge } from '@/components/display/data';
 import { DataTable } from '@/components/display/table';
 import type { FinanceInvoiceRow } from '@/lib/application/finance/invoices';
@@ -25,8 +25,12 @@ export const invoiceHref = (organizationId: string, invoice: { id: string; workI
 export const quoteHref = (organizationId: string, row: Pick<FinanceQuoteRow, 'workItemId' | 'customer'>) => row.workItemId ? workHref(organizationId, row.workItemId) : row.customer ? proposalHref(organizationId, row.customer.id) : `/organizations/${organizationId}/finance/quotes`;
 const customerHref = (organizationId: string, customerId: string) => `/organizations/${organizationId}/crm/contacts/${customerId}`;
 
-/** Settled, overdue or outstanding — told by word and icon as well as colour. */
-export function InvoiceStandingBadge({ row }: { row: Pick<FinanceInvoiceRow, 'settled' | 'overdue'> }) {
+/** Where an invoice came from, as its row names it; a Work invoice needs no label. */
+export const INVOICE_SOURCE_LABEL = { work_item: null, direct: 'Direct', proposal: 'Proposal', subscription: 'Subscription' } as const;
+
+/** Void, settled, overdue or outstanding — told by word and icon as well as colour. */
+export function InvoiceStandingBadge({ row }: { row: Pick<FinanceInvoiceRow, 'settled' | 'overdue'> & { voided?: boolean } }) {
+  if (row.voided) return <Badge className="gap-1"><Ban aria-hidden className="size-3" />Void</Badge>;
   if (row.settled) return <Badge tone="success" className="gap-1"><CheckCircle2 aria-hidden className="size-3" />Settled</Badge>;
   if (row.overdue) return <Badge tone="danger" className="gap-1"><AlertTriangle aria-hidden className="size-3" />Overdue</Badge>;
   return <Badge className="gap-1"><CircleDot aria-hidden className="size-3" />Outstanding</Badge>;
@@ -52,7 +56,7 @@ export function InvoicesTable({ organizationId, rows, empty, mayRecord = false, 
           : <PaymentDialog organizationId={organizationId} invoiceId={row.id} today={today} label="Record payment" ariaLabel={`Record payment for invoice #${row.number}`} size="tiny" /> : null}
       </> : undefined}
       columns={[
-        { key: 'number', header: 'Invoice', emphasis: 'primary', cell: (row) => <span className="flex flex-col"><Link className={LINK} href={invoiceHref(organizationId, row)}>#{row.number}</Link>{row.source === 'work_item' ? null : <span className="text-xs text-muted">{row.source === 'direct' ? 'Direct' : 'Proposal'}</span>}</span> },
+        { key: 'number', header: 'Invoice', emphasis: 'primary', cell: (row) => <span className="flex flex-col"><Link className={LINK} href={invoiceHref(organizationId, row)}>#{row.number}</Link>{INVOICE_SOURCE_LABEL[row.source] ? <span className="text-xs text-muted">{INVOICE_SOURCE_LABEL[row.source]}{row.providerNumber ? ` · ${row.providerNumber}` : ''}</span> : null}</span> },
         { key: 'customer', header: 'Customer', cell: (row) => row.customerId ? <Link className="underline-offset-4 hover:underline" href={customerHref(organizationId, row.customerId)}>{row.billedTo}</Link> : row.billedTo },
         ...(!compact ? [{ key: 'issued', header: 'Issued', cell: (row: FinanceInvoiceRow) => inZone(row.issuedAt), cardValue: () => null }] : []),
         { key: 'due', header: 'Due', cell: (row) => row.dueAt ? inZone(row.dueAt) : 'No due date' },

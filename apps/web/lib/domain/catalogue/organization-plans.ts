@@ -27,18 +27,6 @@ export type PlanAssignment = {
   note: string;
 };
 
-export type PlanAgreement = {
-  id: string;
-  organizationId: string;
-  planId: string;
-  currency: string;
-  amountMinor: number;
-  effectiveFrom: string;
-  effectiveTo: string | null;
-  recordedAt: string;
-  note: string;
-};
-
 export type PlanQuotaOverride = {
   id: string;
   organizationId: string;
@@ -52,7 +40,7 @@ export type PlanQuotaOverride = {
 
 export type EffectiveEntitlement = { featureId: string; planId: string; planKey: string };
 
-/** `sourceId` is the deciding row's own id: `organization_plan_agreements.id` for `'agreement'`, `price_book_item_prices.id` for `'standard'`. */
+/** `sourceId` is the deciding row's own id: the agreed subscription price (`subscription_agreed_prices.id`) for `'agreement'`, `price_book_item_prices.id` for `'standard'`. */
 export type EffectivePrice = { amountMinor: number; currency: string; source: 'agreement' | 'standard'; sourceId: string };
 
 export type EffectiveQuota = {
@@ -183,83 +171,6 @@ export async function currentAddonAssignments(db: Db, input: { organizationId: s
     assignedAt: row.assigned_at,
     note: row.note,
   }));
-}
-
-export type RecordPlanAssignmentInput = {
-  organizationId: string;
-  planId: string;
-  periodStart: string;
-  periodEnd: string;
-  note?: string;
-};
-
-export async function recordPlanAssignment(db: Db, input: RecordPlanAssignmentInput): Promise<string> {
-  const { data, error } = await db.rpc('record_plan_assignment', {
-    p_organization_id: input.organizationId,
-    p_plan_id: input.planId,
-    p_period_start: input.periodStart,
-    p_period_end: input.periodEnd,
-    p_note: input.note ?? '',
-  });
-  if (error) {
-    if (error.code === '23P01') {
-      throw new DomainError(
-        'This business already has a base Plan covering part of this period. End it first, or choose a non-overlapping period.',
-        'organization_plans.assignment_overlap',
-      );
-    }
-    staffOnly(error, 'organization_plans.record_assignment_failed');
-  }
-  return data as string;
-}
-
-export async function listOrganizationPlanAgreements(
-  db: Db,
-  input: { organizationId: string; planId?: string },
-): Promise<PlanAgreement[]> {
-  let query = db
-    .from('organization_plan_agreements')
-    .select('id, organization_id, plan_id, currency, amount_minor, effective_from, effective_to, recorded_at, note')
-    .eq('organization_id', input.organizationId)
-    .order('effective_from', { ascending: false });
-  if (input.planId) query = query.eq('plan_id', input.planId);
-  const { data, error } = await query;
-  if (error) throw fromDatabaseError(error, 'organization_plans.agreements_failed');
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    organizationId: row.organization_id,
-    planId: row.plan_id,
-    currency: row.currency,
-    amountMinor: Number(row.amount_minor),
-    effectiveFrom: row.effective_from,
-    effectiveTo: row.effective_to,
-    recordedAt: row.recorded_at,
-    note: row.note,
-  }));
-}
-
-export type RecordPlanAgreementInput = {
-  organizationId: string;
-  planId: string;
-  currency: string;
-  amountMinor: number;
-  effectiveFrom?: string;
-  effectiveTo?: string | null;
-  note?: string;
-};
-
-export async function recordPlanAgreement(db: Db, input: RecordPlanAgreementInput): Promise<string> {
-  const { data, error } = await db.rpc('record_organization_plan_agreement', ({
-    p_organization_id: input.organizationId,
-    p_plan_id: input.planId,
-    p_currency: input.currency,
-    p_amount_minor: input.amountMinor,
-    p_effective_from: input.effectiveFrom ?? new Date().toISOString(),
-    p_effective_to: input.effectiveTo ?? null,
-    p_note: input.note ?? '',
-  }) as never);
-  if (error) staffOnly(error, 'organization_plans.record_agreement_failed');
-  return data as string;
 }
 
 export type RecordPlanQuotaOverrideInput = {
@@ -650,4 +561,30 @@ export function availableFeatureKeys(states: readonly ResolvedFeatureState[]): S
     }
   }
   return keys;
+}
+
+/**
+ * The seller's subscription each of these businesses' plan assignments carry out (ADR-057): read
+ * through the assignment's own link to the subscription line it came from. Empty for a business
+ * this reader may not see the subscriptions of; `organizationId` is the seller.
+ */
+export async function subscriptionsForTenants(db: Db, input: { organizationId: string; tenantIds: string[] }): Promise<Map<string, string>> {
+  if (input.tenantIds.length === 0) return new Map();
+  const { data: assignments, error } = await db.from('organization_plan_assignments')
+    .select('organization_id, subscription_line_id, period_start')
+    .in('organization_id', input.tenantIds).not('subscription_line_id', 'is', null)
+    .order('period_start', { ascending: false });
+  if (error) throw fromDatabaseError(error, 'organization_plans.subscriptions_failed');
+  const lineIds = [...new Set((assignments ?? []).map((row) => row.subscription_line_id as string))];
+  if (lineIds.length === 0) return new Map();
+  const { data: lines, error: linesError } = await db.from('subscription_lines').select('id, subscription_id')
+    .eq('organization_id', input.organizationId).in('id', lineIds);
+  if (linesError) throw fromDatabaseError(linesError, 'organization_plans.subscriptions_failed');
+  const subscriptionByLine = new Map((lines ?? []).map((row) => [row.id, row.subscription_id]));
+  const result = new Map<string, string>();
+  for (const row of assignments ?? []) {
+    const subscriptionId = subscriptionByLine.get(row.subscription_line_id as string);
+    if (subscriptionId && !result.has(row.organization_id)) result.set(row.organization_id, subscriptionId);
+  }
+  return result;
 }

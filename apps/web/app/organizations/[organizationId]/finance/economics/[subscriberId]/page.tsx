@@ -8,6 +8,7 @@ import { ButtonLink } from '@/components/controls/button';
 import { ALLOCATION_QUALITY_LABEL, COST_CATEGORY_LABEL } from '@/features/finance/costs/cost-labels';
 import { loadOrganizationEconomics } from '@/lib/application/finance/cost-to-serve';
 import { getTenant } from '@/lib/domain/platform/tenants';
+import { subscriptionsForTenants } from '@/lib/domain/catalogue/organization-plans';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
 import { formatMicrosMoney } from '@/lib/domain/commercial/economics';
 import { requireOperatingArea } from '@/lib/route/workspace-configuration';
@@ -40,7 +41,11 @@ export default async function CostToServePage({ params }: PageProps<'/organizati
   if (!gate.featureAvailability.has('cost_to_serve')) notFound();
   const tenant = await getTenant(db, subscriberId);
   if (!tenant) notFound();
-  const { period, revenue, cost, infrastructureCosts, storage } = await loadOrganizationEconomics(db, { organizationId: subscriberId });
+  const [{ period, revenue, cost, infrastructureCosts, storage }, subscriptionByTenant] = await Promise.all([
+    loadOrganizationEconomics(db, { organizationId: subscriberId }),
+    gate.featureAvailability.has('subscriptions') ? subscriptionsForTenants(db, { organizationId, tenantIds: [subscriberId] }) : Promise.resolve(new Map<string, string>()),
+  ]);
+  const subscriptionId = subscriptionByTenant.get(subscriberId);
   const finance = `/organizations/${organizationId}/finance`;
 
   return (
@@ -48,7 +53,7 @@ export default async function CostToServePage({ params }: PageProps<'/organizati
       <PageHeader
         title={tenant.name}
         crumbs={[{ label: 'Finance', href: finance }, { label: 'Economics', href: `${finance}/economics` }]}
-        actions={gate.featureAvailability.has('subscriptions') ? <ButtonLink href={`${finance}/subscriptions/${subscriberId}`} tone="secondary" size="small">Subscription</ButtonLink> : undefined}
+        actions={subscriptionId ? <ButtonLink href={`${finance}/subscriptions/${subscriptionId}`} tone="secondary" size="small">Subscription</ButtonLink> : undefined}
       />
       <Hint className="mb-5">
         {new Date(period.start).toLocaleDateString('en-CA', { month: 'long', year: 'numeric', timeZone: 'UTC' })} · amounts in {revenue.reportingCurrency}

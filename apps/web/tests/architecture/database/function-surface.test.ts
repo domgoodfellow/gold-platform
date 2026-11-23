@@ -156,6 +156,11 @@ describe('objects removed as dead surface stay removed', () => {
          from pg_proc p join pg_namespace n on n.oid = p.pronamespace
         where (n.nspname, p.proname) in (
           ('public', 'store_integration_secret'), ('public', 'retail_rate_at'),
+          -- Retired with the global usage price and the plan agreement (20261122000001): usage is
+          -- priced by the plans a business holds, and a plan is sold only as a subscription.
+          ('app', 'retail_rate_at'), ('public', 'effective_retail_rates'), ('public', 'resolve_commercial_retail_rate'),
+          ('public', 'record_plan_assignment'), ('public', 'record_organization_plan_agreement'),
+          ('app', 'write_plan_agreement'), ('public', 'record_platform_billing_notice'),
           ('public', 'add_runtime_mapping'), ('public', 'remove_runtime_mapping'),
           ('app', 'enable_default_modules'))`,
     );
@@ -195,10 +200,11 @@ describe('platform SQL enforcement', () => {
     expect(rows).toEqual([]);
   });
 
-  it('keeps internal plan-writing cores inaccessible to clients', async () => {
+  it('keeps internal plan, subscription and pricing cores inaccessible to clients', async () => {
     const { rows } = await pg.query(
       `select proname from pg_proc where pronamespace = 'app'::regnamespace
-        and proname in ('write_plan_assignment','write_plan_agreement')
+        and proname in ('write_plan_assignment', 'write_subscription', 'write_subscription_line', 'write_subscription_agreed_price',
+                        'provision_platform_line', 'subscription_line_price', 'usage_price_at', 'require_subscription_manager', 'require_priced_line')
         and (has_function_privilege('authenticated', oid, 'execute')
           or has_function_privilege('anon', oid, 'execute')
           or has_function_privilege('public', oid, 'execute'))`,

@@ -10,6 +10,12 @@ export type FinanceInvoiceRow = {
   workItemId: string | null;
   /** The accepted proposal it was issued from; null unless `source` is `proposal`. */
   proposalId: string | null;
+  /** The subscription it bills; null unless `source` is `subscription`. */
+  subscriptionId: string | null;
+  /** The billing provider's own number for an invoice it issued. */
+  providerNumber: string | null;
+  /** Voided by the billing provider that issued it: owed by no one. */
+  voided: boolean;
   number: number;
   billedTo: string;
   customerId: string | null;
@@ -108,9 +114,9 @@ export async function readFinanceInvoices(db: Db, organizationId: string, f: Fin
   return { rows, total: count ?? 0 };
 }
 
-type InvoiceRecord = { id: string | null; source: string | null; work_item_id: string | null; proposal_id: string | null; number: number | null; billed_to: string | null; customer_id: string | null; currency: string | null; issued_at: string | null; due_at: string | null; total_minor: number | null; paid_minor: number | null; outstanding_minor: number | null; settled: boolean | null; overdue: boolean | null };
+type InvoiceRecord = { id: string | null; source: string | null; work_item_id: string | null; proposal_id: string | null; subscription_id: string | null; provider_number: string | null; voided_at: string | null; number: number | null; billed_to: string | null; customer_id: string | null; currency: string | null; issued_at: string | null; due_at: string | null; total_minor: number | null; paid_minor: number | null; outstanding_minor: number | null; settled: boolean | null; overdue: boolean | null };
 function invoiceRow(r: InvoiceRecord): FinanceInvoiceRow {
-  return ({ id: r.id!, source: invoiceSource(r.source ?? ''), workItemId: r.work_item_id, proposalId: r.proposal_id, number: r.number!, billedTo: r.billed_to!, customerId: r.customer_id,
+  return ({ id: r.id!, source: invoiceSource(r.source ?? ''), workItemId: r.work_item_id, proposalId: r.proposal_id, subscriptionId: r.subscription_id, providerNumber: r.provider_number, voided: r.voided_at !== null, number: r.number!, billedTo: r.billed_to!, customerId: r.customer_id,
     currency: r.currency!, issuedAt: r.issued_at!, dueAt: r.due_at, total: r.total_minor === null ? null : { totalMinor: safeMinor(r.total_minor), currency: r.currency! },
     paidMinor: safeMinor(r.paid_minor ?? 0), outstandingMinor: r.outstanding_minor === null ? null : safeMinor(r.outstanding_minor), settled: r.settled ?? false, overdue: r.overdue ?? false });
 }

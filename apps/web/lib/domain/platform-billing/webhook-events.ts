@@ -17,7 +17,7 @@ export type PlatformBillingWebhookEvent = {
   /** When the provider says it happened. Null for an invoice notice, which is not ordered. */
   providerEventAt: string | null;
   /** What GildOps did with it: changed state, was older than the state held, or could not be ordered. Null for a notice. */
-  application: 'applied' | 'stale' | 'ambiguous' | null;
+  application: 'applied' | 'stale' | 'ambiguous' | 'unmatched' | null;
 };
 
 export async function listRecentPlatformBillingEvents(

@@ -3,7 +3,6 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { getPlan } from '@/lib/domain/catalogue/plans';
-import { recordPlanAgreement } from '@/lib/domain/catalogue/organization-plans';
 import { createRole } from '@/lib/domain/tenancy/roles';
 import { addMember } from '@/lib/domain/tenancy/members';
 import { ensurePlatformBillingCustomer, getPlatformBillingCustomer } from '@/lib/domain/platform-billing/customers';
@@ -19,7 +18,7 @@ import { setAsideOperatingOrganization } from '@/tests/support/operating-organiz
 import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
 import { applySubscriptionEvent } from '@/tests/support/subscription-events';
 import { BILLING_PROVISIONER_API, provisionerFinalize, withBillingProvisionerApi } from '@/tests/support/billing-provisioner';
-import { assignFixturePlan, createFixturePlan, priceFixturePlan } from '@/tests/support/plans';
+import { agreeFixturePrice, assignFixturePlan, createFixturePlan, priceFixturePlan } from '@/tests/support/plans';
 
 /**
  * GOLD charging the organization for its own subscription — the opposite money direction from
@@ -608,8 +607,8 @@ describe('billing customer identity, at the database boundary', () => {
       createdAt: 1_800_000_050, items: [{ priceReference: `price_${randomUUID().slice(0, 8)}` }],
     });
     expect(applied).toBeNull();
-    const notice = await pg.query(`select public.record_platform_billing_notice($1,$2,$3,$4,$5) as result`, [`evt_${randomUUID()}`, 'invoice.paid', reserved.data!.customer_reference, 'stripe', 'sandbox']);
-    expect(notice.rows[0].result).toBeNull();
+    const invoice = await pg.query(`select public.apply_platform_invoice_event($1,$2,$3,$4::jsonb,$5,$6) as result`, [`evt_${randomUUID()}`, 'invoice.paid', reserved.data!.customer_reference, JSON.stringify({ id: `in_${randomUUID().slice(0, 8)}`, currency: 'CAD', status: 'paid', lines: [] }), 'stripe', 'sandbox']);
+    expect(invoice.rows[0].result).toBeNull();
     const ledger = await pg.query(`select count(*)::int as count from public.platform_billing_webhook_events where organization_id = $1`, [org.organizationId]);
     expect(ledger.rows[0].count).toBe(0);
   });
@@ -869,7 +868,7 @@ describe('multi-line checkout and negotiated prices', () => {
     await assignPlan(org.organizationId, planId);
     // No standard price at all -- only a negotiated one for this organization.
     // Effective a minute ago, not "now": the database's clock and this process's are not the same clock, and an agreement dated a few hundred milliseconds ahead of the database is not yet in force when the checkout reads it.
-    await recordPlanAgreement(seller.db, { organizationId: org.organizationId, planId, currency: 'CAD', amountMinor: 42_000, effectiveFrom: new Date(Date.now() - 60_000).toISOString() });
+    await agreeFixturePrice({ organizationId: org.organizationId, planId, currency: 'CAD', amountMinor: 42_000, effectiveFrom: new Date(Date.now() - 60_000).toISOString() });
 
     const fetchSpy = mockStripeFetch({
       '/v1/products': { id: `prod_agreement_${randomUUID().slice(0, 8)}` },
@@ -996,7 +995,7 @@ describe('the reviewed quote is stale-safe', () => {
     await assignPlan(org.organizationId, planId);
     const reviewed = await buildOrganizationPurchaseQuote(org.db, { organizationId: org.organizationId });
 
-    await recordPlanAgreement(seller.db, { organizationId: org.organizationId, planId, currency: 'CAD', amountMinor: 7_000, effectiveFrom: earlyToday(1) });
+    await agreeFixturePrice({ organizationId: org.organizationId, planId, currency: 'CAD', amountMinor: 7_000, effectiveFrom: earlyToday(1) });
     const now = await buildOrganizationPurchaseQuote(org.db, { organizationId: org.organizationId });
     expect(now.reviewVersion).not.toBe(reviewed.reviewVersion);
 
@@ -1087,7 +1086,7 @@ describe('the reviewed quote is stale-safe', () => {
 });
 
 describe('every quote price names its exact source record', () => {
-  it('identifies a standard price by price_book_item_prices.id and an agreement price by organization_plan_agreements.id', async () => {
+  it('identifies a standard price by price_book_item_prices.id and an agreement price by its agreed subscription price id', async () => {
     const standardOrg = await newTenant('provenance-standard');
     const { planId, priceId } = await seedProvisionedPlan();
     await assignPlan(standardOrg.organizationId, planId);
@@ -1096,7 +1095,7 @@ describe('every quote price names its exact source record', () => {
 
     const agreementOrg = await newTenant('provenance-agreement');
     await assignPlan(agreementOrg.organizationId, planId);
-    const agreementId = await recordPlanAgreement(seller.db, {
+    const agreementId = await agreeFixturePrice({
       organizationId: agreementOrg.organizationId, planId, currency: 'CAD', amountMinor: 5_500, effectiveFrom: earlyToday(1),
     });
     const agreementQuote = await buildOrganizationPurchaseQuote(agreementOrg.db, { organizationId: agreementOrg.organizationId });
@@ -1115,7 +1114,7 @@ describe('a negotiated provider price belongs to its own agreement', () => {
     const planId = await createFixturePlan({ key, kind: 'plan', label: 'History Plan', description: '', billable: true });
     await assignPlan(org.organizationId, planId);
 
-    const agreementA = await recordPlanAgreement(seller.db, { organizationId: org.organizationId, planId, currency: 'CAD', amountMinor: 40_000, effectiveFrom: earlyToday(1) });
+    const agreementA = await agreeFixturePrice({ organizationId: org.organizationId, planId, currency: 'CAD', amountMinor: 40_000, effectiveFrom: earlyToday(1) });
     let stripe = mockStripeFetch({
       '/v1/products': { id: `prod_a_${randomUUID().slice(0, 8)}` },
       '/v1/prices': { id: `price_a_${randomUUID().slice(0, 8)}` },
@@ -1130,7 +1129,7 @@ describe('a negotiated provider price belongs to its own agreement', () => {
     checkoutA.spy.mockRestore();
 
     // A later agreement for the same Plan.
-    const agreementB = await recordPlanAgreement(seller.db, { organizationId: org.organizationId, planId, currency: 'CAD', amountMinor: 38_000, effectiveFrom: earlyToday(2) });
+    const agreementB = await agreeFixturePrice({ organizationId: org.organizationId, planId, currency: 'CAD', amountMinor: 38_000, effectiveFrom: earlyToday(2) });
     expect(agreementB).not.toBe(agreementA);
     stripe = mockStripeFetch({
       '/v1/products': { id: `prod_b_${randomUUID().slice(0, 8)}` },
@@ -1438,16 +1437,20 @@ describe('the webhook: applying subscription events (called exactly as platform_
     await expect(event(null, 1_800_000_032)).rejects.toMatchObject({ code: '21000' });
   });
 
-  it('invoice notices are logged for diagnostics only, and never write a subscription row', async () => {
+  it('an invoice event is recorded in the ledger and never writes a subscription row', async () => {
     const org = await newTenant('webhook-notice');
     const customerReference = `cus_${randomUUID().slice(0, 12)}`;
     await seedCustomer(org.organizationId, customerReference, org.userId);
 
+    const eventReference = `evt_${randomUUID()}`;
     const { rows } = await pg.query(
-      `select public.record_platform_billing_notice($1,$2,$3,$4) as result`,
-      [`evt_${randomUUID()}`, 'invoice.paid', customerReference, 'stripe'],
+      `select public.apply_platform_invoice_event($1,$2,$3,$4::jsonb,$5) as result`,
+      [eventReference, 'invoice.paid', customerReference, JSON.stringify({ id: `in_${randomUUID().slice(0, 8)}`, currency: 'CAD', status: 'paid', amount_paid: 100, total: 100, lines: [{ description: 'Plan', amount: 100, quantity: 1 }] }), 'stripe'],
     );
     expect(rows[0].result).toBe(org.organizationId);
+    // This business has no GildOps subscription to bill, so the delivery is kept and nothing else is written.
+    const ledger = await pg.query('select application from public.platform_billing_webhook_events where event_reference = $1', [eventReference]);
+    expect(ledger.rows[0].application).toBe('unmatched');
 
     const subscription = await getOrganizationSubscription(org.db, { organizationId: org.organizationId });
     expect(subscription).toBeNull();
@@ -1456,7 +1459,7 @@ describe('the webhook: applying subscription events (called exactly as platform_
   it('nobody but the webhook role holds execute on either function', async () => {
     for (const signature of [
       'public.apply_platform_subscription_event(text,text,text,text,text,text,bigint,bigint,boolean,bigint,bigint,jsonb,text,text,text)',
-      'public.record_platform_billing_notice(text,text,text,text,text)',
+      'public.apply_platform_invoice_event(text,text,text,jsonb,text,text)',
     ]) {
       const { rows } = await pg.query(
         `select has_function_privilege('authenticated', '${signature}', 'execute') as authenticated_execute,

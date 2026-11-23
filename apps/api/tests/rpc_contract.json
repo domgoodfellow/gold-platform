@@ -827,7 +827,7 @@
         "p_to_number"
       ]
     },
-    "record_platform_billing_notice": {
+    "apply_platform_invoice_event": {
       "role": "platform_billing_webhook",
       "callers": [
         "app/core/db.py"
@@ -836,7 +836,8 @@
         "p_customer_reference",
         "p_environment",
         "p_event_reference",
-        "p_event_type"
+        "p_event_type",
+        "p_invoice"
       ]
     },
     "begin_platform_billing_customer": {

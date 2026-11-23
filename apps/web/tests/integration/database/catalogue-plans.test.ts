@@ -27,19 +27,16 @@ import {
   activeModuleKeys,
   availableFeatureKeys,
   currentPlanAssignment,
-  listOrganizationPlanAgreements,
   organizationEffectiveEntitlements,
   organizationEffectiveQuotas,
   organizationResolvedFeatureStates,
   organizationPlanPrice,
-  recordPlanAgreement,
-  recordPlanAssignment,
   recordPlanQuotaOverride,
 } from '@/lib/domain/catalogue/organization-plans';
 import { moduleCommercialState } from '@/lib/domain/commercial/terms';
 import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
 import { setAsideOperatingOrganization } from '@/tests/support/operating-organization';
-import { createFixturePlan, priceFixturePlan } from '@/tests/support/plans';
+import { agreeFixturePrice, createFixturePlan, priceFixturePlan, sellFixturePlan, withDatabaseOwner } from '@/tests/support/plans';
 import { CATALOGUE_SURFACE_COVERAGE } from '@/lib/catalogue-surface-coverage';
 
 /**
@@ -304,25 +301,24 @@ describe('Plans and Add-ons', () => {
     const addonKey = `addon_${randomUUID().slice(0, 8)}`;
     const addonId = await createFixturePlan({ key: addonKey, kind: 'addon', label: 'Addon', description: '', billable: true });
 
-    await recordPlanAssignment(seller, { organizationId: org.organizationId, planId, periodStart: '2026-01-01', periodEnd: '9999-12-31' });
-    // An add-on for the same organization, same open period, must not collide with the base plan.
+    // An add-on on the same subscription, same open period, does not collide with the base plan.
     await expect(
-      recordPlanAssignment(seller, { organizationId: org.organizationId, planId: addonId, periodStart: '2026-01-01', periodEnd: '9999-12-31' }),
+      sellFixturePlan(seller, { organizationId: org.organizationId, planId, addonPlanIds: [addonId], periodStart: '2026-01-01' }),
     ).resolves.toBeTruthy();
 
     const secondPlanKey = `second_base_${randomUUID().slice(0, 8)}`;
     const secondPlanId = await createFixturePlan({ key: secondPlanKey, kind: 'plan', label: 'Second base', description: '', billable: true });
     // A second base Plan overlapping the first must be refused.
     await expect(
-      recordPlanAssignment(seller, { organizationId: org.organizationId, planId: secondPlanId, periodStart: '2026-06-01', periodEnd: '9999-12-31' }),
-    ).rejects.toMatchObject({ code: 'organization_plans.assignment_overlap' });
+      sellFixturePlan(seller, { organizationId: org.organizationId, planId: secondPlanId, periodStart: '2026-06-01' }),
+    ).rejects.toMatchObject({ code: '23P01' });
   });
 
   it('never lets a Plan edit rewrite a historical organization assignment', async () => {
     const org = await newTenant('stable-history');
     const planKey = `stable_${randomUUID().slice(0, 8)}`;
     const planId = await createFixturePlan({ key: planKey, kind: 'plan', label: 'Before edit', description: 'v1', billable: true });
-    await recordPlanAssignment(seller, { organizationId: org.organizationId, planId, periodStart: '2026-01-01', periodEnd: '9999-12-31' });
+    await sellFixturePlan(seller, { organizationId: org.organizationId, planId, periodStart: '2026-01-01', periodEnd: '9999-12-31' });
 
     const before = await currentPlanAssignment(org.db, { organizationId: org.organizationId });
     expect(before?.planId).toBe(planId);
@@ -367,7 +363,7 @@ describe('Plans and Add-ons', () => {
     const planKey = `override_${randomUUID().slice(0, 8)}`;
     const planId = await createFixturePlan({ key: planKey, kind: 'plan', label: 'Override test', description: '', billable: true });
     await setPlanQuota(staff, { planId, allowanceKey: 'voice_minutes', label: 'Voice minutes', unit: 'minute', includedQuantity: 500, period: 'month', overagePolicy: 'allowed' });
-    await recordPlanAssignment(seller, { organizationId: org.organizationId, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31', note: 'quota override test' });
+    await sellFixturePlan(seller, { organizationId: org.organizationId, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31', note: 'quota override test' });
 
     let effective = await organizationEffectiveQuotas(org.db, { organizationId: org.organizationId });
     let voice = effective.find((q) => q.allowanceKey === 'voice_minutes' && q.planKey === planKey)!;
@@ -394,13 +390,13 @@ describe('Plans and Add-ons', () => {
     expect(prices).toHaveLength(2);
     expect(prices.map((p) => p.amountMinor).sort()).toEqual([29900, 34900]);
 
-    await recordPlanAssignment(seller, { organizationId: org.organizationId, planId, periodStart: '2026-01-01', periodEnd: '9999-12-31' });
+    await sellFixturePlan(seller, { organizationId: org.organizationId, planId, periodStart: '2026-01-01', agreedAmountMinor: null });
 
     const standard = await organizationPlanPrice(seller, { organizationId: org.organizationId, planId, at: '2026-03-01T00:00:00Z' });
     expect(standard).toMatchObject({ amountMinor: 29900, currency: 'EUR', source: 'standard' });
 
-    // A negotiated agreement overrides the standard price without touching its history.
-    await recordPlanAgreement(seller, { organizationId: org.organizationId, planId, currency: 'EUR', amountMinor: 24900, effectiveFrom: '2026-10-01T00:00:00Z', note: 'negotiated' });
+    // A negotiated price on the subscription line overrides the standard price without touching its history.
+    await agreeFixturePrice({ organizationId: org.organizationId, planId, currency: 'EUR', amountMinor: 24900, effectiveFrom: '2026-10-01T00:00:00Z', note: 'negotiated' });
 
     const agreed = await organizationPlanPrice(seller, { organizationId: org.organizationId, planId, at: '2026-11-01T00:00:00Z' });
     expect(agreed).toMatchObject({ amountMinor: 24900, currency: 'EUR', source: 'agreement' });
@@ -412,7 +408,9 @@ describe('Plans and Add-ons', () => {
     const stillTwo = await listPlanPrices(seller, planId);
     expect(stillTwo).toHaveLength(2);
 
-    const agreements = await listOrganizationPlanAgreements(seller, { organizationId: org.organizationId, planId });
+    const agreements = await withDatabaseOwner(async (pg) => (await pg.query(
+      `select g.id from public.subscription_agreed_prices g join public.organization_plan_assignments a on a.subscription_line_id = g.line_id
+        where a.organization_id = $1 and a.plan_id = $2`, [org.organizationId, planId])).rows);
     expect(agreements).toHaveLength(1);
   });
 
@@ -423,7 +421,7 @@ describe('Plans and Add-ons', () => {
     expect(goldInternal).toBeTruthy();
     expect(goldInternal?.billable).toBe(false);
 
-    await recordPlanAssignment(seller, { organizationId: org.organizationId, planId: goldInternal!.id, periodStart: '2026-01-01', periodEnd: '9999-12-31', note: 'dogfooding test' });
+    await sellFixturePlan(seller, { organizationId: org.organizationId, planId: goldInternal!.id, periodStart: '2026-01-01', periodEnd: '9999-12-31', note: 'dogfooding test' });
 
     const entitlements = await organizationEffectiveEntitlements(org.db, { organizationId: org.organizationId });
     // GOLD Internal grants every Product's currently-available Features — this organization now sees a real, non-empty resolved set through the identical RPC any tenant's Plan uses.
@@ -435,7 +433,7 @@ describe('Plans and Add-ons', () => {
     const org = await newTenant('gold-internal-resolver');
     goldInternalHolders.push(org.organizationId);
     const goldInternal = await getPlan(seller, 'gold_internal');
-    await recordPlanAssignment(seller, {
+    await sellFixturePlan(seller, {
       organizationId: org.organizationId,
       planId: goldInternal!.id,
       periodStart: '2020-01-01',
@@ -483,14 +481,15 @@ describe('Plans and Add-ons', () => {
   it('never lets a tenant read another organization\'s Plan assignments, agreements or overrides', async () => {
     const planKey = `isolation_${randomUUID().slice(0, 8)}`;
     const planId = await createFixturePlan({ key: planKey, kind: 'plan', label: 'Isolation test', description: '', billable: true });
-    await recordPlanAssignment(seller, { organizationId: tenant.organizationId, planId, periodStart: '2026-01-01', periodEnd: '9999-12-31' });
-    await recordPlanAgreement(seller, { organizationId: tenant.organizationId, planId, currency: 'EUR', amountMinor: 100, note: 'secret to this tenant' });
+    await sellFixturePlan(seller, { organizationId: tenant.organizationId, planId, periodStart: '2026-01-01', periodEnd: '9999-12-31' });
+    await agreeFixturePrice({ organizationId: tenant.organizationId, planId, currency: 'EUR', amountMinor: 100, note: 'secret to this tenant' });
 
     const crossAssignments = await currentPlanAssignment(other.db, { organizationId: tenant.organizationId });
     expect(crossAssignments).toBeNull();
 
-    const { data, error } = await other.db.from('organization_plan_agreements').select('id').eq('organization_id', tenant.organizationId);
+    const { data, error } = await other.db.from('subscription_agreed_prices').select('id');
     expect(error).toBeNull();
     expect(data).toEqual([]);
+    expect(await organizationPlanPrice(other.db, { organizationId: tenant.organizationId, planId })).toBeNull();
   });
 });

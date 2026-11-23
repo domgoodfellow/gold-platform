@@ -14,6 +14,7 @@ import {
 } from '@/lib/domain/platform-billing/subscriptions';
 import { describeSubscriptionPackage } from '@/lib/domain/platform-billing/subscription-package';
 import { buildOrganizationPurchaseQuote, type PurchaseQuote } from '@/lib/domain/platform-billing/quote';
+import { listPlatformInvoicesForBuyer } from '@/lib/domain/platform-billing/buyer-invoices';
 
 /**
  * What this business is entitled to use, how much of it is left, what it has used and what that
@@ -52,12 +53,16 @@ export async function loadPlanUsage(db: Db, input: { organizationId: string; cur
   // review. It is the single authority on whether checkout can proceed.
   const quote: PurchaseQuote | null =
     billingProvider && !subscription && basePlan ? await buildOrganizationPurchaseQuote(db, { organizationId }) : null;
+  const canManageBilling = input.capabilities.includes('billing.manage');
+  // What GildOps invoiced this business, for the people who manage its billing: the buyer's own
+  // projection, never GildOps' invoice records themselves.
+  const invoices = canManageBilling ? await listPlatformInvoicesForBuyer(db, { organizationId }) : [];
   return {
     terms, products, usage, account, basePlanAssignment, addonAssignments, allowances, basePlan, addonPlans,
     meterLabel: new Map(meters.map((meter) => [meter.id, meter.label])),
     productLabel: new Map(products.map((product) => [product.key, product.label])), billingProvider, subscription,
     subscriptionPackage, quote, canSubscribe: Boolean(quote && quote.blockers.length === 0),
-    canManageBilling: input.capabilities.includes('billing.manage'),
+    canManageBilling, invoices,
   };
 }
 

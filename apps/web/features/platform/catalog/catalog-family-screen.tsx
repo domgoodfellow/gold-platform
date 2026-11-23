@@ -10,7 +10,7 @@ import { FeatureStatusBadges } from '@/features/catalogue/feature-badges';
 import { EditModuleSheet, EditProductSheet, FeatureSheet } from '@/features/platform/catalog/family-forms';
 import { Button } from '@/components/controls/button';
 
-export function CatalogFamilyScreen({ goldId, model }: { goldId: string; model: CatalogFamilyModel }) {
+export function CatalogFamilyScreen({ goldId, model, mayOpenPlans }: { goldId: string; model: CatalogFamilyModel; mayOpenPlans: boolean }) {
   const { product, modules, featuresByModule, featureById, dependenciesByFeature, mappingsByFeature,
     grantingPlansByFeature, plansIncludingProduct, totalFeatures, byState, meteredCount, providerCapabilities } = model;
 
@@ -34,7 +34,7 @@ export function CatalogFamilyScreen({ goldId, model }: { goldId: string; model: 
       </div>
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label="Features" value={modules.length} />
+        <StatCard label="Feature groups" value={modules.length} />
         <StatCard label="Features" value={totalFeatures} />
         <StatCard label="Metered Features" value={meteredCount} />
         <StatCard label="Plans including this" value={plansIncludingProduct.length} />
@@ -44,7 +44,7 @@ export function CatalogFamilyScreen({ goldId, model }: { goldId: string; model: 
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="modules">Features</TabsTrigger>
-          <TabsTrigger value="plans">Plans</TabsTrigger>
+          <TabsTrigger value="plans">Plan coverage</TabsTrigger>
           <TabsTrigger value="requirements">Requirements</TabsTrigger>
         </TabsList>
 
@@ -128,9 +128,9 @@ export function CatalogFamilyScreen({ goldId, model }: { goldId: string; model: 
               {plansIncludingProduct.map((plan) => (
                 <li key={plan.id} className="flex items-center justify-between gap-2 py-2 text-sm">
                   <span>{plan.label}</span>
-                  {plan.priceBookItemId ? (
+                  {mayOpenPlans && plan.priceBookItemId ? (
                     <a href={`/organizations/${goldId}/finance/catalog/${plan.priceBookItemId}`} className="underline underline-offset-4">
-                      Open in Catalog &amp; Pricing
+                      Open plan
                     </a>
                   ) : null}
                 </li>

@@ -30,8 +30,13 @@ export type Payment = {
   note: string | null;
 };
 
-/** Where an invoice came from. A Work invoice copies its Work item's quote; a direct invoice copies catalog items; a proposal invoice copies an accepted proposal's lines. */
-export type InvoiceSource = 'work_item' | 'direct' | 'proposal';
+/**
+ * Where an invoice came from. A Work invoice copies its Work item's quote; a direct invoice copies
+ * catalog items; a proposal invoice copies an accepted proposal's lines; a subscription invoice
+ * bills one period of a subscription, issued from Finance or reported by the billing provider that
+ * collects it.
+ */
+export type InvoiceSource = 'work_item' | 'direct' | 'proposal' | 'subscription';
 
 export type Invoice = {
   id: string;
@@ -40,6 +45,16 @@ export type Invoice = {
   workItemId: string | null;
   /** The accepted proposal it invoiced. Null unless `source` is `proposal`. */
   proposalId: string | null;
+  /** The subscription it bills, and the period. Null unless `source` is `subscription`. */
+  subscriptionId: string | null;
+  periodStart: string | null;
+  periodEnd: string | null;
+  /** The billing provider that issued it, its own number and its page; null for an invoice this business issued. */
+  provider: string | null;
+  providerNumber: string | null;
+  providerUrl: string | null;
+  /** When the provider voided it. A voided invoice is owed by no one. */
+  voidedAt: string | null;
   /** Per tenant and human-facing. Two businesses both having an invoice 1 is the ordinary case. */
   number: number;
   /** Who was billed, as it read at issue — snapshotted rather than joined. */
@@ -71,9 +86,13 @@ export function totalPaid(payments: Payment[]): number {
 }
 
 /** Pure, and calls `priceWorkItem` rather than totalling lines itself — what keeps the one-calculation rule true on a page showing both a quote and an invoice. */
-export function invoiceStanding(invoice: Pick<Invoice, 'lines' | 'payments'>): InvoiceStanding {
+export function invoiceStanding(invoice: Pick<Invoice, 'lines' | 'payments'> & { voidedAt?: string | null }): InvoiceStanding {
   const total = priceWorkItem(invoice.lines);
   const paidMinor = totalPaid(invoice.payments);
+
+  if (invoice.voidedAt) {
+    return { total, paidMinor, outstandingMinor: 0, settled: true };
+  }
 
   if (total === null) {
     // Unreachable through `issue_invoice`, which refuses a job with nothing priced. Here in case that guarantee is ever dropped.
@@ -131,7 +150,7 @@ async function hydrateInvoice(db: Db, organizationId: string, row: InvoiceRow): 
 
 /** The database's source column, held to the sources the schema allows rather than cast. */
 export function invoiceSource(value: string): InvoiceSource {
-  if (value === 'work_item' || value === 'direct' || value === 'proposal') return value;
+  if (value === 'work_item' || value === 'direct' || value === 'proposal' || value === 'subscription') return value;
   throw new DomainError(`Unknown invoice source: ${value}`, 'invoices.source_unknown');
 }
 
@@ -141,6 +160,13 @@ function invoiceFields(row: InvoiceRow): Omit<Invoice, 'lines' | 'payments'> {
     source: invoiceSource(row.source),
     workItemId: row.work_item_id,
     proposalId: row.proposal_id,
+    subscriptionId: row.subscription_id,
+    periodStart: row.period_start,
+    periodEnd: row.period_end,
+    provider: row.provider,
+    providerNumber: row.provider_number,
+    providerUrl: row.provider_url,
+    voidedAt: row.voided_at,
     number: row.number,
     billedTo: row.billed_to,
     customerId: row.customer_id,
@@ -155,6 +181,13 @@ type InvoiceRow = {
   source: string;
   work_item_id: string | null;
   proposal_id: string | null;
+  subscription_id: string | null;
+  period_start: string | null;
+  period_end: string | null;
+  provider: string | null;
+  provider_number: string | null;
+  provider_url: string | null;
+  voided_at: string | null;
   number: number;
   billed_to: string;
   customer_id: string | null;
@@ -163,7 +196,7 @@ type InvoiceRow = {
   due_at: string | null;
 };
 
-const INVOICE_COLUMNS = 'id, source, work_item_id, proposal_id, number, billed_to, customer_id, currency, issued_at, due_at';
+const INVOICE_COLUMNS = 'id, source, work_item_id, proposal_id, subscription_id, period_start, period_end, provider, provider_number, provider_url, voided_at, number, billed_to, customer_id, currency, issued_at, due_at';
 
 /**
  * **Batched rather than one query per invoice:** two queries scoped to the invoice ids in hand,
@@ -264,12 +297,14 @@ export async function listCustomerInvoices(
  */
 export async function listInvoices(
   db: Db,
-  input: { organizationId: string; limit?: number },
+  input: { organizationId: string; subscriptionId?: string; limit?: number },
 ): Promise<Counted<Invoice>> {
-  const { data, error, count } = await db
+  let query = db
     .from('invoices')
     .select(INVOICE_COLUMNS, { count: 'exact' })
-    .eq('organization_id', input.organizationId)
+    .eq('organization_id', input.organizationId);
+  if (input.subscriptionId) query = query.eq('subscription_id', input.subscriptionId);
+  const { data, error, count } = await query
     .order('issued_at', { ascending: false })
     .limit(input.limit ?? LIST_LIMIT);
 

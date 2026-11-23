@@ -54,7 +54,7 @@ export default async function CatalogItemPage({ params }: PageProps<'/organizati
   const has = (capability: (typeof organization.capabilities)[number]) => organization.capabilities.includes(capability);
   const mayManage = has('price.manage');
   const [platform, switchModel] = item.plan
-    ? await Promise.all([loadPlatformContext(db, organizationId), loadPlanSwitches(db, item.plan.key)])
+    ? await Promise.all([loadPlatformContext(db, organizationId), loadPlanSwitches(db, item.plan.key, { organizationId })])
     : [null, null];
   const mayEditSwitches = Boolean(platform?.permissions.has('platform.catalogue'));
   const maySeeSubscribers = has('subscription.read') && gate.featureAvailability.has('subscriptions');

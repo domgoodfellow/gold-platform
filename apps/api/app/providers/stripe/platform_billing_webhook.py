@@ -10,11 +10,13 @@ Postgres role, the signing secret and the `auth.users` actor are all distinct.
 
 **Which events, and why only these.** Checked against current Stripe guidance
 (docs.stripe.com/billing/subscriptions/webhooks) rather than assumed: `customer.subscription.*`
-is what actually carries subscription status, and `invoice.paid`/`invoice.payment_failed` are
-logged for the idempotency ledger and platform diagnostics only -- Stripe's own docs state a
-`customer.subscription.updated` event already accompanies the status transition either invoice
-event causes ("Catch subscription status changes"), so there is exactly one writer of `status`
-rather than two independently-derived opinions about it. `checkout.session.completed` is
+is what actually carries subscription status, and the invoice events never write it -- Stripe's
+own docs state a `customer.subscription.updated` event already accompanies the status transition
+an invoice event causes ("Catch subscription status changes"), so there is exactly one writer of
+`status`. What the invoice events carry instead is the invoice itself: `invoice.finalized`,
+`invoice.paid`, `invoice.payment_failed`, `invoice.voided` and `invoice.marked_uncollectible`
+become the invoice in GildOps' Finance (ADR-057), with its lines, total and payment, and
+`charge.refunded` records a refund against the invoice the charge paid. `checkout.session.completed` is
 deliberately **not** subscribed here: subscription lifecycle is fully covered by the events above,
 resolved by the processor's own customer reference (already on file from provisioning) rather
 than a session id -- and the browser's return from Checkout is not payment proof in any case
@@ -33,11 +35,15 @@ SUBSCRIPTION_EVENTS = {
     "customer.subscription.updated",
     "customer.subscription.deleted",
 }
-NOTICE_EVENTS = {
+INVOICE_EVENTS = {
+    "invoice.finalized",
     "invoice.paid",
     "invoice.payment_failed",
+    "invoice.voided",
+    "invoice.marked_uncollectible",
 }
-HANDLED = SUBSCRIPTION_EVENTS | NOTICE_EVENTS
+REFUND_EVENTS = {"charge.refunded"}
+HANDLED = SUBSCRIPTION_EVENTS | INVOICE_EVENTS | REFUND_EVENTS
 
 
 @dataclass(frozen=True)
@@ -101,18 +107,95 @@ CHECKOUT_CORRELATION_KEY = "gildops_checkout_session_id"
 
 
 @dataclass(frozen=True)
-class NoticeEvent:
-    """`invoice.paid` / `invoice.payment_failed` -- ledger-only, see the module docstring."""
+class InvoiceEvent:
+    """An invoice the provider issued, paid, voided or refunded, thinned to what
+    `apply_platform_invoice_event` needs as `p_invoice`. Amounts are the provider's own minor
+    units; times are the provider's own Unix seconds. Never a subscription-status writer."""
 
     event_reference: str
     event_type: str
     customer_reference: str
     environment: str
+    invoice: dict[str, object]
+
+
+def _int(value: object) -> int | None:
+    # `bool` is an `int` in Python; a provider `true` is not an amount.
+    return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+
+def _invoice_payload(obj: dict[str, object], created: int | None) -> dict[str, object] | None:
+    """The provider invoice in the bounded shape the database reads, or None when it lacks an id or
+    a currency, or any line lacks an amount -- a partial invoice is not recorded as a whole one."""
+    invoice_id = obj.get("id")
+    currency = obj.get("currency")
+    if not isinstance(invoice_id, str) or not isinstance(currency, str):
+        return None
+    lines: list[dict[str, object]] = []
+    starts: list[int] = []
+    ends: list[int] = []
+    for raw in ((obj.get("lines") or {}).get("data") or []) if isinstance(obj.get("lines"), dict) else []:
+        if not isinstance(raw, dict) or _int(raw.get("amount")) is None:
+            return None
+        period = raw.get("period") if isinstance(raw.get("period"), dict) else {}
+        if _int(period.get("start")) is not None:
+            starts.append(period["start"])
+        if _int(period.get("end")) is not None:
+            ends.append(period["end"])
+        lines.append({
+            "description": raw.get("description") if isinstance(raw.get("description"), str) else "",
+            "amount": raw["amount"],
+            "quantity": _int(raw.get("quantity")) or 1,
+        })
+    # Tax: a single figure on older API versions, a list of amounts on newer ones.
+    tax = _int(obj.get("tax"))
+    if tax is None and isinstance(obj.get("total_taxes"), list):
+        tax = sum(_int(entry.get("amount")) or 0 for entry in obj["total_taxes"] if isinstance(entry, dict))
+    transitions = obj.get("status_transitions") if isinstance(obj.get("status_transitions"), dict) else {}
+    payment = obj.get("payment_intent") or obj.get("charge")
+    return {
+        "id": invoice_id,
+        "number": obj.get("number") if isinstance(obj.get("number"), str) else None,
+        "status": obj.get("status") if isinstance(obj.get("status"), str) else None,
+        # Stripe lower-cases currency codes; every currency column in this schema is `^[A-Z]{3}$`.
+        "currency": currency.upper(),
+        "created": _int(obj.get("created")),
+        "finalized_at": _int(transitions.get("finalized_at")),
+        "paid_at": _int(transitions.get("paid_at")),
+        "due_date": _int(obj.get("due_date")),
+        # The service period the lines bill, else the invoice's own.
+        "period_start": min(starts) if starts else _int(obj.get("period_start")),
+        "period_end": max(ends) if ends else _int(obj.get("period_end")),
+        "hosted_invoice_url": obj.get("hosted_invoice_url") if isinstance(obj.get("hosted_invoice_url"), str) else None,
+        "total": _int(obj.get("total")),
+        "tax": tax or 0,
+        "amount_paid": _int(obj.get("amount_paid")) or 0,
+        "payment_reference": payment if isinstance(payment, str) else None,
+        "lines": lines,
+        "refunds": [],
+        "event_created": created,
+    }
+
+
+def _refund_payload(obj: dict[str, object], created: int | None) -> dict[str, object] | None:
+    """A refunded charge, as the refunds against the invoice it paid. Without the invoice the
+    charge paid there is nothing in Finance to record it against, so the event is not acted on."""
+    invoice_id = obj.get("invoice")
+    currency = obj.get("currency")
+    if not isinstance(invoice_id, str) or not isinstance(currency, str):
+        return None
+    refunds = []
+    for raw in ((obj.get("refunds") or {}).get("data") or []) if isinstance(obj.get("refunds"), dict) else []:
+        if isinstance(raw, dict) and isinstance(raw.get("id"), str) and _int(raw.get("amount")):
+            refunds.append({"id": raw["id"], "amount": raw["amount"], "created": _int(raw.get("created"))})
+    if not refunds:
+        return None
+    return {"id": invoice_id, "currency": currency.upper(), "status": None, "refunds": refunds, "lines": [], "event_created": created}
 
 
 def parse(
     *, body: str, signature: str | None, signing_secret: str, now: int
-) -> SubscriptionEvent | NoticeEvent | None:
+) -> SubscriptionEvent | InvoiceEvent | None:
     """Turn a signed callback into a typed event, or None for one this handler does not act on.
 
     Raises when the signature does not check out -- the caller must not distinguish that from
@@ -142,12 +225,17 @@ def parse(
         return None
     environment = "live" if livemode else "sandbox"
 
-    if event_type in NOTICE_EVENTS:
-        return NoticeEvent(
+    if event_type in INVOICE_EVENTS or event_type in REFUND_EVENTS:
+        occurred = _int(event.get("created"))
+        payload = _invoice_payload(obj, occurred) if event_type in INVOICE_EVENTS else _refund_payload(obj, occurred)
+        if payload is None:
+            return None
+        return InvoiceEvent(
             event_reference=event_reference,
             event_type=event_type,
             customer_reference=customer_reference,
             environment=environment,
+            invoice=payload,
         )
 
     subscription_reference = obj.get("id")

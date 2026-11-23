@@ -27,7 +27,7 @@ from app.core.db import (
     machine_token,
 )
 from app.providers.stripe.platform_billing_webhook import (
-    NoticeEvent,
+    InvoiceEvent,
     SubscriptionEvent,
     parse,
 )
@@ -264,21 +264,77 @@ def test_an_event_without_a_readable_livemode_flag_is_about_no_environment_and_i
     assert parse(body=notice, signature=sign(notice), signing_secret=SECRET, now=NOW) is None
 
 
-def test_parses_invoice_events_as_notices_only() -> None:
-    for event_type in ("invoice.paid", "invoice.payment_failed"):
-        body = json.dumps(
-            {"id": "evt_6", "type": event_type, "livemode": True, "data": {"object": {"id": "in_1", "customer": "cus_1"}}}
-        )
+def invoice_object(**overrides: object) -> dict[str, object]:
+    return {
+        "id": "in_1",
+        "customer": "cus_1",
+        "number": "GILD-0001",
+        "status": "paid",
+        "currency": "cad",
+        "created": 1_750_000_000,
+        "status_transitions": {"finalized_at": 1_750_000_010, "paid_at": 1_750_000_020},
+        "hosted_invoice_url": "https://invoice.stripe.com/i/acct_1/test_1",
+        "total": 5_650,
+        "total_taxes": [{"amount": 650}],
+        "amount_paid": 5_650,
+        "payment_intent": "pi_1",
+        "lines": {"data": [
+            {"description": "Operate", "amount": 4_000, "quantity": 1, "period": {"start": 1_750_000_000, "end": 1_752_600_000}},
+            {"description": "Extra user", "amount": 1_000, "quantity": 2, "period": {"start": 1_750_000_000, "end": 1_752_600_000}},
+        ]},
+        **overrides,
+    }
+
+
+def test_parses_invoice_events_as_the_invoice_and_never_a_subscription_status() -> None:
+    for event_type in ("invoice.finalized", "invoice.paid", "invoice.payment_failed", "invoice.voided", "invoice.marked_uncollectible"):
+        body = json.dumps({"id": "evt_6", "type": event_type, "created": 1_750_000_030, "livemode": True, "data": {"object": invoice_object()}})
         parsed = parse(body=body, signature=sign(body), signing_secret=SECRET, now=NOW)
 
-        assert isinstance(parsed, NoticeEvent)
+        assert isinstance(parsed, InvoiceEvent)
         assert parsed.event_reference == "evt_6"
         assert parsed.event_type == event_type
         assert parsed.customer_reference == "cus_1"
         assert parsed.environment == "live"
-        # A notice carries no status, no subscription, no price -- it is not a subscription
-        # writer (module docstring).
         assert not hasattr(parsed, "status")
+        invoice = parsed.invoice
+        assert invoice["id"] == "in_1" and invoice["currency"] == "CAD" and invoice["number"] == "GILD-0001"
+        assert invoice["total"] == 5_650 and invoice["tax"] == 650 and invoice["amount_paid"] == 5_650
+        assert invoice["payment_reference"] == "pi_1"
+        assert invoice["period_start"] == 1_750_000_000 and invoice["period_end"] == 1_752_600_000
+        assert invoice["lines"] == [
+            {"description": "Operate", "amount": 4_000, "quantity": 1},
+            {"description": "Extra user", "amount": 1_000, "quantity": 2},
+        ]
+
+
+def test_reads_the_older_single_tax_figure_and_refuses_a_partial_invoice() -> None:
+    body = json.dumps({"id": "evt_8", "type": "invoice.paid", "livemode": False, "data": {"object": invoice_object(tax=300, total_taxes=None)}})
+    parsed = parse(body=body, signature=sign(body), signing_secret=SECRET, now=NOW)
+    assert isinstance(parsed, InvoiceEvent) and parsed.invoice["tax"] == 300 and parsed.environment == "sandbox"
+
+    broken = invoice_object()
+    broken["lines"] = {"data": [{"description": "No amount", "quantity": 1}]}
+    body = json.dumps({"id": "evt_9", "type": "invoice.paid", "livemode": False, "data": {"object": broken}})
+    assert parse(body=body, signature=sign(body), signing_secret=SECRET, now=NOW) is None
+
+    no_currency = invoice_object(currency=None)
+    body = json.dumps({"id": "evt_10", "type": "invoice.finalized", "livemode": False, "data": {"object": no_currency}})
+    assert parse(body=body, signature=sign(body), signing_secret=SECRET, now=NOW) is None
+
+
+def test_reads_a_refunded_charge_as_refunds_against_the_invoice_it_paid() -> None:
+    charge = {"id": "ch_1", "customer": "cus_1", "currency": "cad", "invoice": "in_1",
+              "refunds": {"data": [{"id": "re_1", "amount": 1_000, "created": 1_750_100_000}]}}
+    body = json.dumps({"id": "evt_11", "type": "charge.refunded", "created": 1_750_100_001, "livemode": True, "data": {"object": charge}})
+    parsed = parse(body=body, signature=sign(body), signing_secret=SECRET, now=NOW)
+    assert isinstance(parsed, InvoiceEvent)
+    assert parsed.invoice["id"] == "in_1" and parsed.invoice["refunds"] == [{"id": "re_1", "amount": 1_000, "created": 1_750_100_000}]
+
+    # A charge that paid no invoice has nothing in Finance to refund against.
+    del charge["invoice"]
+    body = json.dumps({"id": "evt_12", "type": "charge.refunded", "livemode": True, "data": {"object": charge}})
+    assert parse(body=body, signature=sign(body), signing_secret=SECRET, now=NOW) is None
 
 
 def test_mints_a_token_naming_its_own_role_and_never_service_role_or_the_payment_roles_role() -> None:

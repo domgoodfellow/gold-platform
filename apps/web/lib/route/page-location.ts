@@ -114,7 +114,7 @@ const LOCATION_METADATA: readonly LocationNode[] = [
   { id: 'record:asset', scope: 'organization', kind: 'record', pattern: 'assets/[assetId]', parent: 'area:assets', record: 'assetId' },
   // Finance
   { id: 'record:finance-catalog-item', scope: 'organization', kind: 'record', pattern: 'finance/catalog/[itemId]', parent: 'area:finance-catalog', record: 'itemId' },
-  { id: 'record:finance-subscription', scope: 'organization', kind: 'record', pattern: 'finance/subscriptions/[subscriberId]', parent: 'area:finance-subscriptions', record: 'subscriberId' },
+  { id: 'record:finance-subscription', scope: 'organization', kind: 'record', pattern: 'finance/subscriptions/[subscriptionId]', parent: 'area:finance-subscriptions', record: 'subscriptionId' },
   { id: 'record:finance-cost-to-serve', scope: 'organization', kind: 'record', pattern: 'finance/economics/[subscriberId]', parent: 'area:finance-economics', record: 'subscriberId' },
   { id: 'view:finance-packages', scope: 'organization', kind: 'view', pattern: 'finance/economics/packages', parent: 'area:finance-economics', label: 'Packages' },
   { id: 'view:finance-search', scope: 'organization', kind: 'view', pattern: 'finance/search', parent: 'workspace:finance', label: 'Search', open: 'U-12' },

@@ -157,7 +157,7 @@ describe('the catalogue features that offer the new Finance destinations', () =>
     expect(rows.map((row) => row.key)).toEqual(['gold_internal']);
   });
 
-  it('keeps the operator Product unlisted, with subscriptions to platform plans in it and recurring items under Gild Finance', async () => {
+  it('keeps the operator Product unlisted for costs and economics, with subscriptions and recurring items under Gild Finance for every business', async () => {
     const { rows } = await pg.query<{ product: string; kind: string; product_sale: string; feature: string; feature_sale: string }>(
       `select p.key as product, p.kind, p.sale_status as product_sale, f.key as feature, f.sale_status as feature_sale
          from public.platform_catalog_features f
@@ -170,7 +170,7 @@ describe('the catalogue features that offer the new Finance destinations', () =>
       { product: 'operator', kind: 'operator', product_sale: 'unlisted', feature: 'cost_to_serve', feature_sale: 'unlisted' },
       { product: 'operator', kind: 'operator', product_sale: 'unlisted', feature: 'package_economics', feature_sale: 'unlisted' },
       { product: 'finance', kind: 'product', product_sale: 'active', feature: 'recurring_items', feature_sale: 'active' },
-      { product: 'operator', kind: 'operator', product_sale: 'unlisted', feature: 'subscriptions', feature_sale: 'unlisted' },
+      { product: 'finance', kind: 'product', product_sale: 'active', feature: 'subscriptions', feature_sale: 'active' },
       { product: 'operator', kind: 'operator', product_sale: 'unlisted', feature: 'supplier_costs', feature_sale: 'unlisted' },
     ]);
   });

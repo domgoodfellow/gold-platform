@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { recordPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
 import { foundBusiness } from '@/tests/support/founding';
 import { agreeFixturePrice, assignFixturePlan, createFixturePlan, designateGildOps } from '@/tests/support/plans';
 
@@ -36,6 +35,8 @@ let otherCustomerOrg: string;
 let planId: string;
 let addonId: string;
 let rateId: string;
+let addonItem: string;
+let customerContact: string;
 
 async function person(label: string): Promise<Person> {
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { autoRefreshToken: false, persistSession: false } });
@@ -60,6 +61,19 @@ async function gildopsMember(label: string, capabilities: string[], staff = fals
   if (staff) await pg.query('insert into public.platform_staff (user_id, name, capabilities) values ($1, $2, $3)', [member.userId, 'Technician', ALL_PLATFORM]);
   return member;
 }
+
+/** Whether this reader is told a business's agreed plan price: the one reader of agreed prices outside the seller's own records. */
+const agreed = async (db: SupabaseClient, organizationId: string) => {
+  const { data, error } = await db.rpc('organization_plan_price', { p_organization_id: organizationId, p_plan_id: planId });
+  expect(error).toBeNull();
+  return (data ?? []).filter((row: { source: string }) => row.source === 'agreement').length;
+};
+
+/** Selling a plan to the customer business through the subscription door, as this member. */
+const sell = (db: SupabaseClient, year: number) => db.rpc('create_subscription', {
+  p_organization_id: gildops, p_customer_id: customerContact, p_item_id: addonItem, p_currency: 'CAD', p_billing_interval: 'month',
+  p_starts_on: `${year}-01-01`, p_ends_on: `${year}-02-01`, p_agreed_amount_minor: 0, p_note: 'finance-gildops-commercial.test.ts',
+});
 
 const visible = async (db: SupabaseClient, table: string, column: string, value: string) => {
   const { data, error } = await db.from(table).select('id').eq(column, value);
@@ -93,6 +107,11 @@ beforeAll(async () => {
   await assignFixturePlan({ organizationId: otherCustomerOrg, planId, periodStart: '2026-01-01', periodEnd: '9999-12-31' });
   await agreeFixturePrice({ organizationId: customerOrg, planId, currency: 'CAD', amountMinor: 30_000 });
   await agreeFixturePrice({ organizationId: otherCustomerOrg, planId, currency: 'CAD', amountMinor: 31_000 });
+  addonItem = (await pg.query<{ item: string }>('select price_book_item_id as item from public.platform_plans where id = $1', [addonId])).rows[0].item;
+  customerContact = (await pg.query<{ id: string }>(
+    `insert into public.contacts (organization_id, name, contact_type, lifecycle, custom, created_by) values ($1, 'Customer business', 'company', 'customer', '{}'::jsonb, $2) returning id`,
+    [gildops, owner.userId],
+  )).rows[0].id;
 
   const rate = await owner.db.rpc('record_provider_rate', {
     p_provider_key: 'twilio', p_meter_id: 'voice_minutes', p_currency: 'USD', p_unit_amount_micros: 13_000,
@@ -108,7 +127,9 @@ afterAll(async () => {
 
 describe('platform authority opens no GildOps money', () => {
   it('shows a GildOps member who holds every platform permission but no Finance permission no subscription, agreed price or cost', async () => {
-    expect(await visible(technician.db, 'organization_plan_agreements', 'organization_id', customerOrg)).toBe(0);
+    expect(await agreed(technician.db, customerOrg)).toBe(0);
+    expect(await visible(technician.db, 'subscriptions', 'organization_id', gildops)).toBe(0);
+    expect(await visible(technician.db, 'subscription_agreed_prices', 'organization_id', gildops)).toBe(0);
     expect(await visible(technician.db, 'organization_commercial_terms', 'organization_id', customerOrg)).toBe(0);
     expect(await visible(technician.db, 'platform_provider_rates', 'id', rateId)).toBe(0);
     expect(await visible(technician.db, 'commercial_draft_scenarios', 'id', randomUUID())).toBe(0);
@@ -121,12 +142,12 @@ describe('platform authority opens no GildOps money', () => {
   });
 
   it('refuses that member every subscription change', async () => {
-    await expect(recordPlanAssignment(technician.db, { organizationId: customerOrg, planId: addonId, periodStart: '2030-01-01', periodEnd: '2030-02-01' }))
-      .rejects.toMatchObject({ message: expect.stringMatching(/subscription permission in GildOps/) });
+    expect((await sell(technician.db, 2030)).error?.code).toBe('42501');
   });
 
   it('gives platform staff outside GildOps nothing at all', async () => {
-    expect(await visible(outsiderStaff.db, 'organization_plan_agreements', 'organization_id', customerOrg)).toBe(0);
+    expect(await agreed(outsiderStaff.db, customerOrg)).toBe(0);
+    expect(await visible(outsiderStaff.db, 'subscriptions', 'organization_id', gildops)).toBe(0);
     expect(await visible(outsiderStaff.db, 'platform_provider_rates', 'id', rateId)).toBe(0);
     expect((await outsiderStaff.db.rpc('platform_usage_economics', {})).error?.code).toBe('42501');
   });
@@ -134,17 +155,20 @@ describe('platform authority opens no GildOps money', () => {
 
 describe('each Finance permission opens its own part', () => {
   it('lets subscription permissions read and change subscriptions, but not costs', async () => {
-    expect(await visible(accountManager.db, 'organization_plan_agreements', 'organization_id', customerOrg)).toBe(1);
+    expect(await agreed(accountManager.db, customerOrg)).toBe(1);
+    expect(await visible(accountManager.db, 'subscription_agreed_prices', 'organization_id', gildops)).toBeGreaterThanOrEqual(2);
     expect(await visible(accountManager.db, 'platform_provider_rates', 'id', rateId)).toBe(0);
-    const id = await recordPlanAssignment(accountManager.db, { organizationId: customerOrg, planId: addonId, periodStart: '2031-01-01', periodEnd: '2031-02-01', note: 'finance-gildops-commercial.test.ts' });
-    expect(id).toBeTruthy();
+    const sold = await sell(accountManager.db, 2031);
+    expect(sold.error).toBeNull();
+    expect(sold.data).toBeTruthy();
   });
 
   it('lets cost permission read supplier rates and economics, but change no subscription', async () => {
     expect(await visible(analyst.db, 'platform_provider_rates', 'id', rateId)).toBe(1);
     const portfolio = await analyst.db.rpc('platform_revenue_portfolio', { p_billing_period_start: '2026-11-01T00:00:00Z', p_billing_period_end: '2026-12-01T00:00:00Z', p_reporting_currency: 'CAD' });
     expect(portfolio.error).toBeNull();
-    await expect(recordPlanAssignment(analyst.db, { organizationId: customerOrg, planId: addonId, periodStart: '2032-01-01', periodEnd: '2032-02-01' })).rejects.toBeTruthy();
+    expect((await sell(analyst.db, 2032)).error?.code).toBe('42501');
+    expect(await visible(analyst.db, 'subscriptions', 'organization_id', gildops)).toBe(0);
   });
 
   it('refuses a supplier rate to the subscription permissions', async () => {
@@ -159,12 +183,14 @@ describe('each Finance permission opens its own part', () => {
 describe('a customer business', () => {
   it('reads its own plan and agreed price — the buyer side of Plan & usage', async () => {
     expect(await visible(customer.db, 'organization_plan_assignments', 'organization_id', customerOrg)).toBeGreaterThanOrEqual(1);
-    expect(await visible(customer.db, 'organization_plan_agreements', 'organization_id', customerOrg)).toBe(1);
+    expect(await agreed(customer.db, customerOrg)).toBe(1);
+    // The agreed price is the seller's record: the buyer reads it through its projection only.
+    expect(await visible(customer.db, 'subscription_agreed_prices', 'organization_id', gildops)).toBe(0);
   });
 
   it('never reads another customer’s plan or agreed price', async () => {
     expect(await visible(customer.db, 'organization_plan_assignments', 'organization_id', otherCustomerOrg)).toBe(0);
-    expect(await visible(customer.db, 'organization_plan_agreements', 'organization_id', otherCustomerOrg)).toBe(0);
+    expect(await agreed(customer.db, otherCustomerOrg)).toBe(0);
   });
 
   it('never reads GildOps’ supplier rates, costs or billing-provider references', async () => {

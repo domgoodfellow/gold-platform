@@ -8,7 +8,7 @@ import { organizationCommercialSummary, organizationUsageDetail, recordUsageReco
 import { createCustomer } from '@/lib/domain/customers/customers';
 import { recordCall } from '@/lib/domain/reception/calls';
 import { foundBusiness } from '@/tests/support/founding';
-import { designateGildOps } from '@/tests/support/plans';
+import { createFixturePlan, designateGildOps, seedPlanSubscriptionLine } from '@/tests/support/plans';
 
 let restoreOperatingSeller: () => Promise<void> = async () => {};
 let sellerPg: Client | undefined;
@@ -22,16 +22,20 @@ afterAll(async () => {
 });
 
 /**
- * One economics model: meter -> usage event -> provider fulfilment and cost -> retail rate.
+ * One economics model: meter -> usage event -> provider fulfilment and cost -> usage price.
  *
- * What is proved here: a retail rate resolves deterministically by meter, currency and moment; a
+ * Usage is priced by the plans a business holds (ADR-057): an agreed price on its subscription
+ * line, then an add-on's item, then the base plan's item. Every business in this suite holds the
+ * suite's own plan, whose item carries the price history below.
+ *
+ * What is proved here: a usage price resolves deterministically by meter, currency and moment; a
  * usage event cannot name another business's binding or resource; a real call can be traced from
  * the business to the capability, the provider fulfilment, the cost and the retail rate; what
  * usage cost GOLD and what it charged are facts written once and never recomputed against
  * today's rates; and the only thing that writes a usage event is `app.record_usage`.
  *
- * Every price here is in a currency invented for this run, because a rate has no tenant to scope
- * it by and this suite shares a database with others.
+ * Every price here is in a currency invented for this run, so the history below is the only
+ * history that can apply.
  */
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
@@ -61,6 +65,9 @@ let pg: Client;
 /** GildOps' Finance (ADR-057): subscriptions, prices, costs and economics take its permissions. */
 let seller: SupabaseClient;
 let sellerOrganizationId: string;
+/** The suite's own plan, held by every business it founds, and the catalog item that prices its usage. */
+let ratePlanId: string;
+let ratePlanItem: string;
 
 let tenant: Tenant;
 let other: Tenant;
@@ -86,6 +93,11 @@ async function newTenant(label: string): Promise<Tenant> {
   const organizationId = await foundBusiness({ ownerEmail: email, name: `${label} ${randomUUID().slice(0, 6)}`, currency: CURRENCY });
   const customerId = await createCustomer(db, { organizationId, name: 'A Caller' });
   createdOrganizations.push(organizationId);
+  // Held since long before any price below, so every moment the suite asks about is on the plan.
+  await pg.query(
+    `select app.write_plan_assignment($1, $2, '2020-01-01', '9999-12-31', $3, 'usage-economics.test.ts')`,
+    [organizationId, ratePlanId, created.data.user.id],
+  );
   return { db, organizationId, customerId };
 }
 
@@ -112,8 +124,19 @@ async function fulfilment(organizationId: string, number: string, accountForBind
 }
 
 async function retailAt(meter: string, moment: string, organizationId = tenant.organizationId) {
-  const { rows } = await pg.query('select * from app.retail_rate_at($1, $2, $3, $4::timestamptz)', [meter, CURRENCY, organizationId, moment]);
-  return rows[0] as { id: string; unit_amount_micros: string } | undefined;
+  const { rows } = await pg.query('select * from app.usage_price_at($1, $2, $3, $4::timestamptz)', [meter, CURRENCY, organizationId, moment]);
+  return rows[0] as { id: string; unit_amount_micros: string; source_scope: string } | undefined;
+}
+
+/** A usage price on the suite's plan item, or agreed for one subscription line, written as history. */
+async function usagePrice(meter: string, micros: number, state: string, effectiveFrom: string, input: { currency?: string; lineId?: string } = {}) {
+  const { rows } = await pg.query<{ id: string }>(
+    `insert into public.price_book_item_usage_prices
+       (organization_id, item_id, subscription_line_id, meter_id, currency, unit_amount_micros, approval_state, effective_from, source)
+     values ($1, $2, $3, $4, $5, $6, $7, $8::timestamptz, 'usage-economics.test.ts') returning id`,
+    [sellerOrganizationId, ratePlanItem, input.lineId ?? null, meter, input.currency ?? CURRENCY, micros, state, effectiveFrom],
+  );
+  return rows[0].id;
 }
 
 
@@ -126,7 +149,7 @@ async function retailAt(meter: string, moment: string, organizationId = tenant.o
 async function purgeOwnRateHistory(): Promise<void> {
   const ownEvents = `select id from public.usage_events
      where provider_account_id in (select id from public.platform_provider_accounts where label like 'usage-economics %')
-        or retail_rate_id in (select id from public.platform_retail_rates where source = 'usage-economics.test.ts')
+        or retail_rate_id in (select id from public.price_book_item_usage_prices where source = 'usage-economics.test.ts')
         or provider_rate_id in (select id from public.platform_provider_rates
              where source = 'usage-economics.test.ts' or source like 'components-%' or source like 'history-%')`;
   await pg.query(`delete from public.usage_cost_component_adjustments where cost_component_id in (select id from public.usage_cost_components where usage_event_id in (${ownEvents}))`);
@@ -141,7 +164,7 @@ beforeAll(async () => {
   pg = new Client({ connectionString: CONNECTION });
   await pg.connect();
   await holdPlatformProviderTables(pg);
-  while ((await pg.query('select 1 from public.platform_retail_rates where currency = $1 union all select 1 from public.platform_provider_rates where currency = $1 limit 1', [CURRENCY])).rowCount) {
+  while ((await pg.query('select 1 from public.price_book_item_usage_prices where currency = $1 union all select 1 from public.platform_provider_rates where currency = $1 limit 1', [CURRENCY])).rowCount) {
     CURRENCY = code();
   }
   const gildopsSeller = await designateGildOps(sellerPg ??= await connectSellerPg());
@@ -149,6 +172,8 @@ beforeAll(async () => {
   seller = gildopsSeller.db;
   restoreOperatingSeller = gildopsSeller.restore;
   await purgeOwnRateHistory();
+  ratePlanId = await createFixturePlan({ key: `econ_${randomUUID().replaceAll('-', '').slice(0, 10)}`, label: 'Usage economics plan', billable: true });
+  ratePlanItem = (await pg.query<{ item: string }>('select price_book_item_id as item from public.platform_plans where id = $1', [ratePlanId])).rows[0].item;
 
   // Retail history for voice in this run's currency: two past prices, one scheduled, and a draft
   // that must never apply. Effective dates are explicit so the resolution is what is tested.
@@ -162,11 +187,7 @@ beforeAll(async () => {
     ['call_recording_minutes', 0, 'approved', -1 * DAY],
   ];
   for (const [meter, micros, state, offset] of rates) {
-    await pg.query(
-      `insert into public.platform_retail_rates (meter_id, currency, unit_amount_micros, approval_state, effective_from, source)
-       values ($1, $2, $3, $4, $5::timestamptz, 'usage-economics.test.ts')`,
-      [meter, CURRENCY, micros, state, at(offset)],
-    );
+    await usagePrice(meter, micros, state, at(offset));
   }
 
   const { rows: account } = await pg.query(
@@ -196,7 +217,7 @@ afterAll(async () => {
     await pg.query('delete from public.organization_provider_resources where organization_id = any($1)', [orgs]);
     await pg.query('delete from public.organization_provider_bindings where organization_id = any($1)', [orgs]);
     await pg.query('delete from public.platform_provider_accounts where id = $1', [accountId]);
-    await pg.query(`delete from public.platform_retail_rates where source = 'usage-economics.test.ts'`);
+    await pg.query(`delete from public.price_book_item_usage_prices where source = 'usage-economics.test.ts'`);
     await pg.query(
       `delete from public.platform_provider_rates
         where source = 'usage-economics.test.ts'
@@ -280,7 +301,7 @@ describe('provider cost components', () => {
   });
 });
 
-describe('retail rate resolution', () => {
+describe('usage price resolution', () => {
   it('resolves the rate in force now: the latest approved one that has started', async () => {
     expect(Number((await retailAt('voice_minutes', at(0)))?.unit_amount_micros)).toBe(7_000_000);
   });
@@ -302,67 +323,50 @@ describe('retail rate resolution', () => {
   it('answers nothing for a moment before any price, and nothing for a meter or currency with none', async () => {
     expect(await retailAt('voice_minutes', at(-3 * DAY))).toBeUndefined();
     expect(await retailAt('email_send', at(0))).toBeUndefined();
-    const { rows } = await pg.query(`select * from app.retail_rate_at('voice_minutes', 'XZZ', $1, now())`, [tenant.organizationId]);
+    const { rows } = await pg.query(`select * from app.usage_price_at('voice_minutes', 'XZZ', $1, now())`, [tenant.organizationId]);
     expect(rows).toEqual([]);
   });
 
   it('reads the currency without regard to case', async () => {
-    const { rows } = await pg.query(`select * from app.retail_rate_at('voice_minutes', $1, $2, now())`, [CURRENCY.toLowerCase(), tenant.organizationId]);
+    const { rows } = await pg.query(`select * from app.usage_price_at('voice_minutes', $1, $2, now())`, [CURRENCY.toLowerCase(), tenant.organizationId]);
     expect(rows).toHaveLength(1);
   });
 
-  it('never resolves another organization\'s negotiated rate, even one that would otherwise sort first (20261022000007)', async () => {
-    // A negotiated rate for `other`, dated after every global row above — if `app.retail_rate_at`
-    // ever went back to ignoring the organization it is pricing for, this is exactly what would
-    // leak: `tenant`'s own usage priced at a rate GOLD only agreed with a different business.
-    // A negotiated rate needs a Plan to be negotiated under
-    // (`platform_retail_rates_organization_needs_plan`); created directly, over the same raw
-    // connection the rest of this suite's setup uses, since the staff-only recording door also
-    // requires a real Plan assignment this test has no other reason to stand up.
-    const { rows: ownerRows } = await pg.query(`select created_by from public.organizations where id = $1`, [other.organizationId]);
-    const { rows: planRows } = await pg.query(
-      `insert into public.platform_plans (key, kind, label, created_by) values ($1, 'plan', 'Negotiated test plan', $2) returning id`,
-      [`negotiated_${randomUUID().slice(0, 8)}`, ownerRows[0].created_by],
-    );
-    await pg.query(
-      `insert into public.platform_retail_rates
-         (meter_id, currency, unit_amount_micros, approval_state, effective_from, source, organization_id, plan_id)
-       values ('voice_minutes', $1, 1, 'approved', $2::timestamptz, 'usage-economics.test.ts', $3, $4)`,
-      [CURRENCY, at(3 * DAY), other.organizationId, planRows[0].id],
-    );
-    // A negotiated rate is scoped to a Plan as well as an organization (the check constraint
-    // above), so resolving it for real usage also needs `other` to currently hold that Plan.
-    await pg.query(
-      `insert into public.organization_plan_assignments (organization_id, plan_id, plan_kind, period_start, period_end, assigned_by)
-       values ($1, $2, 'plan', '2020-01-01', '9999-12-31', $3)`,
-      [other.organizationId, planRows[0].id, ownerRows[0].created_by],
-    );
+  it('never resolves another organization\'s agreed usage price, even one that would otherwise sort first', async () => {
+    // A usage price agreed on `other`'s subscription line, starting after every plan price above —
+    // if the resolver ever stopped scoping an agreement to the line it was agreed for, this is
+    // exactly what would leak: `tenant`'s usage priced at what GildOps agreed with another business.
+    const { rows: owner } = await pg.query(`select created_by from public.organizations where id = $1`, [other.organizationId]);
+    const lineId = await seedPlanSubscriptionLine(pg, { organizationId: other.organizationId, planId: ratePlanId, currency: CURRENCY, actorId: owner[0].created_by });
+    await usagePrice('voice_minutes', 1, 'approved', at(3 * DAY), { lineId });
 
-    // `tenant` still resolves the platform default — the negotiated row belongs to `other`.
-    expect(Number((await retailAt('voice_minutes', at(4 * DAY), tenant.organizationId))?.unit_amount_micros)).toBe(9_000_000);
-    // `other` resolves its own negotiated rate once it has started.
-    expect(Number((await retailAt('voice_minutes', at(4 * DAY), other.organizationId))?.unit_amount_micros)).toBe(1);
-    // Before it starts, `other` still falls back to the platform default like anyone else.
-    expect(Number((await retailAt('voice_minutes', at(2.5 * DAY), other.organizationId))?.unit_amount_micros)).toBe(9_000_000);
+    // `tenant` still pays the plan's own price — the agreement belongs to `other`.
+    expect(await retailAt('voice_minutes', at(4 * DAY), tenant.organizationId)).toMatchObject({ unit_amount_micros: '9000000', source_scope: 'plan' });
+    // `other` pays its own agreed price once it has started.
+    expect(await retailAt('voice_minutes', at(4 * DAY), other.organizationId)).toMatchObject({ unit_amount_micros: '1', source_scope: 'agreement' });
+    // Before it starts, `other` pays the plan's price like anyone else on it.
+    expect(await retailAt('voice_minutes', at(2.5 * DAY), other.organizationId)).toMatchObject({ unit_amount_micros: '9000000', source_scope: 'plan' });
+  });
+
+  it('prices nothing for a business on no plan: there is no platform-wide price', async () => {
+    const { rows: owner } = await pg.query(`select created_by from public.organizations where id = $1`, [tenant.organizationId]);
+    const unplanned = await foundBusiness({ ownerEmail: (await pg.query('select email from auth.users where id = $1', [owner[0].created_by])).rows[0].email, name: `econ-unplanned ${randomUUID().slice(0, 6)}`, currency: CURRENCY });
+    createdOrganizations.push(unplanned);
+    expect(await retailAt('voice_minutes', at(0), unplanned)).toBeUndefined();
   });
 
   it('cannot hold two rates for one meter, currency and moment, whatever their state', async () => {
     // In a currency of its own, so the row it leaves cannot change what the history above resolves to.
     const scratch = code();
     const moment = at(-5 * DAY);
-    const insert = (state: string) =>
-      pg.query(
-        `insert into public.platform_retail_rates (meter_id, currency, unit_amount_micros, approval_state, effective_from, source)
-         values ('voice_minutes', $1, 1, $2, $3::timestamptz, 'usage-economics.test.ts')`,
-        [scratch, state, moment],
-      );
+    const insert = (state: string) => usagePrice('voice_minutes', 1, state, moment, { currency: scratch });
     await insert('approved');
     await expect(insert('approved')).rejects.toMatchObject({ code: '23505' });
     await expect(insert('draft')).rejects.toMatchObject({ code: '23505' });
   });
 
   it('is offered to a member as the effective rate per meter, and to nobody who belongs to no business', async () => {
-    const member = await tenant.db.rpc('effective_retail_rates', { p_currency: CURRENCY, p_organization_id: tenant.organizationId });
+    const member = await tenant.db.rpc('effective_usage_prices', { p_currency: CURRENCY, p_organization_id: tenant.organizationId });
     expect(member.error).toBeNull();
     const byMeter = Object.fromEntries(((member.data ?? []) as Array<{ meter_id: string; unit_amount_micros: number }>).map((row) => [row.meter_id, Number(row.unit_amount_micros)]));
     expect(byMeter.voice_minutes).toBe(7_000_000);
@@ -371,7 +375,7 @@ describe('retail rate resolution', () => {
 
     const visitor = createClient(SUPABASE_URL, ANON_KEY, { auth: { autoRefreshToken: false, persistSession: false } });
     await visitor.auth.signInAnonymously();
-    const none = await visitor.rpc('effective_retail_rates', { p_currency: CURRENCY, p_organization_id: tenant.organizationId });
+    const none = await visitor.rpc('effective_usage_prices', { p_currency: CURRENCY, p_organization_id: tenant.organizationId });
     expect(none.data).toEqual([]);
   });
 
@@ -384,7 +388,7 @@ describe('retail rate resolution', () => {
     });
     const ahead = await seller.rpc('record_item_usage_price', price(at(3 * DAY)));
     expect(ahead.error).toBeNull();
-    const { rows } = await pg.query('select plan_id is not null as on_plan, effective_from > now() as ahead from public.platform_retail_rates where id = $1', [ahead.data]);
+    const { rows } = await pg.query('select item_id = $2 as on_plan, effective_from > now() as ahead from public.price_book_item_usage_prices where id = $1', [ahead.data, created.data]);
     expect(rows[0]).toEqual({ on_plan: true, ahead: true });
 
     const past = await seller.rpc('record_item_usage_price', price(at(-DAY)));
@@ -519,7 +523,7 @@ describe('tenant integrity of usage provenance', () => {
          values ($1, 'email_send', 1, 'resend', $2, $3, 'organization_binding')`, [tenant.organizationId, CURRENCY, bindingId]),
     ).rejects.toMatchObject({ code: '23503', constraint: 'usage_events_binding_same_org_and_provider' });
     // A retail rate for a different meter.
-    const { rows: voiceRate } = await pg.query(`select id from public.platform_retail_rates where meter_id = 'voice_minutes' and currency = $1 limit 1`, [CURRENCY]);
+    const { rows: voiceRate } = await pg.query(`select id from public.price_book_item_usage_prices where meter_id = 'voice_minutes' and currency = $1 limit 1`, [CURRENCY]);
     await expect(insert('retail_rate_id, customer_charge_micros', [voiceRate[0].id, 0])).rejects.toMatchObject({ code: '23503', constraint: 'usage_events_retail_rate_matches' });
     // An account of a different provider.
     const { rows: account } = await pg.query(`insert into public.platform_provider_accounts (provider_key, label, credential_kind) values ('resend', 'fixture', 'api_key') returning id`);
@@ -549,7 +553,7 @@ describe('a real call can be traced end to end', () => {
          left join public.organization_provider_resources r on r.id = u.provider_resource_id
          left join public.platform_provider_accounts a on a.id = u.provider_account_id
          left join public.platform_provider_rates pr on pr.id = u.provider_rate_id
-         left join public.platform_retail_rates rr on rr.id = u.retail_rate_id
+         left join public.price_book_item_usage_prices rr on rr.id = u.retail_rate_id
         where u.organization_id = $1 and u.reference = $2`,
       [tenant.organizationId, callId],
     );
@@ -612,8 +616,8 @@ describe('what a usage event cost and charged is written once', () => {
       providerKey: 'twilio', meterId: meter, currency: 'USD', unitAmountMicros: 999_999, source: 'usage-economics.test.ts',
     });
     await pg.query(
-      `insert into public.platform_retail_rates (meter_id, currency, unit_amount_micros, effective_from, source)
-       values ($1, $2, 50000000, now(), 'usage-economics.test.ts')`, [meter, CURRENCY]);
+      `insert into public.price_book_item_usage_prices (organization_id, item_id, meter_id, currency, unit_amount_micros, effective_from, source)
+       values ($1, $2, $3, $4, 50000000, now(), 'usage-economics.test.ts')`, [sellerOrganizationId, ratePlanItem, meter, CURRENCY]);
 
     expect(await snapshot()).toEqual(before);
 
@@ -649,7 +653,7 @@ describe('what a usage event cost and charged is written once', () => {
   it('holds the rate rows an event used in place: they cannot be deleted from under it', async () => {
     const { rows } = await pg.query(
       `select retail_rate_id from public.usage_events where organization_id = $1 and retail_rate_id is not null limit 1`, [tenant.organizationId]);
-    await expect(pg.query('delete from public.platform_retail_rates where id = $1', [rows[0].retail_rate_id])).rejects.toMatchObject({ code: '23503' });
+    await expect(pg.query('delete from public.price_book_item_usage_prices where id = $1', [rows[0].retail_rate_id])).rejects.toMatchObject({ code: '23503' });
   });
 });
 

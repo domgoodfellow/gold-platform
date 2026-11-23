@@ -574,9 +574,9 @@ Administration owns what only the platform may do, and manages no money:
 - provider accounts, credentials and infrastructure;
 - metering in units, billing-webhook delivery health, platform security and diagnostics.
 
-GildOps sells its platform through its operating Organization's Finance: a plan is created and priced in Catalog & Pricing, a business's subscription, agreed price and billing state are its record in Subscriptions, and what suppliers charge, what each business costs to serve and what a package earns are Costs and Economics, behind `subscription.read`/`subscription.manage` and `cost.read`/`cost.manage` in that Organization. Platform permissions open none of it.
+Every business sells recurring items to its own customers through Finance → Subscriptions, and invoices each period from the subscription or lets a payment service collect it. GildOps sells its platform the same way through its operating Organization's Finance: a plan is created and priced in Catalog & Pricing (with its usage prices), a business subscribes to it in Subscriptions, which provisions the plan onto the business, and its Stripe invoices appear in Finance → Invoices; what suppliers charge, what each business costs to serve and what a package earns are Costs and Economics. These answer to `subscription.read`/`subscription.manage`, `price.manage`, `invoice.issue` and `cost.read`/`cost.manage` in that Organization. Platform permissions open none of it.
 
-An Organization's purchase of GildOps is shown to that Organization under Business Settings → Plan & usage, never as its revenue.
+An Organization's purchase of GildOps is shown to that Organization under Business Settings → Plan & usage, never as its revenue: its plan, allowances, usage and, for its billing managers, the invoices GildOps sent it, with their amounts, what was paid and Stripe's page to pay or view each.
 
 A Finance workspace must never become a back door into GildOps platform economics.
 

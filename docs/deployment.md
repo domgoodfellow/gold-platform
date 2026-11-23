@@ -622,6 +622,8 @@ Every provider webhook deployment must verify:
 
 Do not reuse one webhook signing secret across logically distinct money/security planes merely because the provider is the same.
 
+The GildOps platform billing webhook (`apps/api/api/stripe_platform_billing_webhook.py`) acts on `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.finalized`, `invoice.paid`, `invoice.payment_failed`, `invoice.voided`, `invoice.marked_uncollectible` and `charge.refunded`; the Stripe endpoint must be subscribed to all of them for GildOps' Stripe invoices, payments and refunds to reach Finance → Invoices.
+
 Example:
 
 ```text

@@ -43,7 +43,7 @@ const PLAN_DEFINITIONS = [
 /** What plans cost: published list prices for business members, and nothing at all for platform authority alone (ADR-057). */
 const LIST_PRICES = [
   { table: 'price_book_item_prices', listed: 'plan_id is not null' },
-  { table: 'platform_retail_rates', listed: 'organization_id is null' },
+  { table: 'price_book_item_usage_prices', listed: 'subscription_line_id is null and item_id in (select price_book_item_id from public.platform_plans)' },
 ] as const;
 
 const CONTROL_PLANE = [
@@ -98,15 +98,21 @@ beforeAll(async () => {
   // Two tables the seed leaves empty, filled as the database owner so the deny has a row to refuse.
   // Removed afterwards over the direct connection.
   await pg.query(
-    "insert into public.platform_retail_rates (meter_id, currency, unit_amount_micros, source, note) values ('email_send', 'EUR', 1, 'visibility fixture', $1)",
+    `insert into public.price_book_item_usage_prices (organization_id, item_id, meter_id, currency, unit_amount_micros, source, note)
+     select i.organization_id, i.id, 'email_send', 'EUR', 1, 'visibility fixture', $1
+       from public.platform_plans p join public.price_book_items i on i.id = p.price_book_item_id order by p.key limit 1`,
     [FIXTURE],
   );
-  const { rows: prices } = await pg.query('select id from public.price_book_item_prices where plan_id is not null limit 1');
+  const { rows: prices } = await pg.query(
+    `select p.id from public.price_book_item_prices p where p.plan_id is not null
+        and not exists (select 1 from public.price_book_item_provider_prices m where m.plan_price_id = p.id and m.environment = 'sandbox')
+      limit 1`,
+  );
   await mapFixturePlanPrice({ planPriceId: prices[0].id, environment: 'sandbox', productReference: `prod_${FIXTURE}`, priceReference: `price_${FIXTURE}` });
 }, 90_000);
 
 afterAll(async () => {
-  await pg.query('delete from public.platform_retail_rates where note = $1', [FIXTURE]);
+  await pg.query('delete from public.price_book_item_usage_prices where note = $1', [FIXTURE]);
   await pg.query('delete from public.price_book_item_provider_prices where price_reference = $1', [`price_${FIXTURE}`]);
   await pg.end();
 });

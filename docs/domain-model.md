@@ -1075,11 +1075,15 @@ Its name, description, prices, add-ons, usage prices and sale status are the sel
 
 ### Subscription
 
-**Definition:** The GildOps-recorded commercial lifecycle for one Organization's recurring GildOps package — its plan and add-on periods, agreed price and terms, in GildOps' Finance — with the billing provider's copy of its billing state beside it.
+**Definition:** A recurring agreement between a business and one of its own customers, kept in that business's Finance: what it is for (one primary recurring item and any add-ons, each a line with its own dates and quantity), its billing terms (currency and monthly or yearly interval), its start and end, and, per line, an agreed price where the item's list price does not apply. Any business keeps subscriptions; GildOps sells its plans as subscriptions of its operating Organization.
 
-A Subscription is not the same as Entitlement.
+A Subscription is not the same as Entitlement. Where a line of GildOps' subscription sells a platform plan and the customer is linked to a provisioned Organization, the line is carried out as that Organization's plan assignment (its entitlement), following the line's dates; nothing else in the subscription model knows GildOps. The billing provider's copy of a GildOps subscription is kept beside it.
 
 Subscription state is an input to commercial/service-access resolution.
+
+### Usage price
+
+**Definition:** What one unit of a meter costs the buyer, beyond any allowance: a recurring item's own usage price, or one agreed for one subscription line, effective-dated and appended. Usage is priced by the plans the using Organization holds when it happens — an agreed price on its subscription line first, then an add-on's item, then the base plan's item. There is no platform-wide price; usage on no priced plan is not priced. Each usage event keeps the price it was charged at.
 
 ---
 

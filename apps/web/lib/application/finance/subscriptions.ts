@@ -1,64 +1,53 @@
 import type { Db } from '@/lib/db/types';
 import { getTenant, type Tenant } from '@/lib/domain/platform/tenants';
-import { listOrganizationTerms, moduleCommercialState, type CommercialTerm, type ModuleCommercialState } from '@/lib/domain/commercial/terms';
-import { listProducts, type Product } from '@/lib/domain/commercial/catalogue';
 import { listCatalogFeatures, listCatalogModules, listCatalogProducts, type CatalogFeature, type CatalogModule, type CatalogProduct } from '@/lib/domain/catalogue/catalogue';
-import { listPlans, listPlanPrices, listPlanQuotas, currentPlanPrice, type Plan, type PlanPrice, type PlanQuota } from '@/lib/domain/catalogue/plans';
+import { listPlans, listPlanQuotas, type Plan, type PlanQuota } from '@/lib/domain/catalogue/plans';
 import {
-  currentAddonAssignments,
-  currentPlanAssignment,
-  listOrganizationPlanAgreements,
-  listOrganizationPlanAssignments,
   listOrganizationPlanQuotaOverrides,
   organizationEffectiveQuotas,
-  organizationPlanPrice,
   organizationResolvedFeatureStates,
-  type PlanAgreement,
-  type PlanAssignment,
   type PlanQuotaOverride,
   type ResolvedFeatureState,
 } from '@/lib/domain/catalogue/organization-plans';
-import {
-  organizationAllowanceStates,
-  type OrganizationAllowanceState,
-} from '@/lib/domain/commercial/allowances';
-import { listCurrentPlanAssignments } from '@/lib/domain/catalogue/organization-plans';
-import { listTenantsByIds } from '@/lib/domain/platform/tenants';
+import { organizationAllowanceStates, type OrganizationAllowanceState } from '@/lib/domain/commercial/allowances';
+import { listMeters, listProducts, type Meter, type Product } from '@/lib/domain/commercial/catalogue';
+import { listOrganizationTerms, type CommercialTerm } from '@/lib/domain/commercial/terms';
 import { platformBillingEnvironment } from '@/lib/adapters/platform-billing';
 import { getOrganizationServiceAccess, type ServiceAccess } from '@/lib/domain/platform-billing/service-access';
-import {
-  listOrganizationSubscriptions,
-  listSubscriptionItems,
-  listSubscriptionsForOrganization,
-  type OrganizationSubscription,
-  type OrganizationSubscriptionItem,
-} from '@/lib/domain/platform-billing/subscriptions';
+import { listSubscriptionItems, listSubscriptionsForOrganization, type OrganizationSubscriptionItem } from '@/lib/domain/platform-billing/subscriptions';
 import { listRecentPlatformBillingEvents } from '@/lib/domain/platform-billing/webhook-events';
-import { customerForTenant } from '@/lib/domain/customers/client-tenants';
+import { invoiceStanding, listInvoices, type Invoice } from '@/lib/domain/billing/invoices';
+import { listItemAddons, listItemPrices, listRecurringItems, type ItemPrice, type RecurringItem } from '@/lib/domain/pricing/recurring-items';
+import { fromDatabaseError } from '@/lib/domain/errors';
+import {
+  getSubscription,
+  lineInForce,
+  listAgreedPrices,
+  listAgreedUsagePrices,
+  listSubscriptionLines,
+  listSubscriptions,
+  recurringAmount,
+  subscriptionLinePrices,
+  subscriptionStatus,
+  todayIso,
+  type AgreedPrice,
+  type AgreedUsagePrice,
+  type LinePrice,
+  type Subscription,
+  type SubscriptionLine,
+  type SubscriptionStatus,
+} from '@/lib/domain/subscriptions/subscriptions';
 
 /**
- * GildOps' Finance → Subscriptions (ADR-057): what each business GildOps serves subscribes to,
- * at what price, what that switches on and what the billing provider holds. One compositional
- * read model over the canonical Plan/Add-on functions (`organization-plans.ts`, `plans.ts`), the
- * legacy per-product terms (`commercial/terms.ts`) and the billing provider's copy
- * (`platform-billing/subscriptions.ts`). Every read runs as the signed-in member, so the database
- * decides: `subscription.read` in GildOps' operating organization, never platform authority.
- * Composes; it introduces no second calculation — `effective` below is always
- * `organizationPlanPrice()`'s own result, never re-derived.
+ * Finance → Subscriptions (ADR-057): every subscription a business keeps with its own customers,
+ * read through the shared subscription records and priced by the database's one rule. Every read
+ * runs as the signed-in member, so the database decides who sees what.
+ *
+ * A subscription whose lines sell platform plans, to a customer linked to a provisioned business,
+ * also shows that business's entitlements: what its plans switch on, its allowances, the billing
+ * provider's copy and whether service is available. That part is read only where it exists; the
+ * subscription itself is the same record every business keeps.
  */
-
-export type ComponentPrice = {
-  planId: string;
-  planKey: string;
-  label: string;
-  kind: 'plan' | 'addon';
-  /** The Plan's own catalogue price, ignoring any agreement — from `price_book_item_prices` alone. */
-  standard: { amountMinor: number; currency: string } | null;
-  /** The currently-effective negotiated price, if this organization has one. */
-  agreement: { amountMinor: number; currency: string; effectiveFrom: string; effectiveTo: string | null } | null;
-  /** What this organization actually pays right now — `organizationPlanPrice()`'s own answer, never re-derived. */
-  effective: { amountMinor: number; currency: string; source: 'agreement' | 'standard' } | null;
-};
 
 export type OrganizationAllowance = {
   allowanceKey: string;
@@ -77,13 +66,8 @@ export type OrganizationAllowance = {
   };
   overridden: boolean;
   /**
-   * What is actually being consumed against this allowance right now — the resolver's own
-   * answer, the same one `app.record_usage` and `open_call` enforce against. Null for a
-   * configured allowance the runtime resolver returns no state for.
-   *
-   * **Configuration and consumption stay separate concepts.** The fields above are what was
-   * agreed; this is what is happening. They are shown side by side and never merged into one
-   * number, because "1,500 SMS included" and "1,082 used" answer different questions.
+   * What is being consumed against this allowance now: the resolver's own answer, the same one
+   * `app.record_usage` enforces. Shown beside what was agreed, never merged into one number.
    */
   runtime: OrganizationAllowanceState | null;
 };
@@ -96,52 +80,7 @@ export type CommercialFeatureGroup = {
   }[];
 };
 
-async function componentPrice(
-  db: Db,
-  input: { organizationId: string; currency: string },
-  assignment: PlanAssignment,
-  plan: Plan | null,
-): Promise<ComponentPrice> {
-  const [prices, effective] = await Promise.all([
-    listPlanPrices(db, assignment.planId),
-    organizationPlanPrice(db, { organizationId: input.organizationId, planId: assignment.planId }),
-  ]);
-  const standardPrice = currentPlanPrice(prices, { currency: input.currency, billingInterval: 'month' });
-  const agreements = await listOrganizationPlanAgreements(db, { organizationId: input.organizationId, planId: assignment.planId });
-  const today = new Date().toISOString();
-  const currentAgreement =
-    agreements.find((agreement) => agreement.effectiveFrom <= today && (agreement.effectiveTo === null || agreement.effectiveTo >= today)) ?? null;
-
-  return {
-    planId: assignment.planId,
-    planKey: plan?.key ?? assignment.planId,
-    label: plan?.label ?? assignment.planId,
-    kind: assignment.planKind,
-    standard: standardPrice ? { amountMinor: standardPrice.amountMinor, currency: standardPrice.currency } : null,
-    agreement: currentAgreement
-      ? { amountMinor: currentAgreement.amountMinor, currency: currentAgreement.currency, effectiveFrom: currentAgreement.effectiveFrom, effectiveTo: currentAgreement.effectiveTo }
-      : null,
-    effective: effective ? { amountMinor: effective.amountMinor, currency: effective.currency, source: effective.source } : null,
-  };
-}
-
-/** Sums every component's effective price, only when every component is priced and every price shares one currency — an absent or mixed-currency total is `null` (`Unknown / incomplete`), never `$0` or a guess. */
-function recurringTotal(components: readonly ComponentPrice[]): { amountMinor: number; currency: string } | null {
-  if (components.length === 0) return null;
-  const currencies = new Set(components.map((component) => component.effective?.currency).filter((currency): currency is string => Boolean(currency)));
-  if (currencies.size !== 1 || components.some((component) => !component.effective)) return null;
-  const currency = [...currencies][0];
-  return { amountMinor: components.reduce((sum, component) => sum + (component.effective?.amountMinor ?? 0), 0), currency };
-}
-
-async function buildAllowances(
-  db: Db,
-  input: { organizationId: string },
-  planById: Map<string, Plan>,
-): Promise<OrganizationAllowance[]> {
-  // The raw contributions (one row per contributing Plan, with the override applied) stay the
-  // provenance this screen is for; the resolved runtime state is read alongside them rather than
-  // replacing them, and neither is derived from the other here.
+async function buildAllowances(db: Db, input: { organizationId: string }, planById: Map<string, Plan>): Promise<OrganizationAllowance[]> {
   const [effective, runtimeStates] = await Promise.all([
     organizationEffectiveQuotas(db, { organizationId: input.organizationId }),
     organizationAllowanceStates(db, { organizationId: input.organizationId }),
@@ -189,7 +128,6 @@ function buildFeatureGroups(
   for (const feature of catalogFeatures) {
     featuresByModule.set(feature.moduleId, [...(featuresByModule.get(feature.moduleId) ?? []), feature]);
   }
-
   return [...catalogProducts]
     .sort((a, b) => a.displayOrder - b.displayOrder)
     .map((product) => ({
@@ -207,46 +145,6 @@ function buildFeatureGroups(
     .filter((entry) => entry.modules.length > 0);
 }
 
-/** One row of GildOps' Subscriptions: a business it serves, its plan and price, and the billing provider's state. */
-export type SubscriptionRow = {
-  tenant: Tenant;
-  plan: Plan | null;
-  addonCount: number;
-  since: string | null;
-  effective: { amountMinor: number; currency: string; source: 'agreement' | 'standard' } | null;
-  billing: OrganizationSubscription | null;
-  access: ServiceAccess;
-};
-
-/**
- * Every business with a current plan or a billing-provider subscription. Prices come from
- * `organizationPlanPrice`, service access from the resolver the business's own guard runs.
- */
-export async function loadSubscriptions(db: Db): Promise<SubscriptionRow[]> {
-  const [assignments, billing, plans] = await Promise.all([listCurrentPlanAssignments(db), listOrganizationSubscriptions(db), listPlans(db)]);
-  const environment = platformBillingEnvironment();
-  const ids = [...new Set([...assignments.map((row) => row.organizationId), ...billing.map((row) => row.organizationId)])];
-  const tenants = await listTenantsByIds(db, ids);
-  const planById = new Map(plans.map((plan) => [plan.id, plan]));
-  return Promise.all(tenants.map(async (tenant) => {
-    const held = assignments.filter((row) => row.organizationId === tenant.id);
-    const base = held.find((row) => row.planKind === 'plan') ?? null;
-    const [effective, access] = await Promise.all([
-      base ? organizationPlanPrice(db, { organizationId: tenant.id, planId: base.planId }) : Promise.resolve(null),
-      getOrganizationServiceAccess(db, { organizationId: tenant.id, environment, operationalState: tenant.operationalState }),
-    ]);
-    return {
-      tenant,
-      plan: base ? (planById.get(base.planId) ?? null) : null,
-      addonCount: held.filter((row) => row.planKind === 'addon').length,
-      since: base?.periodStart ?? null,
-      effective: effective ? { amountMinor: effective.amountMinor, currency: effective.currency, source: effective.source } : null,
-      billing: billing.find((row) => row.organizationId === tenant.id && row.environment === environment) ?? null,
-      access,
-    };
-  })).then((rows) => rows.sort((a, b) => a.tenant.name.localeCompare(b.tenant.name)));
-}
-
 /** The billing provider's copy of one business's subscription: what it holds, its items, and the deliveries that changed it. */
 async function loadBilling(db: Db, organizationId: string) {
   const environment = platformBillingEnvironment();
@@ -258,71 +156,184 @@ async function loadBilling(db: Db, organizationId: string) {
   return { environment, subscription: subscriptions[0] ?? null, items: items as OrganizationSubscriptionItem[], events };
 }
 
-/** One business's subscription record in GildOps' Finance, keyed by the business it serves. */
-export async function loadSubscription(db: Db, input: { sellerId: string; subscriberId: string }) {
-  const organizationId = input.subscriberId;
-  const tenant = await getTenant(db, organizationId);
+type Customer = { id: string; name: string };
+
+async function customerNames(db: Db, organizationId: string, ids: string[]): Promise<Map<string, string>> {
+  if (ids.length === 0) return new Map();
+  const { data, error } = await db.from('contacts').select('id, name').eq('organization_id', organizationId).in('id', ids);
+  if (error) throw fromDatabaseError(error, 'subscriptions.customers_failed');
+  return new Map((data ?? []).map((row) => [row.id, row.name]));
+}
+
+/** One row of Finance → Subscriptions. */
+export type SubscriptionRow = {
+  subscription: Subscription;
+  status: SubscriptionStatus;
+  customer: Customer;
+  /** What it is for today (or first, before it starts): the primary item's name. */
+  itemName: string | null;
+  addonCount: number;
+  /** The recurring amount per billing interval of the lines in force; null when unknown. */
+  amount: { amountMinor: number; currency: string } | null;
+  agreed: boolean;
+};
+
+export async function loadSubscriptions(db: Db, input: { organizationId: string }): Promise<SubscriptionRow[]> {
+  const subscriptions = await listSubscriptions(db, { organizationId: input.organizationId });
+  const [lines, items, names] = await Promise.all([
+    listSubscriptionLines(db, { organizationId: input.organizationId, subscriptionIds: subscriptions.map((row) => row.id) }),
+    listRecurringItems(db, { organizationId: input.organizationId }),
+    customerNames(db, input.organizationId, [...new Set(subscriptions.map((row) => row.customerId))]),
+  ]);
+  const itemName = new Map(items.map((item) => [item.id, item.name]));
+  const prices = await Promise.all(subscriptions.map((row) => subscriptionLinePrices(db, { subscriptionId: row.id })));
+  const today = todayIso();
+  return subscriptions.map((subscription, index) => {
+    const own = lines.filter((line) => line.subscriptionId === subscription.id);
+    const status = subscriptionStatus(subscription, today);
+    const day = status === 'scheduled' ? subscription.startsOn : today;
+    const primary = own.find((line) => line.role === 'primary' && lineInForce(line, day)) ?? own.find((line) => line.role === 'primary') ?? null;
+    const inForce = own.filter((line) => lineInForce(line, day));
+    return {
+      subscription,
+      status,
+      customer: { id: subscription.customerId, name: names.get(subscription.customerId) ?? 'Customer' },
+      itemName: primary ? (itemName.get(primary.itemId) ?? null) : null,
+      addonCount: inForce.filter((line) => line.role === 'addon').length,
+      amount: status === 'ended' ? null : recurringAmount(own, prices[index], day),
+      agreed: prices[index].some((price) => price.source === 'agreed' && inForce.some((line) => line.id === price.lineId)),
+    };
+  }).sort((a, b) => a.customer.name.localeCompare(b.customer.name) || b.subscription.startsOn.localeCompare(a.subscription.startsOn));
+}
+
+/** One line of a subscription as its record shows it. */
+export type SubscriptionLineView = SubscriptionLine & {
+  item: Pick<RecurringItem, 'id' | 'name' | 'unit' | 'plan'> | null;
+  /** What it pays now, by the database's rule. */
+  price: LinePrice | null;
+  /** The item's list price now in the subscription's terms. */
+  listPrice: Pick<ItemPrice, 'amountMinor' | 'currency' | 'billingInterval'> | null;
+  agreedPrices: AgreedPrice[];
+  inForce: boolean;
+};
+
+/** What a provisioned business holds through this subscription: the platform side, read only where it exists. */
+export type PlatformEntitlements = {
+  tenant: Tenant;
+  access: ServiceAccess;
+  billing: Awaited<ReturnType<typeof loadBilling>>;
+  allowances: OrganizationAllowance[];
+  features: CommercialFeatureGroup[];
+  quotaOverrides: PlanQuotaOverride[];
+  /** The plan the primary line in force sells. */
+  basePlanId: string | null;
+  plans: Plan[];
+  meters: Meter[];
+  agreedUsagePrices: AgreedUsagePrice[];
+  /** Per-product terms from before plans: still what makes some modules usable for an older business. */
+  terms: CommercialTerm[];
+  products: Product[];
+};
+
+/** The business a subscription's lines provision, if any: each plan assignment names the line it carries out. */
+async function provisionedTenant(db: Db, lineIds: string[]): Promise<string | null> {
+  if (lineIds.length === 0) return null;
+  const { data, error } = await db.from('organization_plan_assignments').select('organization_id').in('subscription_line_id', lineIds).limit(1).maybeSingle();
+  if (error) throw fromDatabaseError(error, 'subscriptions.tenant_failed');
+  return data?.organization_id ?? null;
+}
+
+async function loadPlatformEntitlements(db: Db, input: { organizationId: string; tenantId: string; lines: SubscriptionLine[] }): Promise<PlatformEntitlements | null> {
+  const tenant = await getTenant(db, input.tenantId);
   if (!tenant) return null;
   const environment = platformBillingEnvironment();
-  const [billing, access, customerId] = await Promise.all([
-    loadBilling(db, organizationId),
-    getOrganizationServiceAccess(db, { organizationId, environment, operationalState: tenant.operationalState }),
-    customerForTenant(db, { organizationId: input.sellerId, tenantId: organizationId }),
+  const [access, billing, plans, resolvedFeatures, quotaOverrides, catalogProducts, catalogModules, catalogFeatures, meters, agreedUsagePrices, terms, products] = await Promise.all([
+    getOrganizationServiceAccess(db, { organizationId: tenant.id, environment, operationalState: tenant.operationalState }),
+    loadBilling(db, tenant.id),
+    listPlans(db),
+    organizationResolvedFeatureStates(db, { organizationId: tenant.id }),
+    listOrganizationPlanQuotaOverrides(db, { organizationId: tenant.id }),
+    listCatalogProducts(db),
+    listCatalogModules(db),
+    listCatalogFeatures(db),
+    listMeters(db),
+    listAgreedUsagePrices(db, { organizationId: input.organizationId, lineIds: input.lines.map((line) => line.id) }),
+    listOrganizationTerms(db, { organizationId: tenant.id }),
+    listProducts(db),
   ]);
-
-  const [terms, states, products, plans, basePlanAssignment, addonAssignments, resolvedFeatures, agreements, assignmentHistory, quotaOverrides, catalogProducts, catalogModules, catalogFeatures] =
-    await Promise.all([
-      listOrganizationTerms(db, { organizationId }),
-      moduleCommercialState(db, { organizationId }),
-      listProducts(db),
-      listPlans(db),
-      currentPlanAssignment(db, { organizationId }),
-      currentAddonAssignments(db, { organizationId }),
-      organizationResolvedFeatureStates(db, { organizationId }),
-      listOrganizationPlanAgreements(db, { organizationId }),
-      listOrganizationPlanAssignments(db, { organizationId }),
-      listOrganizationPlanQuotaOverrides(db, { organizationId }),
-      listCatalogProducts(db),
-      listCatalogModules(db),
-      listCatalogFeatures(db),
-    ]);
-
   const planById = new Map(plans.map((plan) => [plan.id, plan]));
-  const resolvedByFeature = new Map(resolvedFeatures.map((feature) => [feature.featureId, feature]));
+  const allowances = await buildAllowances(db, { organizationId: tenant.id }, planById);
+  const features = buildFeatureGroups(catalogProducts, catalogModules, catalogFeatures, new Map(resolvedFeatures.map((feature) => [feature.featureId, feature])));
+  const primary = input.lines.find((line) => line.role === 'primary' && lineInForce(line));
+  const basePlanId = primary ? (plans.find((plan) => plan.priceBookItemId === primary.itemId)?.id ?? null) : null;
+  return { tenant, access, billing, allowances, features, quotaOverrides, basePlanId, plans, meters, agreedUsagePrices, terms, products };
+}
 
-  const priceInput = { organizationId, currency: tenant.currency };
-  const basePlanComponent = basePlanAssignment ? await componentPrice(db, priceInput, basePlanAssignment, planById.get(basePlanAssignment.planId) ?? null) : null;
-  const addonComponents = await Promise.all(addonAssignments.map((assignment) => componentPrice(db, priceInput, assignment, planById.get(assignment.planId) ?? null)));
-  const recurringComponents = basePlanComponent ? [basePlanComponent, ...addonComponents] : addonComponents;
-
-  const allowances = await buildAllowances(db, { organizationId }, planById);
-  const features = buildFeatureGroups(catalogProducts, catalogModules, catalogFeatures, resolvedByFeature);
-
+/** One subscription's record: its terms, lines and prices, its invoices and, where it provisions a business, that business's entitlements. */
+export async function loadSubscription(db: Db, input: { organizationId: string; subscriptionId: string }) {
+  const subscription = await getSubscription(db, input);
+  if (!subscription) return null;
+  const [lines, items, names, invoices, prices] = await Promise.all([
+    listSubscriptionLines(db, { organizationId: input.organizationId, subscriptionIds: [subscription.id] }),
+    listRecurringItems(db, { organizationId: input.organizationId }),
+    customerNames(db, input.organizationId, [subscription.customerId]),
+    listInvoices(db, { organizationId: input.organizationId, subscriptionId: subscription.id }),
+    subscriptionLinePrices(db, { subscriptionId: subscription.id }),
+  ]);
+  const [agreedPrices, listPrices, addons, tenantId] = await Promise.all([
+    listAgreedPrices(db, { organizationId: input.organizationId, lineIds: lines.map((line) => line.id) }),
+    listItemPrices(db, { organizationId: input.organizationId, itemIds: items.map((item) => item.id) }),
+    listItemAddons(db, { organizationId: input.organizationId, itemIds: items.map((item) => item.id) }),
+    provisionedTenant(db, lines.map((line) => line.id)),
+  ]);
+  const itemById = new Map(items.map((item) => [item.id, item]));
+  const now = new Date().toISOString();
+  const currentList = (itemId: string) => listPrices
+    .filter((price) => price.itemId === itemId && price.currency === subscription.currency && price.approvalState === 'approved'
+      && (price.billingInterval === subscription.billingInterval || price.billingInterval === 'one_time')
+      && price.effectiveFrom <= now && (!price.effectiveTo || price.effectiveTo > now))
+    .sort((a, b) => Number(b.billingInterval === subscription.billingInterval) - Number(a.billingInterval === subscription.billingInterval) || b.effectiveFrom.localeCompare(a.effectiveFrom))[0] ?? null;
+  const today = todayIso();
+  const lineViews: SubscriptionLineView[] = lines.map((line) => {
+    const item = itemById.get(line.itemId);
+    return {
+      ...line,
+      item: item ? { id: item.id, name: item.name, unit: item.unit, plan: item.plan } : null,
+      price: prices.find((price) => price.lineId === line.id) ?? null,
+      listPrice: currentList(line.itemId),
+      agreedPrices: agreedPrices.filter((price) => price.lineId === line.id),
+      inForce: lineInForce(line, today),
+    };
+  });
+  const primary = lineViews.find((line) => line.role === 'primary' && line.inForce) ?? null;
+  const sellable = items.filter((item) => item.saleStatus !== 'archived');
   return {
-    tenant,
-    billing,
-    access,
-    customerId,
-    basePlan: { assignment: basePlanAssignment, plan: basePlanAssignment ? (planById.get(basePlanAssignment.planId) ?? null) : null },
-    addons: addonAssignments.map((assignment) => ({ assignment, plan: planById.get(assignment.planId) ?? null })),
-    pricing: basePlanComponent
-      ? { standard: basePlanComponent.standard, agreement: basePlanComponent.agreement, effective: basePlanComponent.effective }
-      : { standard: null, agreement: null, effective: null },
-    recurringComponents,
-    recurringTotal: recurringTotal(recurringComponents),
-    features,
-    allowances,
-    agreements,
-    assignmentHistory,
-    quotaOverrideHistory: quotaOverrides,
-    legacy: { hasLegacyTerms: terms.length > 0, terms },
-    // Kept for the legacy-compatibility surfaces (the wanted∩paid entitlement state, and the form that records
-    // a standalone term) — not part of the canonical commercial account shape above.
-    states,
-    products,
-    plans,
+    subscription,
+    status: subscriptionStatus(subscription, today),
+    customer: { id: subscription.customerId, name: names.get(subscription.customerId) ?? 'Customer' } satisfies Customer,
+    lines: lineViews,
+    amount: recurringAmount(lines, prices, today),
+    invoices: invoices.map((invoice: Invoice) => ({ invoice, standing: invoiceStanding(invoice) })),
+    /** Recurring items it can change to, and the add-ons of what it is for now. */
+    options: {
+      items: sellable.filter((item) => item.plan?.kind !== 'addon' && item.id !== primary?.itemId).map((item) => ({ value: item.id, label: item.name })),
+      addons: primary
+        ? addons.filter((addon) => addon.itemId === primary.itemId).flatMap((addon) => {
+            const item = itemById.get(addon.addonItemId);
+            return item && item.saleStatus !== 'archived' ? [{ value: item.id, label: item.name }] : [];
+          })
+        : [],
+    },
+    platform: tenantId ? await loadPlatformEntitlements(db, { organizationId: input.organizationId, tenantId, lines }) : null,
   };
 }
 
 export type SubscriptionModel = NonNullable<Awaited<ReturnType<typeof loadSubscription>>>;
-export type { Tenant, CommercialTerm, ModuleCommercialState, Product, PlanAgreement, PlanAssignment, PlanQuotaOverride, PlanPrice };
+
+/** What the New subscription form offers: every recurring item this business still sells, offered publicly or not (an unlisted item is sold by agreement). */
+export async function loadSubscriptionOptions(db: Db, input: { organizationId: string }) {
+  const items = await listRecurringItems(db, { organizationId: input.organizationId });
+  return items.filter((item) => item.saleStatus !== 'archived' && item.plan?.kind !== 'addon').map((item) => ({ value: item.id, label: item.name }));
+}
+
+export type { Tenant, PlanQuota, CatalogFeature, CatalogModule, CatalogProduct, ResolvedFeatureState, OrganizationAllowanceState };

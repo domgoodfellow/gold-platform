@@ -8,7 +8,7 @@ import { configureBusiness, type BusinessShape } from '@/lib/domain/configuratio
 import { workTypesOf } from '@/lib/domain/configuration/shape';
 import { recordCommercialTerm } from '@/lib/domain/commercial/terms';
 import { createPlanItem, grantPlanModule, grantPlanProduct } from '@/lib/domain/catalogue/plans';
-import { recordPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
+import { createSubscription } from '@/lib/domain/subscriptions/subscriptions';
 import { provisionOrganization } from '@/lib/domain/platform/provision';
 import { bootstrapOperatingOrganization, callerOperatingOrganization } from '@/lib/domain/platform/operating-organization';
 import { createPortalInvite, listPortalInvites } from '@/lib/domain/portal/portal';
@@ -231,7 +231,7 @@ async function standUp(
   staff: SupabaseClient,
   business: DemoBusiness,
   shape: BusinessShape,
-  planId: string,
+  sale: { goldOrganizationId: string; planItemId: string; pg: Client },
 ): Promise<{ organizationId: string }> {
   const ownerDb = await account(business.owner.email);
   const memberDb = await account(business.member.email);
@@ -251,8 +251,22 @@ async function standUp(
   });
 
   // A sold business has a plan before it is configured: `configureBusiness` refuses any module
-  // outside the plan. The demo plan is assigned through the same command a sale uses.
-  await recordPlanAssignment(staff, { organizationId, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
+  // outside the plan. GildOps sells the demo plan the way it sells any plan: the business is a
+  // customer in GildOps' CRM, linked to the business it runs, and subscribes in GildOps' Finance;
+  // the link provisions the plan (ADR-057). The demo plan is free, so its price is agreed at zero.
+  const customerId = await createContact(staff, { organizationId: sale.goldOrganizationId, name: business.name, contactType: 'company', lifecycle: 'customer' });
+  await createSubscription(staff, {
+    organizationId: sale.goldOrganizationId, customerId, itemId: sale.planItemId, currency: business.currency,
+    billingInterval: 'month', startsOn: '2020-01-01', agreedAmountMinor: 0, note: 'Local demo',
+  });
+  // Linking a customer to a business takes someone who manages both; nobody in a fresh demo does,
+  // so the link GildOps' onboarding would record is written directly, and its trigger provisions
+  // the plan line onto the business.
+  await sale.pg.query(
+    `insert into public.client_tenant_relationships (organization_id, customer_id, tenant_organization_id, origin, authority_basis, created_by)
+     values ($1, $2, $3, 'existing_tenant_link', 'Local demo: GildOps provisioned this business', $4)`,
+    [sale.goldOrganizationId, customerId, organizationId, (await staff.auth.getUser()).data.user?.id],
+  );
 
   // The template, in this business's words: stages and what they mean, fields, hours, roles,
   // modules and online booking all come from it, through the same call a reviewed draft takes.
@@ -603,6 +617,8 @@ async function main(): Promise<void> {
     // a second run adds nothing and ends with the same sign-in table.
     const { staff, goldOrganizationId } = await ensurePlatformAdmin(pg);
     const planId = await ensureDemoPlan(pg, staff, goldOrganizationId);
+    const { rows: planItem } = await pg.query<{ price_book_item_id: string }>('select price_book_item_id from public.platform_plans where id = $1', [planId]);
+    const sale = { goldOrganizationId, planItemId: planItem[0].price_book_item_id, pg };
 
     const stood: { business: DemoBusiness; shape: BusinessShape; organizationId: string }[] = [];
     for (const business of BUSINESSES) {
@@ -614,7 +630,7 @@ async function main(): Promise<void> {
         continue;
       }
       process.stdout.write(`Standing up ${business.name}…\n`);
-      const { organizationId } = await standUp(staff, business, shape, planId);
+      const { organizationId } = await standUp(staff, business, shape, sale);
       stood.push({ business, shape, organizationId });
     }
 

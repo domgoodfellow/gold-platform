@@ -40,7 +40,8 @@ const MONEY = [
   /@\/lib\/domain\/billing\//,
   /@\/lib\/application\/finance\//,
   /@\/features\/finance\//,
-  /\b(listProviderRates|listProviderCostRates|listRetailRates|recordPlanAssignment|recordPlanAgreement|recordCommercialTerm|listPlanPrices|organizationPlanPrice)\(/,
+  /@\/lib\/domain\/subscriptions\//,
+  /\b(listProviderRates|listProviderCostRates|recordCommercialTerm|listPlanPrices|organizationPlanPrice|createSubscription|setSubscriptionPrice)\(/,
 ];
 
 describe('Finance is the one place money is managed', () => {
@@ -60,7 +61,7 @@ describe('Finance is the one place money is managed', () => {
   });
 
   it('has a working page behind every GildOps money destination and record, never a redirect', () => {
-    for (const path of ['subscriptions/page.tsx', 'subscriptions/[subscriberId]/page.tsx', 'costs/page.tsx', 'economics/page.tsx', 'economics/[subscriberId]/page.tsx', 'economics/packages/page.tsx']) {
+    for (const path of ['subscriptions/page.tsx', 'subscriptions/[subscriptionId]/page.tsx', 'costs/page.tsx', 'economics/page.tsx', 'economics/[subscriberId]/page.tsx', 'economics/packages/page.tsx']) {
       const source = code(join(FINANCE_ROUTES, path));
       expect(source, path).toMatch(/requireOperatingArea\(organizationId, 'finance-(subscriptions|costs|economics)'\)/);
       expect(source, path).not.toMatch(/^\s*redirect\(`\/platform/m);
@@ -95,6 +96,23 @@ describe('Finance is the one place money is managed', () => {
   it('imports no Administration screen or route', () => {
     const offenders = FINANCE_FILES.filter((file) => /@\/features\/platform\/|@\/app\/organizations\/\[organizationId\]\/administration|@\/lib\/application\/platform\//.test(code(file)));
     expect(offenders.map(rel)).toEqual([]);
+  });
+});
+
+describe('one subscription model for every business', () => {
+  const SUBSCRIPTION_DOMAIN = walk(join(WEB, 'lib/domain/subscriptions'));
+
+  it('keeps the shared subscription domain free of GildOps: no seller, plan or billing-provider knowledge', () => {
+    expect(SUBSCRIPTION_DOMAIN.length).toBeGreaterThan(0);
+    for (const file of SUBSCRIPTION_DOMAIN) {
+      expect(code(file), rel(file)).not.toMatch(/platform_seller|operating_organization|platform_plans|organization_plan_assignments|platform-billing|platformBilling|GildOps|gildops/);
+    }
+  });
+
+  it('offers Finance → Subscriptions to every business with the Subscriptions feature, not the operator Product', () => {
+    const area = AREAS.find((candidate) => candidate.segment === 'finance-subscriptions')!;
+    expect(area.featureKeys).toEqual(['subscriptions']);
+    expect(code(join(WEB, 'lib/catalogue-surface-coverage.ts'))).toMatch(/'finance\.subscriptions\.subscriptions'/);
   });
 });
 

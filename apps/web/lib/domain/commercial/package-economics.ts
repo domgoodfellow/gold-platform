@@ -98,19 +98,24 @@ type ProviderRate = {
 type FxRate = { base_currency: string; quote_currency: string; rate: number; effective_from: string; effective_to: string | null };
 /** The most recent known-real infrastructure cost rate per (provider, driver basis) — derived from an actually recorded platform_infrastructure_cost_components row, never a literal vendor price in code. */
 type InfrastructureRate = { providerKey: string; driverBasis: string; microsPerUnit: number; currency: string };
+/**
+ * A usage price the scenario may charge, already scoped by the one rule (ADR-057): an agreed price
+ * on the business's subscription, else an add-on item's, else the base plan item's. There is no
+ * platform-wide default.
+ */
 type RetailRate = {
   id: string;
   meter_id: string;
   currency: string;
   unit_amount_micros: number;
-  plan_id: string | null;
-  organization_id: string | null;
-  billing_interval: string | null;
+  scope: 'agreement' | 'addon' | 'plan';
   effective_from: string;
   effective_to: string | null;
   approval_state: string;
-  source: string;
 };
+
+const RATE_SCOPE_ORDER: Record<RetailRate['scope'], number> = { agreement: 0, addon: 1, plan: 2 };
+const RATE_SCOPE_LABEL: Record<RetailRate['scope'], string> = { agreement: 'Agreed price', addon: 'Add-on price', plan: 'Plan price' };
 
 type CalculationContext = {
   source: SimulationSource;
@@ -206,14 +211,8 @@ function convertMicros(context: CalculationContext, micros: number, from: string
 function resolveRetailRate(context: CalculationContext, meterId: string): RetailRate | null {
   const candidates = context.retailRates.filter((rate) =>
     rate.meter_id === meterId && rate.currency === context.currency && rate.approval_state === 'approved' &&
-    active(context.at, rate.effective_from, rate.effective_to) &&
-    (!rate.billing_interval || rate.billing_interval === 'month') &&
-    (!rate.plan_id || rate.plan_id === context.planId) &&
-    (!rate.organization_id || rate.organization_id === context.organizationId));
-  candidates.sort((a, b) =>
-    Number(Boolean(b.organization_id)) - Number(Boolean(a.organization_id)) ||
-    Number(Boolean(b.plan_id)) - Number(Boolean(a.plan_id)) ||
-    b.effective_from.localeCompare(a.effective_from));
+    active(context.at, rate.effective_from, rate.effective_to));
+  candidates.sort((a, b) => RATE_SCOPE_ORDER[a.scope] - RATE_SCOPE_ORDER[b.scope] || b.effective_from.localeCompare(a.effective_from));
   return candidates[0] ?? null;
 }
 
@@ -303,7 +302,7 @@ export function calculatePackageEconomics(
       overageQuantity,
       overageRevenueMinor,
       overageRateMicros: retailRate ? Number(retailRate.unit_amount_micros) : null,
-      overageRateSource: retailRate ? (retailRate.organization_id ? 'Contract override' : retailRate.plan_id ? 'Plan override' : 'Platform default') : null,
+      overageRateSource: retailRate ? RATE_SCOPE_LABEL[retailRate.scope] : null,
       provenance: quota.provenance,
     });
   }
@@ -496,7 +495,7 @@ async function loadContext(db: Db, source: SimulationSource): Promise<Calculatio
     meterIds.length ? db.from('platform_meter_cost_model_components').select('meter_id,component_key,provider_key,cost_meter_key,quantity_multiplier,region,direction,resource_type,required').in('meter_id', meterIds) : Promise.resolve({ data: [], error: null }),
     db.from('platform_provider_rates').select('provider_key,cost_meter_key,currency,unit_amount_micros,effective_from,effective_to,region,direction,resource_type,approval_state').lte('effective_from', at),
     db.from('platform_fx_rates').select('base_currency,quote_currency,rate,effective_from,effective_to').lte('effective_from', at),
-    meterIds.length ? db.from('platform_retail_rates').select('id,meter_id,currency,unit_amount_micros,plan_id,organization_id,billing_interval,effective_from,effective_to,approval_state,source').in('meter_id', meterIds).eq('currency', currency).lte('effective_from', at) : Promise.resolve({ data: [], error: null }),
+    loadUsageRates(db, { meterIds, currency, at, organizationId: source.type === 'organization_agreement' ? organizationId : null, planItemId: plan.priceBookItemId, addonItemIds: addonPlans.flatMap((addon) => (addon.priceBookItemId ? [addon.priceBookItemId] : [])) }),
     db.from('platform_plan_margin_policies').select('target_margin,warning_margin,hard_floor_margin,effective_from').eq('plan_id', planId).eq('currency', currency).lte('effective_from', at).order('effective_from', { ascending: false }).limit(1).maybeSingle(),
     // Storage's own effective infrastructure cost: the most recent real `byte_days`-driven
     // infrastructure_attributable component recorded for any organization, never a literal price
@@ -534,9 +533,45 @@ async function loadContext(db: Db, source: SimulationSource): Promise<Calculatio
     costModels: (modelsResult.data ?? []).map((row) => ({ ...row, quantity_multiplier: Number(row.quantity_multiplier) })),
     providerRates: (providerRatesResult.data ?? []).map((row) => ({ ...row, unit_amount_micros: Number(row.unit_amount_micros) })),
     fxRates: (fxResult.data ?? []).map((row) => ({ ...row, rate: Number(row.rate) })),
-    retailRates: (retailResult.data ?? []).map((row) => ({ ...row, unit_amount_micros: Number(row.unit_amount_micros) })),
+    retailRates: retailResult.data,
     infrastructureRates,
     policy, at,
+  };
+}
+
+/**
+ * The usage prices a scenario charges. For a business, the database's own answer at that moment
+ * (`effective_usage_prices`), the one rule a usage event is priced by. For a plan scenario, the
+ * plan item's and its default add-ons' own usage prices.
+ */
+async function loadUsageRates(
+  db: Db,
+  input: { meterIds: string[]; currency: string; at: string; organizationId: string | null; planItemId: string | null; addonItemIds: string[] },
+): Promise<{ data: RetailRate[]; error: null | { message: string; code?: string } }> {
+  if (!input.meterIds.length) return { data: [], error: null };
+  if (input.organizationId) {
+    const { data, error } = await db.rpc('effective_usage_prices', { p_currency: input.currency, p_organization_id: input.organizationId, p_at: input.at });
+    if (error) return { data: [], error };
+    return {
+      data: (data ?? []).filter((row) => input.meterIds.includes(row.meter_id)).map((row) => ({
+        id: `${row.meter_id}:${row.source_scope}`, meter_id: row.meter_id, currency: row.currency, unit_amount_micros: Number(row.unit_amount_micros),
+        scope: row.source_scope as RetailRate['scope'], effective_from: input.at, effective_to: null, approval_state: 'approved',
+      })),
+      error: null,
+    };
+  }
+  const itemIds = [...(input.planItemId ? [input.planItemId] : []), ...input.addonItemIds];
+  if (!itemIds.length) return { data: [], error: null };
+  const { data, error } = await db.from('price_book_item_usage_prices')
+    .select('id,item_id,meter_id,currency,unit_amount_micros,effective_from,effective_to,approval_state')
+    .in('item_id', itemIds).is('subscription_line_id', null).in('meter_id', input.meterIds).eq('currency', input.currency).lte('effective_from', input.at);
+  if (error) return { data: [], error };
+  return {
+    data: (data ?? []).map((row) => ({
+      id: row.id, meter_id: row.meter_id, currency: row.currency, unit_amount_micros: Number(row.unit_amount_micros),
+      scope: row.item_id === input.planItemId ? 'plan' : 'addon', effective_from: row.effective_from, effective_to: row.effective_to, approval_state: row.approval_state,
+    })),
+    error: null,
   };
 }
 

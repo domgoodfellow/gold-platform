@@ -178,8 +178,6 @@ const FINANCE_DOORS: Record<string, string> = {
   "record_commercial_adjustment": "subscription.manage",
   "record_commercial_term": "subscription.manage",
   "record_infrastructure_cost": "cost.manage",
-  "record_organization_plan_agreement": "subscription.manage",
-  "record_plan_assignment": "subscription.manage",
   "record_plan_margin_policy": "cost.manage",
   "record_plan_quota_override": "subscription.manage",
   "record_plan_utilization_assumption": "cost.manage",

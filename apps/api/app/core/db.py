@@ -44,7 +44,7 @@ from app.core.config import (
 )
 
 if TYPE_CHECKING:
-    from app.providers.stripe.platform_billing_webhook import NoticeEvent, SubscriptionEvent
+    from app.providers.stripe.platform_billing_webhook import InvoiceEvent, SubscriptionEvent
 
 ROLE = "payment_webhook"
 
@@ -159,7 +159,7 @@ def apply_platform_subscription_event(
     event: SubscriptionEvent,
 ) -> str | None:
     """Apply one `customer.subscription.*` event. The only thing this role may do besides
-    `record_platform_billing_notice` below -- every value deciding *where* it lands is derived
+    `apply_platform_invoice_event` below -- every value deciding *where* it lands is derived
     inside the function from `platform_billing_customers`, never trusted from the event itself.
 
     Returns the organization id acted on, or `None` for an event about a customer this platform
@@ -200,18 +200,19 @@ def apply_platform_subscription_event(
     return response.json()
 
 
-def record_platform_billing_notice(
+def apply_platform_invoice_event(
     settings: PlatformBillingSettings,
     *,
-    event: NoticeEvent,
+    event: InvoiceEvent,
 ) -> str | None:
-    """Log an `invoice.paid`/`invoice.payment_failed` event to the idempotency ledger. Never a
-    subscription-status writer -- see `platform_billing_webhook.py`'s module docstring for why.
+    """Record one provider invoice event in GildOps' Finance: the invoice, its payment, a refund or
+    its voiding. Idempotent by the provider's event id and by its invoice, payment and refund ids.
+    Never a subscription-status writer -- see `platform_billing_webhook.py`'s module docstring.
     """
     token = machine_token(settings.supabase_jwt_secret, role=PLATFORM_BILLING_ROLE, sub=PLATFORM_BILLING_ACTOR)
 
     response = httpx.post(
-        f"{settings.supabase_url}/rest/v1/rpc/record_platform_billing_notice",
+        f"{settings.supabase_url}/rest/v1/rpc/apply_platform_invoice_event",
         headers={
             "apikey": settings.supabase_publishable_key,
             "Authorization": f"Bearer {token}",
@@ -221,13 +222,14 @@ def record_platform_billing_notice(
             "p_event_reference": event.event_reference,
             "p_event_type": event.event_type,
             "p_customer_reference": event.customer_reference,
+            "p_invoice": event.invoice,
             "p_environment": event.environment,
         },
         timeout=10.0,
     )
 
     if response.status_code >= 400:
-        raise RuntimeError(f"record_platform_billing_notice failed: {response.status_code}")
+        raise RuntimeError(f"apply_platform_invoice_event failed: {response.status_code}")
 
     return response.json()
 

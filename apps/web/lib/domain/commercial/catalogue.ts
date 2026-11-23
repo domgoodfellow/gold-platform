@@ -303,25 +303,6 @@ export async function listProviderRates(
   return (data ?? []).map(toRate);
 }
 
-/** What GOLD charges. Readable by a member of any business or by staff. No provider dimension — a business is charged one retail price per meter regardless of which vendor GOLD used. */
-export async function listRetailRates(db: Db, input: { meterId?: string } = {}): Promise<Rate[]> {
-  let query = db
-    .from('platform_retail_rates')
-    .select(
-      'id, meter_id, currency, unit_amount_micros, effective_from, approval_state, source, source_url, captured_at, note',
-    )
-    .order('meter_id')
-    .order('effective_from', { ascending: false });
-
-  if (input.meterId) query = query.eq('meter_id', input.meterId);
-
-  const { data, error } = await query;
-
-  if (error) throw fromDatabaseError(error, 'commercial.retail_rates_failed');
-
-  return (data ?? []).map((row) => toRate({ ...row, provider_key: null }));
-}
-
 function toRate(row: {
   id: string;
   provider_key: string | null;

@@ -32,7 +32,7 @@ describe('platform control-plane scope boundaries', () => {
     const record = source('app/organizations/[organizationId]/administration/organizations/[targetOrganizationId]/page.tsx');
     const providers = source('app/organizations/[organizationId]/administration/organizations/[targetOrganizationId]/providers/page.tsx');
     // The record links to the subscription, for members who may read it, and writes none of it.
-    expect(record).toMatch(/finance\/subscriptions\/\$\{organizationId\}/);
+    expect(record).toMatch(/finance\/subscriptions\/\$\{subscriptionId\}/);
     expect(record).toContain("may('subscription.read')");
     expect(record).not.toMatch(/recordPlanAssignment|recordPlanAgreement|recordCommercialTerm|AssignPlanSheet/);
     expect(source('lib/application/finance/subscriptions.ts')).toContain('listOrganizationTerms');

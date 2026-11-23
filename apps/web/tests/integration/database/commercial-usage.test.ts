@@ -11,7 +11,7 @@ import {
   recordUsageReconciliation,
 } from '@/lib/domain/commercial/usage';
 import { foundBusiness } from '@/tests/support/founding';
-import { designateGildOps } from '@/tests/support/plans';
+import { assignFixturePlan, createFixturePlan, designateGildOps, recordFixtureUsagePrice } from '@/tests/support/plans';
 
 /**
  * The generalized usage ledger (the platform-economics separation, corrected): what a call cost GOLD, in the provider's own
@@ -42,6 +42,9 @@ let restoreOperatingSeller: () => Promise<void> = async () => {};
 
 type Tenant = { db: SupabaseClient; organizationId: string; customerId: string };
 
+/** The plan every business in this suite holds; its item prices voice usage. */
+let usagePlanId: string;
+
 async function newTenant(label: string): Promise<Tenant> {
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
@@ -62,6 +65,7 @@ async function newTenant(label: string): Promise<Tenant> {
     name: `${label} ${randomUUID().slice(0, 8)}`,
     currency: CUSTOMER_CURRENCY,
   });
+  await assignFixturePlan({ organizationId, planId: usagePlanId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
 
   const customerId = await createCustomer(db, { organizationId, name: 'A Caller' });
 
@@ -118,17 +122,12 @@ beforeAll(async () => {
     `delete from public.platform_provider_rates where provider_key = 'twilio' and meter_id = 'voice_minutes'`,
   );
 
-  // Twenty minor units a minute, retail.
-  await pg.query(
-    `insert into public.platform_retail_rates (meter_id, currency, unit_amount_micros, source)
-     values ('voice_minutes', $1, 20000000, 'commercial-usage.test.ts')
-     on conflict do nothing`,
-    [CUSTOMER_CURRENCY],
-  );
-
   const gildops = await designateGildOps(pg, 'usage-seller');
   seller = gildops.db;
   restoreOperatingSeller = gildops.restore;
+  // Twenty minor units a minute, the price of the plan every business in this suite holds.
+  usagePlanId = await createFixturePlan({ key: `usage_${randomUUID().replaceAll('-', '').slice(0, 10)}`, label: 'Usage plan', billable: true });
+  await recordFixtureUsagePrice({ planId: usagePlanId, meterId: 'voice_minutes', currency: CUSTOMER_CURRENCY, unitAmountMicros: 20_000_000, source: 'commercial-usage.test.ts', effectiveFrom: new Date(Date.now() - 86_400_000).toISOString() });
   tenant = await newTenant('usage');
   other = await newTenant('usage-other');
 }, 60_000);

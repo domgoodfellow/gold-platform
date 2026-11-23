@@ -6,6 +6,7 @@ import { createCustomer } from '@/lib/domain/customers/customers';
 import { communicationsAccount, creditBalance } from '@/lib/domain/communications/credits';
 import { recordCall } from '@/lib/domain/reception/calls';
 import { foundBusiness } from '@/tests/support/founding';
+import { assignFixturePlan, createFixturePlan, recordFixtureUsagePrice } from '@/tests/support/plans';
 
 /**
  * The communications engine: one purse, and a refusal that lives in the database.
@@ -64,21 +65,23 @@ async function newTenant(label: string, currency: string): Promise<Tenant> {
     name: `${label} ${randomUUID().slice(0, 8)}`,
     currency,
   });
+  // Every business here holds the suite's plan, whose item carries the price.
+  await assignFixturePlan({ organizationId, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
 
   return { db, organizationId };
 }
+
+/** The plan every business in this suite holds; its item prices voice usage. */
+let planId: string;
 
 beforeAll(async () => {
   pg = new Client({ connectionString: CONNECTION });
   await pg.connect();
 
-  // Ten minor units a minute, in a currency invented for this file.
-  await pg.query(
-    `insert into public.platform_retail_rates (meter_id, currency, unit_amount_micros, source)
-     values ('voice_minutes', $1, 10000000, 'communications.test.ts')
-     on conflict do nothing`,
-    [PRICED],
-  );
+  // Ten minor units a minute, in a currency invented for this file, on a plan both businesses hold
+  // (ADR-057: usage is priced by the plans a business holds).
+  planId = await createFixturePlan({ key: `comms_${randomUUID().replaceAll('-', '').slice(0, 10)}`, label: 'Communications plan', billable: true });
+  await recordFixtureUsagePrice({ planId, meterId: 'voice_minutes', currency: PRICED, unitAmountMicros: 10_000_000, source: 'communications.test.ts', effectiveFrom: new Date(Date.now() - 86_400_000).toISOString() });
 
   [priced, unpriced] = await Promise.all([
     newTenant('priced', PRICED),

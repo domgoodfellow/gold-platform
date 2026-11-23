@@ -45,7 +45,7 @@ export async function loadRecurringItem(db: Db, input: { organizationId: string;
   const [provider, allowances, usagePrices] = await Promise.all([
     environment ? listItemProviderPrices(db, { organizationId: input.organizationId, priceIds: prices.map((price) => price.id), environment }) : Promise.resolve([]),
     item.plan ? listMeteredAllowances(db, { planId: item.plan.id }) : Promise.resolve([]),
-    item.plan ? listUsagePrices(db, { planId: item.plan.id }) : Promise.resolve([]),
+    item.plan ? listUsagePrices(db, { itemId: item.id }) : Promise.resolve([]),
   ]);
   const attached = new Set(addons.map((addon) => addon.addonItemId));
   // A plan offers add-on items; an add-on and an item that sells no plan offer any other item.

@@ -21,7 +21,7 @@ import type { InvoiceEmailState } from '@/lib/domain/billing/invoice-emails';
 export type InspectedInvoiceEmail = { id: string; conversationId: string; recipient: string; fromAddress: string; createdAt: string; sentAgain: boolean; state: InvoiceEmailState; label: string; detail: string | null };
 
 /** In the business's own words: what the invoice was issued from. */
-const SOURCE_LABEL = { work_item: 'Work', direct: 'Direct, from catalog items', proposal: 'Proposal' } as const;
+const SOURCE_LABEL = { work_item: 'Work', direct: 'Direct, from catalog items', proposal: 'Proposal', subscription: 'Subscription' } as const;
 
 const RETURN_KEY = 'finance-inspector-return';
 
@@ -73,7 +73,7 @@ export function InvoiceInspector({ organizationId, row, invoice, timezone, today
       <PageDrawerBody><div className="flex flex-col gap-4">
         <RecordSummary title={<span className="flex flex-wrap items-center gap-2">Invoice #{row.number} <InvoiceStandingBadge row={row} /></span>}
           subtitle={row.customerId ? <Link className="underline-offset-4 hover:underline" href={`/organizations/${organizationId}/crm/contacts/${row.customerId}`}>{row.billedTo}</Link> : row.billedTo}
-          facts={[{ label: 'Source', value: SOURCE_LABEL[row.source] }, { label: 'Issued', value: date(row.issuedAt) }, { label: 'Due', value: date(row.dueAt) }, { label: 'Currency', value: row.currency }]}>
+          facts={[{ label: 'Source', value: SOURCE_LABEL[row.source] }, ...(invoice.periodStart && invoice.periodEnd ? [{ label: 'Period', value: `${invoice.periodStart} to ${invoice.periodEnd}` }] : []), ...(invoice.providerNumber ? [{ label: 'Stripe number', value: invoice.providerNumber }] : []), { label: 'Issued', value: date(row.issuedAt) }, { label: 'Due', value: date(row.dueAt) }, { label: 'Currency', value: row.currency }]}>
           <MoneyTotals label="Invoice balance" rows={[
             { label: 'Total', value: row.total ? money(row.total.totalMinor) : '—' },
             { label: 'Paid', value: money(row.paidMinor), tone: 'muted' },
@@ -84,7 +84,7 @@ export function InvoiceInspector({ organizationId, row, invoice, timezone, today
           <LineItems label="Invoiced lines" items={invoice.lines.map(line => lineItem(line))} empty="This invoice has no lines." /></section>
         <section aria-labelledby="inspector-payments"><h3 id="inspector-payments" className="mb-1 text-sm font-semibold">Payment history</h3>
           <LineItems label="Payment history" empty="No payments recorded." items={invoice.payments.map(payment => ({ key: payment.id, tone: payment.amountMinor < 0 ? 'correction' as const : undefined,
-            description: payment.amountMinor < 0 ? 'Correction' : payment.provider ? `Paid through ${payment.provider === 'stripe' ? 'Stripe' : 'card payment'}` : 'Recorded by hand',
+            description: payment.amountMinor < 0 ? (payment.provider ? 'Refund' : 'Correction') : payment.provider ? `Paid through ${payment.provider === 'stripe' ? 'Stripe' : 'card payment'}` : 'Recorded by hand',
             detail: [date(payment.receivedAt), payment.note].filter(Boolean).join(' · '), amount: money(payment.amountMinor) }))} />
           <p className="mt-2 text-xs text-muted">Entries recorded by hand are not confirmed by a payment processor.</p>
         </section>
@@ -97,6 +97,8 @@ export function InvoiceInspector({ organizationId, row, invoice, timezone, today
           ? <Button type="button" tone="secondary" size="small" disabled aria-describedby="inspector-email-unavailable"><Mail aria-hidden className="size-4" />Send invoice</Button>
           : <SendInvoiceDialog organizationId={organizationId} invoiceId={row.id} sendAgain={email.sends.length > 0} inboxOpen={email.inboxOpen} /> : null}
         {row.workItemId ? <ButtonLink href={workHref(organizationId, row.workItemId)} tone="secondary" size="small"><ExternalLink aria-hidden className="size-4" />Open Work record</ButtonLink> : null}
+        {row.subscriptionId ? <ButtonLink href={`/organizations/${organizationId}/finance/subscriptions/${row.subscriptionId}`} tone="secondary" size="small"><ExternalLink aria-hidden className="size-4" />Open subscription</ButtonLink> : null}
+        {invoice.providerUrl ? <ButtonLink href={invoice.providerUrl} tone="secondary" size="small" target="_blank" rel="noreferrer"><ExternalLink aria-hidden className="size-4" />Open in Stripe</ButtonLink> : null}
         {row.proposalId && row.customerId ? <ButtonLink href={proposalHref(organizationId, row.customerId)} tone="secondary" size="small"><ExternalLink aria-hidden className="size-4" />Open proposal</ButtonLink> : null}
         {mayRecord ? row.settled
           ? <PaymentDialog organizationId={organizationId} invoiceId={row.id} today={today} entry="correction" label="Record correction" size="small" />

@@ -9,6 +9,8 @@ import { AllowanceMeter } from '@/features/catalogue/allowance-meter';
 import type { UsageEvent } from '@/lib/domain/commercial/usage';
 import type { PurchaseQuote } from '@/lib/domain/platform-billing/quote';
 
+const BUYER_INVOICE_STATE = { outstanding: 'Outstanding', paid: 'Paid', void: 'Void' } as const;
+
 function formatMinor(amountMinor: number, currency: string | null): string {
   if (!currency) return String(amountMinor);
   try {
@@ -124,7 +126,7 @@ export function PlanUsageScreen({
   checkoutReturn?: 'success' | 'canceled' | null;
 }) {
   const { terms, usage, account, basePlan, addonPlans, allowances, meterLabel, productLabel,
-    billingProvider, subscription, subscriptionPackage, quote, canSubscribe, canManageBilling } = model;
+    billingProvider, subscription, subscriptionPackage, quote, canSubscribe, canManageBilling, invoices } = model;
 
   return (
     <SettingsPageFrame width="fluid">
@@ -207,6 +209,32 @@ export function PlanUsageScreen({
                 ? `GildOps has not priced ${basePlan.label} in ${currency || 'this business’s currency'} yet.`
                 : 'No Plan is assigned to subscribe to yet.'}
             </EmptyState>
+          )}
+        </CardSection>
+      ) : null}
+
+      {canManageBilling ? (
+        <CardSection title="Invoices" className="mt-6">
+          {invoices.length === 0 ? (
+            <EmptyState className="mt-2">GildOps has not invoiced this business yet.</EmptyState>
+          ) : (
+            <DividedList as="div" className="mt-2">
+              {invoices.map((invoice) => (
+                <div key={invoice.id} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 py-2 text-sm">
+                  <span className="flex flex-wrap items-baseline gap-x-3">
+                    <span className="font-medium">{invoice.number}</span>
+                    <span className="text-muted">
+                      {invoice.periodStart && invoice.periodLastDay ? `${invoice.periodStart} to ${invoice.periodLastDay}` : new Date(invoice.issuedAt).toLocaleDateString('en-CA')}
+                    </span>
+                  </span>
+                  <span className="flex flex-wrap items-baseline gap-x-3">
+                    <span className="tabular-nums">{formatMinor(invoice.totalMinor, invoice.currency)}</span>
+                    <span className={invoice.state === 'outstanding' ? 'font-medium' : 'text-muted'}>{BUYER_INVOICE_STATE[invoice.state]}</span>
+                    {invoice.payUrl ? <a href={invoice.payUrl} target="_blank" rel="noreferrer" className="font-medium underline-offset-4 hover:underline">{invoice.state === 'outstanding' ? 'Pay' : 'View'}</a> : null}
+                  </span>
+                </div>
+              ))}
+            </DividedList>
           )}
         </CardSection>
       ) : null}

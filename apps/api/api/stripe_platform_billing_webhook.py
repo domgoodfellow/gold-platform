@@ -21,8 +21,8 @@ import time
 from http.server import BaseHTTPRequestHandler
 
 from app.core.config import load_platform_billing_settings
-from app.core.db import apply_platform_subscription_event, record_platform_billing_notice
-from app.providers.stripe.platform_billing_webhook import NoticeEvent, SubscriptionEvent, parse
+from app.core.db import apply_platform_invoice_event, apply_platform_subscription_event
+from app.providers.stripe.platform_billing_webhook import InvoiceEvent, SubscriptionEvent, parse
 
 
 class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
@@ -59,8 +59,8 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
 
         if isinstance(parsed, SubscriptionEvent):
             result = apply_platform_subscription_event(settings, event=parsed)
-        elif isinstance(parsed, NoticeEvent):
-            result = record_platform_billing_notice(settings, event=parsed)
+        elif isinstance(parsed, InvoiceEvent):
+            result = apply_platform_invoice_event(settings, event=parsed)
         else:
             result = None
 

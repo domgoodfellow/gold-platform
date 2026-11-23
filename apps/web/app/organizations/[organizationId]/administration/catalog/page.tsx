@@ -1,5 +1,4 @@
-import { platformParams } from '@/lib/route/platform';
-import { requirePlatformArea } from '@/lib/route/platform';
+import { platformParams, requirePlatformArea, requirePlatformScope } from '@/lib/route/platform';
 import { platformAncestry, platformHref } from '@/lib/platform-navigation';
 import Link from 'next/link';
 import { AppPage } from '@/components/layout/app-page';
@@ -24,6 +23,9 @@ export const dynamic = 'force-dynamic';
 export default async function CatalogPage({ params }: PageProps<'/organizations/[organizationId]/administration/catalog'>) {
   const { organizationId: goldId } = await platformParams(params);
   await requirePlatformArea(goldId, 'platform.catalogue');
+  const { organization } = await requirePlatformScope(goldId);
+  // Plans are GildOps' Finance: linked only for a member who prices there.
+  const mayOpenPlans = organization.capabilities.includes('price.manage');
   const db = await getDb();
   const [products, modules, features, plans, templates] = await Promise.all([
     listCatalogProducts(db),
@@ -114,10 +116,14 @@ export default async function CatalogPage({ params }: PageProps<'/organizations/
       <PageHeader title="Products" crumbs={platformAncestry(goldId, 'products')} />
 
       <div className="flex flex-wrap gap-3 text-sm">
-        <Link href={`/organizations/${goldId}/finance/catalog`} className="underline underline-offset-4">
-          Plans in Catalog &amp; Pricing
-        </Link>
-        <span className="text-muted-foreground">·</span>
+        {mayOpenPlans ? (
+          <>
+            <Link href={`/organizations/${goldId}/finance/catalog`} className="underline underline-offset-4">
+              Plans in Catalog &amp; Pricing
+            </Link>
+            <span className="text-muted-foreground">·</span>
+          </>
+        ) : null}
         <Link href={platformHref(goldId, 'catalog/products')} className="underline underline-offset-4">
           Line items (legacy SKUs)
         </Link>

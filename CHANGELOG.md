@@ -32,6 +32,12 @@ Entries describe the product or operational change, not every file touched.
 
 ---
 
+## 2026-11-22
+
+- Every business can sell subscriptions. Finance → Subscriptions is now part of Gild Finance: New subscription chooses one of the business's customers, a recurring item from Catalog & Pricing, monthly or yearly billing, the start and an optional end, the quantity and an optional agreed price. A subscription's record shows what it is for and pays, and changes it from a date (change item, add or end an add-on, agree a price or return to the list price, end the subscription); Invoice next period issues an ordinary invoice for each period once. GildOps sells its plans with the same subscriptions; subscribing a business's GildOps customer to a plan switches the plan on for that business and follows the subscription's dates. Existing plan holders and agreed prices became subscriptions and agreed prices with nothing recalculated.
+- Usage has one price rule. A plan's usage prices are on its Catalog & Pricing record, and a usage price can be agreed for one subscription; usage is priced by the agreed price, then an add-on's, then the plan's. The hidden platform-wide prices were copied onto every plan and ended, so a business on no priced plan is no longer charged for usage.
+- GildOps' Stripe invoices appear in Finance → Invoices as subscription invoices, with Stripe's number, lines, tax, payment, refunds and void state, each recorded once however often Stripe sends it. A business's billing managers see the invoices GildOps sent them, with what is owed and Stripe's page to pay or view each, in Settings → Plan & usage. Administration's product records link a plan to its Finance record only for members who price there. Forward migration `20261122000001`.
+
 ## 2026-11-21
 
 - GildOps runs GildOps in one application. Administration is now a context of GildOps' own organization at `/organizations/{goldId}/administration`, drawn by the same shell, header, Agent, appearance and phone navigation as every workspace; the separate `/platform` application and its sidebar are gone, without redirects. Administration keeps Organizations, Product Registry (Products, Meters), Integration Registry, Infrastructure and Reliability (Failures, and a new Billing deliveries list), and has no plan, price, billing, usage-economics, vendor-rate or economics page.

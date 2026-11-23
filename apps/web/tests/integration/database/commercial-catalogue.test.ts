@@ -7,11 +7,10 @@ import {
   listProducts,
   listProviderRates,
   listProviders,
-  listRetailRates,
   recordProviderRate,
 } from '@/lib/domain/commercial/catalogue';
 import { asPlatformStaff, newAccountEmail } from '@/tests/support/founding';
-import { designateGildOps, recordFixtureRetailRate } from '@/tests/support/plans';
+import { createFixturePlan, designateGildOps, recordFixtureUsagePrice } from '@/tests/support/plans';
 
 let restoreOperatingSeller: () => Promise<void> = async () => {};
 let sellerPg: Client | undefined;
@@ -122,12 +121,9 @@ describe('the commercial catalogue', () => {
     });
     expect(providerId).toBeTruthy();
 
-    const retailId = await recordFixtureRetailRate({
-      meterId,
-      currency,
-      unitAmountMicros: 9900,
-      source: 'GOLD price list',
-    });
+    // What GildOps charges is a usage price on one of its plans (ADR-057).
+    const planId = await createFixturePlan({ key: `cat_${randomUUID().replaceAll('-', '').slice(0, 10)}`, label: 'Catalogue plan', billable: true });
+    const retailId = await recordFixtureUsagePrice({ planId, meterId, currency, unitAmountMicros: 9900, source: 'GOLD price list' });
     expect(retailId).toBeTruthy();
 
     // GOLD's own cost: staff only. `platform_provider_rates` grants `select` to `authenticated`
@@ -143,13 +139,11 @@ describe('the commercial catalogue', () => {
 
     // What GOLD charges: a business is entitled to know, so a member of a business reads it (proved
     // in catalogue-visibility.test.ts); a signed-in account that belongs to none does not.
-    const retailRatesAsMember = await listRetailRates(seller, { meterId });
-    expect(retailRatesAsMember.some((rate) => rate.id === retailId)).toBe(true);
+    const usagePrices = async (db: typeof seller) => (await db.from('price_book_item_usage_prices').select('id').eq('meter_id', meterId)).data ?? [];
+    expect((await usagePrices(seller)).some((rate) => rate.id === retailId)).toBe(true);
     // Platform authority alone reads no price (ADR-057).
-    expect((await listRetailRates(staff, { meterId })).some((rate) => rate.id === retailId)).toBe(false);
-
-    const retailRatesAsTenant = await listRetailRates(stranger, { meterId });
-    expect(retailRatesAsTenant).toEqual([]);
+    expect((await usagePrices(staff)).some((rate) => rate.id === retailId)).toBe(false);
+    expect(await usagePrices(stranger)).toEqual([]);
   });
 
   it('lets two providers price the same meter independently, without touching a business meter', async () => {
@@ -206,15 +200,11 @@ describe('the commercial catalogue', () => {
   it('is append-only — no update or delete grant reaches either rate table', async () => {
     const meterId = 'tts_characters';
     const currency = 'USD';
-    await recordFixtureRetailRate({
-      meterId,
-      currency,
-      unitAmountMicros: 500,
-      source: 'GOLD price list',
-    });
+    const planId = await createFixturePlan({ key: `cat_${randomUUID().replaceAll('-', '').slice(0, 10)}`, label: 'Append-only plan', billable: true });
+    await recordFixtureUsagePrice({ planId, meterId, currency, unitAmountMicros: 500, source: 'GOLD price list' });
 
     const { error } = await staff
-      .from('platform_retail_rates')
+      .from('price_book_item_usage_prices')
       .update({ unit_amount_micros: 1 })
       .eq('meter_id', meterId)
       .eq('currency', currency);

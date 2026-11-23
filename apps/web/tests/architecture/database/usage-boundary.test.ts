@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 /**
  * The shape of the economics model, asked of the real local Postgres.
  *
- * Retail usage pricing is meter-based and effective-dated in `platform_retail_rates`; a usage
+ * Usage pricing is meter-based and effective-dated in `price_book_item_usage_prices`, on the plans a business holds; a usage
  * event is written by one function; and nothing about a usage event can disagree with the
  * business it belongs to. Each of these is a fact about the schema, so each is asserted from it.
  */
@@ -41,16 +41,18 @@ describe('the second retail price list stays gone', () => {
     expect(rows).toEqual([]);
   });
 
-  it('has one retail-rate resolver, and it is keyed by meter, currency, organization and moment', async () => {
+  it('has one usage-price resolver, and it is keyed by meter, currency, organization and moment', async () => {
     const { rows } = await pg.query(
       `select p.proname, pg_get_function_identity_arguments(p.oid) as args
          from pg_proc p
-        where p.pronamespace in ('public'::regnamespace, 'app'::regnamespace) and p.proname like '%retail_rate_at'`,
+        where p.pronamespace in ('public'::regnamespace, 'app'::regnamespace)
+          and (p.proname like '%retail_rate_at' or p.proname like '%usage_price_at')`,
     );
-    // The organization joined the key in `20261022000007` — a rate resolved for nobody in
-    // particular was how one organization's negotiated rate could leak into another's usage.
+    // The organization is part of the key: a price resolved for nobody in particular was how one
+    // organization's negotiated price could leak into another's usage. Since 20261122000001 the
+    // organization is also what finds the price: the plans it holds, never a platform-wide row.
     expect(rows).toEqual([
-      { proname: 'retail_rate_at', args: 'p_meter_id text, p_currency text, p_organization_id uuid, p_at timestamp with time zone' },
+      { proname: 'usage_price_at', args: 'p_meter_id text, p_currency text, p_organization_id uuid, p_at timestamp with time zone' },
     ]);
   });
 });

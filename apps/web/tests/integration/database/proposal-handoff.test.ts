@@ -2,14 +2,14 @@ import { randomUUID } from 'node:crypto';
 import { seedLegacyPlanProposal } from '@/tests/support/legacy-proposals';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { getPlan } from '@/lib/domain/catalogue/plans';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { acceptCommercialProposal, markCommercialProposalSent } from '@/lib/domain/customers/commercial-proposals';
 import { createCustomer, getCustomer } from '@/lib/domain/customers/customers';
 import { upsertDiscoverySnapshotAnswers } from '@/lib/domain/customers/discovery-snapshots';
 import { claimProposalInvite, createProposalInvite } from '@/lib/domain/customers/proposal-invites';
 import { getFoundingHandoff, getProposalHandoff, handoffAcceptedProposal } from '@/lib/domain/customers/proposal-handoff';
-import { currentPlanAssignment, listOrganizationPlanAgreements } from '@/lib/domain/catalogue/organization-plans';
+import { currentPlanAssignment, organizationPlanPrice } from '@/lib/domain/catalogue/organization-plans';
+import { createFixturePlan, priceFixturePlan, withDatabaseOwner } from '@/tests/support/plans';
 import { computeReadiness, launchOrganization } from '@/lib/domain/tenancy/lifecycle';
 import { requireOrganization, requireOrganizationForBillingRecovery, serviceLockedHref } from '@/lib/route/organization';
 import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
@@ -61,6 +61,14 @@ describe('handing off an accepted proposal', () => {
   let ownerEmail: string;
   let ownerPassword: string;
   let planId: string;
+  let previousOperating: string | null = null;
+
+  afterAll(async () => {
+    await withDatabaseOwner(async (pg) => {
+      await pg.query('update public.platform_settings set operating_organization_id = null where singleton');
+      await pg.query('update public.platform_settings set operating_organization_id = $1 where singleton', [previousOperating]);
+    });
+  });
 
   beforeAll(async () => {
     if (!ANON_KEY || !SERVICE_ROLE_KEY) {
@@ -79,6 +87,28 @@ describe('handing off an accepted proposal', () => {
     if (signInError) throw signInError;
 
     gildOpsOrgId = (await foundBusiness({ ownerEmail: repEmail, name: 'GildOps (test)', currency: 'CAD' })) as string;
+    // A platform-plan proposal is GildOps selling its plan: the seller is the operating
+    // organization, whose catalog holds the plan's item (ADR-057). The suite's plan grants what the
+    // catalog's own Start plan does, so the business it founds can work exactly as before.
+    planId = await withDatabaseOwner(async (pg) => {
+      previousOperating = (await pg.query<{ id: string | null }>('select operating_organization_id as id from public.platform_settings where singleton')).rows[0]?.id ?? null;
+      await pg.query('update public.platform_settings set operating_organization_id = null where singleton');
+      await pg.query('update public.platform_settings set operating_organization_id = $1 where singleton', [gildOpsOrgId]);
+      const id = await createFixturePlan({ key: `handoff_${randomUUID().replaceAll('-', '').slice(0, 10)}`, label: 'Start (hand-off)', billable: true, createdBy: repUserId });
+      for (const table of ['platform_plan_product_grants', 'platform_plan_module_grants']) {
+        const column = table === 'platform_plan_product_grants' ? 'product_id' : 'module_id';
+        await pg.query(`insert into public.${table} (plan_id, ${column}, granted_scope) select $1, ${column}, granted_scope from public.${table} where plan_id = (select id from public.platform_plans where key = 'start')`, [id]);
+      }
+      await pg.query(`insert into public.platform_plan_feature_grants (plan_id, feature_id, included) select $1, feature_id, included from public.platform_plan_feature_grants where plan_id = (select id from public.platform_plans where key = 'start')`, [id]);
+      await pg.query(
+        `insert into public.platform_plan_quotas (plan_id, allowance_key, label, unit, included_quantity, period, hard_limit, overage_policy, service_class, meter_id, display_order, allowance_type, reset_semantics, overage_behavior)
+         select $1, allowance_key, label, unit, included_quantity, period, hard_limit, overage_policy, service_class, meter_id, display_order, allowance_type, reset_semantics, overage_behavior
+           from public.platform_plan_quotas where plan_id = (select id from public.platform_plans where key = 'start')`,
+        [id],
+      );
+      return id;
+    });
+    await priceFixturePlan({ planId, currency: 'CAD', amountMinor: 4_900, billingInterval: 'month', effectiveFrom: new Date(Date.now() - 86_400_000).toISOString() });
 
     // The prospect's own owner-to-be must already have an account (provision_organization's own
     // precondition) — a real one, not anonymous, and reachable by an email on the customer row.
@@ -94,12 +124,10 @@ describe('handing off an accepted proposal', () => {
       patch: { bookingIntake: { value: 'Books online.', status: 'confirmed', source: 'Owner' } },
     });
 
-    const start = await getPlan(repDb, 'start');
-    planId = start!.id;
     const built = await seedLegacyPlanProposal({ createdBy: repUserId,
       organizationId: gildOpsOrgId,
       customerId,
-      planId: start!.id,
+      planId,
       addonPlanIds: [],
       currency: 'CAD',
       billingInterval: 'month',
@@ -234,10 +262,15 @@ describe('handing off an accepted proposal', () => {
     expect(assignment!.planId).toBe(planId);
     expect(assignment!.periodEnd).toBe('9999-12-31');
 
-    const agreements = await listOrganizationPlanAgreements(ownerDb, { organizationId: createdOrganizationId, planId });
-    expect(agreements).toHaveLength(1);
-    expect(agreements[0].currency).toBe('CAD');
-    expect(agreements[0].amountMinor).toBeGreaterThan(0);
+    // The accepted price is the subscription's agreed price, which the business reads as its own.
+    const price = await organizationPlanPrice(ownerDb, { organizationId: createdOrganizationId, planId });
+    expect(price).toMatchObject({ source: 'agreement', currency: 'CAD', amountMinor: 4_900 });
+    const subscription = await withDatabaseOwner(async (pg) => (await pg.query(
+      `select s.organization_id, s.customer_id, s.billing_interval from public.subscriptions s
+         join public.subscription_lines l on l.subscription_id = s.id
+         join public.organization_plan_assignments a on a.subscription_line_id = l.id
+        where a.organization_id = $1`, [createdOrganizationId])).rows);
+    expect(subscription).toEqual([{ organization_id: gildOpsOrgId, customer_id: customerId, billing_interval: 'month' }]);
   });
 
   it('the founded business can read its own handoff; an unrelated third organization cannot', async () => {
@@ -275,11 +308,10 @@ describe('handing off an accepted proposal', () => {
   });
 
   it('refuses to hand off a proposal that was never accepted', async () => {
-    const start = await getPlan(repDb, 'start');
     const draft = await seedLegacyPlanProposal({ createdBy: repUserId,
       organizationId: gildOpsOrgId,
       customerId,
-      planId: start!.id,
+      planId,
       addonPlanIds: [],
       currency: 'CAD',
       billingInterval: 'month',
