@@ -34,7 +34,7 @@ Entries describe the product or operational change, not every file touched.
 
 ## 2026-11-23
 
-- GildOps can be bought without a consultation. Pricing lists GildOps' plans and add-ons at the prices Finance holds; a plan's Start leads to sign-up and founding a business, which is put on that plan as a GildOps subscription and customer. Paying stays the checkout in Plan & usage, required before launch. The header and product pages lead with Get started; asking about a product stays one link away.
+- GildOps can be bought without a consultation. Pricing lists GildOps' plans and add-ons at the prices Finance holds; a plan's Start leads to sign-up and founding a business, which is put on that plan as a GildOps subscription and customer. Plans are started monthly and charged in the plan's own currency, whatever currency the business works in; paying stays the checkout in Plan & usage, required before launch. The header and product pages lead with Get started. The consultation page is now Talk to us: GildOps' phone number when it has one, and a form asking GildOps to call back.
 - A new business's starting point opens with Describe your business, which drafts its setup for review; templates and copying another business stay beside it.
 
 ## 2026-11-22

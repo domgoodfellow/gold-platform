@@ -8,7 +8,7 @@ import { parseChosenPlan, storeChosenPlan } from '@/lib/route/chosen-plan';
  * plan is not remembered and goes back to Pricing. The destinations are fixed literals.
  */
 export async function GET(request: NextRequest) {
-  const choice = parseChosenPlan(request.nextUrl.searchParams.get('plan'), request.nextUrl.searchParams.get('billing'));
+  const choice = parseChosenPlan(request.nextUrl.searchParams.get('plan'));
   if (!choice) return NextResponse.redirect(new URL('/pricing', request.url), 303);
 
   await storeChosenPlan(choice);

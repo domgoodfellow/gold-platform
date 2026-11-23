@@ -29,10 +29,8 @@ export async function beginPlatformBillingCheckoutAction(
   const parsed = PlatformBillingCheckoutSchema.safeParse({ organizationId, planKey, quoteVersion });
   if (!parsed.success) return { error: 'Review the current price before subscribing.' };
 
+  // GildOps charges in its plan's own currency, whatever currency this business works in.
   const { db, organization } = await requireOrganizationForBillingRecovery(organizationId);
-  if (!organization.currency) {
-    return { error: 'Set this business’s currency in General settings before subscribing.' };
-  }
 
   const origin = await requestOrigin();
 
@@ -46,7 +44,6 @@ export async function beginPlatformBillingCheckoutAction(
       // Nothing a business has not said is filled in on its behalf — a billing contact email is
       // a later, explicit question, not one this checkout invents an answer to.
       organizationEmail: null,
-      currency: organization.currency,
       successUrl: `${origin}/organizations/${organizationId}/settings/plan?checkout=success`,
       cancelUrl: `${origin}/organizations/${organizationId}/settings/plan?checkout=canceled`,
     }));

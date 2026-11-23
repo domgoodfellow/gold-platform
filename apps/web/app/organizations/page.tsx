@@ -101,12 +101,12 @@ export default async function OrganizationsPage() {
   );
 }
 
-/** The plan chosen on Pricing, while it is still offered at a list price for its interval. */
+/** The plan chosen on Pricing, while it is still offered at a monthly list price. */
 async function foundingPlan(db: Db): Promise<FoundingPlan | null> {
   const chosen = await readChosenPlan();
   if (!chosen) return null;
   const plan = (await publicPlanCatalog(db)).find((entry) => entry.key === chosen.planKey && entry.kind === 'plan');
-  const price = plan?.prices.find((entry) => entry.billingInterval === chosen.billingInterval);
+  const price = plan?.prices.find((entry) => entry.billingInterval === 'month');
   if (!plan || !price) return null;
   return { ...chosen, label: plan.label, price: formatMoney(price.amountMinor, price.currency) };
 }

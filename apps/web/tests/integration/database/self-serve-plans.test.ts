@@ -118,6 +118,16 @@ describe('the public plan list', () => {
 });
 
 describe('choosing a plan for a new business', () => {
+  it('charges in the plan’s own currency, whatever currency the business works in', async () => {
+    const euro = await founder('euro', 'EUR');
+    const chosen = await euro.owner.db.rpc('choose_platform_plan', { p_organization_id: euro.organizationId, p_plan_key: listedKey });
+    expect(chosen.error).toBeNull();
+    const { rows: [subscription] } = await pg.query('select currency from public.subscriptions where id = $1', [chosen.data]);
+    expect(subscription.currency).toBe('CAD');
+    const { rows: [business] } = await pg.query('select currency from public.organizations where id = $1', [euro.organizationId]);
+    expect(business.currency).toBe('EUR');
+  });
+
   it('records the business as a GildOps customer, writes its subscription and switches the plan on', async () => {
     const { owner, organizationId } = await founder('chooser');
     const chosen = await owner.db.rpc('choose_platform_plan', { p_organization_id: organizationId, p_plan_key: listedKey, p_billing_interval: 'month' });
@@ -148,15 +158,13 @@ describe('choosing a plan for a new business', () => {
     expect(line).toMatchObject({ amount_minor: '4900', source: 'list' });
   });
 
-  it('refuses a second plan, an unlisted plan, an interval or currency it is not sold in, and GildOps itself', async () => {
+  it('refuses a second plan, an unlisted plan, an interval it is not sold in, and GildOps itself', async () => {
     const { owner, organizationId } = await founder('refused');
     expect((await owner.db.rpc('choose_platform_plan', { p_organization_id: organizationId, p_plan_key: unlistedKey })).error?.code).toBe('GD051');
     expect((await owner.db.rpc('choose_platform_plan', { p_organization_id: organizationId, p_plan_key: yearlessKey, p_billing_interval: 'year' })).error?.code).toBe('GD053');
     expect((await owner.db.rpc('choose_platform_plan', { p_organization_id: organizationId, p_plan_key: yearlessKey })).error).toBeNull();
     expect((await owner.db.rpc('choose_platform_plan', { p_organization_id: organizationId, p_plan_key: listedKey })).error?.code).toBe('GD054');
 
-    const euro = await founder('euro', 'EUR');
-    expect((await euro.owner.db.rpc('choose_platform_plan', { p_organization_id: euro.organizationId, p_plan_key: listedKey })).error?.code).toBe('GD053');
 
     expect((await operator.db.rpc('choose_platform_plan', { p_organization_id: gildops, p_plan_key: listedKey })).error?.code).toBe('GD050');
   });

@@ -67,9 +67,11 @@ alter table public.client_tenant_relationships add constraint client_tenant_rela
   check (origin = any (array['proposal_handoff', 'existing_tenant_link', 'migration', 'self_serve']));
 
 -- 3. Choosing a plan. The caller manages the business's own billing; the business holds no plan and
---    is not GildOps; the plan is listed and has a list price in the business's currency for the
---    interval chosen. GildOps' customer for the business is reused or created, and the subscription
---    is written in GildOps' Finance from today, where its plan line provisions the business.
+--    is not GildOps; the plan is listed and has a list price for the interval chosen. GildOps
+--    charges in the plan's own currency: the business's, when the plan is sold in it, else the
+--    plan's (a business's currency is for its own work, not GildOps' price). GildOps' customer for
+--    the business is reused or created, and the subscription is written in GildOps' Finance from
+--    today, where its plan line provisions the business.
 create function public.choose_platform_plan(p_organization_id uuid, p_plan_key text, p_billing_interval text default 'month')
 returns uuid
 language plpgsql
@@ -85,6 +87,7 @@ declare
   v_customer uuid;
   v_link     uuid;
   v_sub      uuid;
+  v_currency text;
 begin
   if v_actor is null or p_organization_id is null
      or p_organization_id not in (select app.current_tenant_ids())
@@ -105,16 +108,16 @@ begin
      or v_item.id is null or v_item.sale_status <> 'active' or v_item.organization_id <> v_seller then
     raise exception 'That plan is not available to choose.' using errcode = 'GD051';
   end if;
-  if v_org.currency is null then
-    raise exception 'Choose this business''s currency before its plan.' using errcode = 'GD052';
-  end if;
-  if not exists (
-    select 1 from public.price_book_item_prices pr
-     where pr.organization_id = v_seller and pr.item_id = v_item.id and pr.approval_state = 'approved'
-       and pr.currency = v_org.currency and pr.billing_interval = p_billing_interval
-       and pr.effective_from <= now() and (pr.effective_to is null or pr.effective_to > now())) then
-    raise exception '% is not sold % in %; talk to GildOps.', v_plan.label,
-      case p_billing_interval when 'year' then 'yearly' else 'monthly' end, v_org.currency using errcode = 'GD053';
+  select pr.currency into v_currency
+    from public.price_book_item_prices pr
+   where pr.organization_id = v_seller and pr.item_id = v_item.id and pr.approval_state = 'approved'
+     and pr.billing_interval = p_billing_interval
+     and pr.effective_from <= now() and (pr.effective_to is null or pr.effective_to > now())
+   order by (pr.currency = v_org.currency) desc nulls last, pr.currency
+   limit 1;
+  if v_currency is null then
+    raise exception '% is not sold %; talk to GildOps.', v_plan.label,
+      case p_billing_interval when 'year' then 'yearly' else 'monthly' end using errcode = 'GD053';
   end if;
   if exists (select 1 from public.organization_plan_assignments a
               where a.organization_id = p_organization_id and a.plan_kind = 'plan'
@@ -148,7 +151,7 @@ begin
             jsonb_build_object('relationshipId', v_link, 'tenantId', p_organization_id, 'origin', 'self_serve'));
   end if;
 
-  v_sub := app.write_subscription(v_seller, v_customer, v_org.currency, p_billing_interval, current_date, null,
+  v_sub := app.write_subscription(v_seller, v_customer, v_currency, p_billing_interval, current_date, null,
                                   v_actor, 'Chosen on the GildOps website');
   perform app.write_subscription_line(v_seller, v_sub, v_item.id, 'primary', 1, current_date, null, v_actor,
                                       'Chosen on the GildOps website');
@@ -163,7 +166,27 @@ grant execute on function public.choose_platform_plan(uuid, text, text) to authe
 comment on function public.choose_platform_plan(uuid, text, text) is
   'A business''s billing manager chooses a listed GildOps plan for it: links the business to its GildOps customer and writes the subscription in GildOps'' Finance, which provisions the plan. Payment is the existing checkout, required before launch.';
 
--- 4. Verification.
+-- 4. A new environment's GildOps homepage leads with Get started (Pricing) beside Talk to us, and
+--    closes on Talk to us beside See plans; the words are unchanged from 20261109000004. An existing
+--    published homepage is GildOps' own content, edited in Studio, and is left as it is.
+create or replace function app.default_gold_homepage_sections()
+returns jsonb
+language sql
+immutable
+set search_path = ''
+as $function$
+  select $json$[
+    {"kind":"hero","variant":"left","eyebrow":"","heading":"AI, automation and business software, set up around how you work.","body":"Start with one product, such as online booking or workflow automation, or connect several so customers, jobs and invoices share one record. We set each one up with you, and you check it before it goes live.","primaryCta":{"href":"/pricing","label":"Get started"},"secondaryCta":{"href":"/demo","label":"Talk to us"}},
+    {"kind":"capabilities","variant":"list","eyebrow":"","heading":"Tools you can use on their own.","body":"No new system to adopt first. Add one where your team loses the most time.","items":[{"title":"Websites and forms","body":"Publish a website and forms in your business's name. Edit a draft, check it, then publish.","href":"/products#websites"},{"title":"Online booking","body":"Customers pick a service and a free time without phoning. Each booking lands on your schedule.","href":"/products#booking"},{"title":"Dialer","body":"Business calls in the browser, with a call list and a record of how each call went. Not yet available to new businesses.","href":"/dialer"}]},
+    {"kind":"capabilities","variant":"list","eyebrow":"","heading":"AI and automation, set up with you.","body":"We agree what it may do and when it hands over to a person. Your team tests it before any customer sees it.","items":[{"title":"Workflow automation","body":"Rules that act when something happens: send an email, update a customer, create or move a job. Every run is recorded.","href":"/products#automation"},{"title":"Business assistant","body":"Ask about your customers, jobs and invoices in plain words, and get answers from records you can already see. It changes nothing unless a person approves.","href":"/products#assistant"},{"title":"AI receptionist","body":"Answers calls to your business number with information you approve, and passes the caller to a person when needed. Not yet available to new businesses.","href":"/products#ai-receptionist"}]},
+    {"kind":"capabilities","variant":"list","eyebrow":"","heading":"Or connect several into one system.","body":"When sales and work share one customer record, nobody types a job in twice or asks a customer to repeat themselves.","items":[{"title":"Sales","body":"Customer records, a pipeline, tasks and email, with each customer’s history in one place.","href":"/sales"},{"title":"Operations","body":"Jobs, scheduling, dispatch, quotes, invoices and payments, from request to paid.","href":"/operations"},{"title":"Customer Service","body":"Calls, email and website conversations in one history, with support cases for anything that needs resolving. Not yet available to new businesses.","href":"/customer-service"}]},
+    {"kind":"process","eyebrow":"","heading":"How a project runs.","items":[{"step":"01","title":"Tell us the job to be done","body":"Bookings taken by hand, follow-ups forgotten, the same customer details typed in twice. We start from the task, not a product list."},{"step":"02","title":"Agree scope and price","body":"What we set up, what connects to the tools you keep, and what is charged for setup, each month and by usage."},{"step":"03","title":"Set up and test","body":"Your team tries it on real work. Anything AI says is reviewed before a customer sees it."},{"step":"04","title":"Go live and adjust","body":"Launch when you are ready, then add or change products as the business changes."}]},
+    {"kind":"trust","eyebrow":"","heading":"What you can count on.","items":[{"title":"One product is not a commitment","body":"Using one product does not mean moving the rest of your business into GildOps."},{"title":"You approve AI before it goes live","body":"You decide what an assistant may say and when a person takes over, and you test it first."},{"title":"Costs in writing","body":"Setup, ongoing fees and usage are listed separately in your quote."},{"title":"Plain about what is ready","body":"Every product says whether it is available, in testing or not yet available, so you know what you can start with now."}]},
+    {"kind":"cta","heading":"What would you like to fix first?","body":"Tell us the task, the tools you use now and who does the work. We will tell you which product fits, what setting it up involves and what it costs.","primaryCta":{"href":"/demo","label":"Talk to us"},"secondaryCta":{"href":"/pricing","label":"See plans"}}
+  ]$json$::jsonb;
+$function$;
+
+-- 5. Verification.
 do $$
 begin
   if not exists (select 1 from pg_proc where proname = 'choose_platform_plan') then

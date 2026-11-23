@@ -24,7 +24,6 @@ export async function beginPlatformBillingCheckout(
     reviewedQuoteVersion: string;
     organizationName: string;
     organizationEmail: string | null;
-    currency: string;
     successUrl: string;
     cancelUrl: string;
   },
@@ -69,12 +68,6 @@ export async function beginPlatformBillingCheckout(
   assertQuoteMatchesReview(input.reviewedQuoteVersion, quote);
   if (quote.blockers.length > 0) {
     throw new DomainError(quote.blockers[0]!.message, `platform_billing.${quote.blockers[0]!.code}`);
-  }
-  if (quote.currency !== input.currency) {
-    throw new DomainError(
-      `GildOps has not priced ${plan.label} in ${input.currency}.`,
-      'platform_billing.no_price_for_currency',
-    );
   }
 
   const quoteLines = [...quote.recurring, ...quote.dueNow];

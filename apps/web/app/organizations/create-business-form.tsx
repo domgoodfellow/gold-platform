@@ -13,7 +13,7 @@ import { createBusinessAction, type CreateBusinessState } from './actions';
 const INITIAL: CreateBusinessState = { error: null };
 
 /** A plan chosen on Pricing, carried into the business this form founds. */
-export type FoundingPlan = { planKey: string; billingInterval: 'month' | 'year'; label: string; price: string };
+export type FoundingPlan = { planKey: string; label: string; price: string };
 
 /**
  * Account identity is collected at signup; this screen creates the business with the three things
@@ -29,11 +29,10 @@ export function CreateBusinessForm({ plan }: { plan?: FoundingPlan | null } = {}
       {plan ? (
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-y border-border py-3">
           <p className="text-sm">
-            <span className="font-medium">{plan.label}</span> · {plan.price} {plan.billingInterval === 'year' ? 'a year' : 'a month'}
+            <span className="font-medium">{plan.label}</span> · {plan.price} a month
           </p>
           <Link href="/pricing" className="text-sm text-muted underline underline-offset-4 hover:text-foreground">Change plan</Link>
           <input type="hidden" name="planKey" value={plan.planKey} />
-          <input type="hidden" name="billingInterval" value={plan.billingInterval} />
         </div>
       ) : null}
       <FormField id="business-name" label="What is the business called?">

@@ -177,7 +177,7 @@ describe('a checkout puts its own id on the subscription it creates, and the web
     expect(quote.blockers).toEqual([]);
     await beginPlatformBillingCheckout(org.db, {
       organizationId: org.organizationId, planKey: base.key, reviewedQuoteVersion: quote.reviewVersion,
-      organizationName: 'C3 Co', organizationEmail: null, currency: 'CAD',
+      organizationName: 'C3 Co', organizationEmail: null,
       successUrl: 'https://app.test/ok', cancelUrl: 'https://app.test/no',
     });
 
@@ -249,7 +249,7 @@ describe('the Plan & usage screen offers checkout whenever the authoritative quo
     });
     await beginPlatformBillingCheckout(org.db, {
       organizationId: org.organizationId, planKey: agreement.key, reviewedQuoteVersion: model.quote!.reviewVersion,
-      organizationName: 'Agreement Only Co', organizationEmail: null, currency: 'CAD',
+      organizationName: 'Agreement Only Co', organizationEmail: null,
       successUrl: 'https://app.test/ok', cancelUrl: 'https://app.test/no',
     });
     expect(new URLSearchParams(checkoutBody).get('line_items[0][price]')).toBe(agreement.priceReference);

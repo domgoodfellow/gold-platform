@@ -41,20 +41,21 @@ describe('the form asks for a conversation, not an account', () => {
     expect(page + form).not.toMatch(/work item type|operating hours|price book/i);
   });
 
-  it('uses customer-facing consultation language, not internal "workflow review" wording', () => {
+  // Talking to GildOps is the funnel beside Pricing (owner decision, 2026-11-23).
+  it('is talking to GildOps in customer-facing language, not internal "workflow review" wording', () => {
     expect(page + form).not.toMatch(/workflow review/i);
-    expect(page).toContain('Request a consultation');
-    expect(form).toContain('Request a consultation');
+    expect(page).toContain('Talk to us');
+    expect(form).toContain('Ask us to call you');
   });
 
-  it('never sends the visitor to account creation: no product is bought by signing up', () => {
+  it('keeps the request itself apart from account creation: buying starts on Pricing', () => {
     expect(page + form).not.toContain('/sign-up');
   });
 });
 
 describe('the success experience', () => {
-  it('thanks the visitor, names the product they asked about, and promises a consultation', () => {
-    expect(successBranch).toMatch(/we.{0,10}ll review what you shared[\s\S]{0,80}contact you to arrange a consultation/i);
+  it('thanks the visitor, names the product they asked about, and promises a call', () => {
+    expect(successBranch).toMatch(/we.{0,10}ll review what you shared[\s\S]{0,80}call you to work out what to set up/i);
     expect(successBranch).toContain('state.product');
   });
 

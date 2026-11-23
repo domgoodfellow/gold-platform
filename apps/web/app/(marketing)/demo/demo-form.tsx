@@ -65,7 +65,7 @@ export function DemoForm({
         <h2 className="text-xl font-semibold tracking-tight">Thanks</h2>
         <p className="max-w-md text-muted">
           We&rsquo;ll review what you shared{state.product ? ` about ${state.product}` : ''} and
-          contact you to arrange a consultation.
+          call you to work out what to set up.
         </p>
         <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
           <Link href="/" className="text-sm font-medium underline underline-offset-4">
@@ -203,7 +203,7 @@ function DemoFields({
       </Hint>
 
       <Button type="submit" disabled={pending}>
-        {pending ? 'Sending…' : 'Request a consultation'}
+        {pending ? 'Sending…' : 'Ask us to call you'}
       </Button>
 
       <ErrorText role="alert">{error}</ErrorText>

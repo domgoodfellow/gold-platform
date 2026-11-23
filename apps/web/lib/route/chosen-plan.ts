@@ -10,16 +10,15 @@ const COOKIE_NAME = 'gold.chosen-plan';
 const MAX_AGE_SECONDS = 24 * 60 * 60;
 const PLAN_KEY = /^[a-z][a-z0-9_]{1,60}$/;
 
-export type BillingInterval = 'month' | 'year';
-export type ChosenPlan = { planKey: string; billingInterval: BillingInterval };
+export type ChosenPlan = { planKey: string };
 
-export function parseChosenPlan(planKey: unknown, billingInterval: unknown): ChosenPlan | null {
+export function parseChosenPlan(planKey: unknown): ChosenPlan | null {
   if (typeof planKey !== 'string' || !PLAN_KEY.test(planKey)) return null;
-  return { planKey, billingInterval: billingInterval === 'year' ? 'year' : 'month' };
+  return { planKey };
 }
 
 export async function storeChosenPlan(choice: ChosenPlan): Promise<void> {
-  (await cookies()).set(COOKIE_NAME, `${choice.planKey}:${choice.billingInterval}`, {
+  (await cookies()).set(COOKIE_NAME, choice.planKey, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
@@ -29,10 +28,7 @@ export async function storeChosenPlan(choice: ChosenPlan): Promise<void> {
 }
 
 export async function readChosenPlan(): Promise<ChosenPlan | null> {
-  const value = (await cookies()).get(COOKIE_NAME)?.value;
-  if (!value) return null;
-  const [planKey, billingInterval] = value.split(':');
-  return parseChosenPlan(planKey, billingInterval);
+  return parseChosenPlan((await cookies()).get(COOKIE_NAME)?.value);
 }
 
 /** Cleared once a business has been put on it, or when the person founds a business without it. */

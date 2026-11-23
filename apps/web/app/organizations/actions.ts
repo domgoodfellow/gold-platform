@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { publicPlanCatalog } from '@/lib/domain/catalogue/public-catalog';
-import { choosePlatformPlan, selfServeCurrencies, selfServePrice } from '@/lib/domain/platform-billing/self-serve';
+import { choosePlatformPlan } from '@/lib/domain/platform-billing/self-serve';
 import { createOrganization } from '@/lib/domain/tenancy/organizations';
 import { clearChosenPlan, parseChosenPlan } from '@/lib/route/chosen-plan';
 
@@ -16,8 +16,8 @@ export type CreateBusinessState = { error: string | null };
  * is applied until the owner applies it, and Start blank goes to Setup as before.
  *
  * A plan chosen on Pricing travels with the form. It is checked before anything is created, so a
- * currency the plan is not sold in is corrected on this form rather than leaving a business with
- * no plan; once the business exists it is put on the plan.
+ * plan no longer offered is caught here; once the business exists it is put on the plan. GildOps
+ * charges in the plan's own currency, so the business's currency is its own choice.
  */
 export async function createBusinessAction(
   _previous: CreateBusinessState,
@@ -25,21 +25,13 @@ export async function createBusinessAction(
 ): Promise<CreateBusinessState> {
   const db = await getDb();
   const currency = String(formData.get('currency') ?? '') || undefined;
-  const chosen = parseChosenPlan(formData.get('planKey'), formData.get('billingInterval'));
+  const chosen = parseChosenPlan(formData.get('planKey'));
 
   if (chosen) {
     const plan = (await publicPlanCatalog(db)).find((entry) => entry.key === chosen.planKey && entry.kind === 'plan');
-    if (!plan || plan.requiresContactSales) {
+    if (!plan || plan.requiresContactSales || !plan.prices.some((price) => price.billingInterval === 'month')) {
       await clearChosenPlan();
       return { error: 'That plan is no longer offered. Choose another on Pricing.' };
-    }
-    if (!selfServePrice(plan, currency, chosen.billingInterval)) {
-      const sold = selfServeCurrencies(plan, chosen.billingInterval);
-      return {
-        error: sold.length > 0
-          ? `${plan.label} is sold in ${sold.join(' or ')}. Choose ${sold.length === 1 ? 'it' : 'one'} as the currency.`
-          : `${plan.label} is not sold ${chosen.billingInterval === 'year' ? 'yearly' : 'monthly'}. Choose another on Pricing.`,
-      };
     }
   }
 
@@ -68,7 +60,7 @@ export async function createBusinessAction(
   let destination = `/organizations/${organizationId}/setup/proposal`;
   if (chosen) {
     try {
-      await choosePlatformPlan(db, { organizationId, ...chosen });
+      await choosePlatformPlan(db, { organizationId, planKey: chosen.planKey });
       await clearChosenPlan();
     } catch (error) {
       if (!(error instanceof DomainError)) throw error;

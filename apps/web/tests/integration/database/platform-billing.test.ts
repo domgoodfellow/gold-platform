@@ -690,7 +690,6 @@ describe('starting a subscription (Checkout)', () => {
       planKey,
       organizationName: 'Tenant Co',
       organizationEmail: null,
-      currency: 'CAD',
       successUrl: 'https://app.test/success',
       cancelUrl: 'https://app.test/cancel',
     });
@@ -716,7 +715,6 @@ describe('starting a subscription (Checkout)', () => {
         planKey,
         organizationName: 'Tenant Co',
         organizationEmail: null,
-        currency: 'CAD',
         successUrl: 'https://app.test/success',
         cancelUrl: 'https://app.test/cancel',
       }),
@@ -742,7 +740,6 @@ describe('starting a subscription (Checkout)', () => {
         planKey: key,
         organizationName: 'Tenant Co',
         organizationEmail: null,
-        currency: 'CAD',
         successUrl: 'https://app.test/success',
         cancelUrl: 'https://app.test/cancel',
       }),
@@ -765,7 +762,6 @@ describe('starting a subscription (Checkout)', () => {
         planKey,
         organizationName: 'Tenant Co',
         organizationEmail: null,
-        currency: 'CAD',
         successUrl: 'https://app.test/success',
         cancelUrl: 'https://app.test/cancel',
       }),
@@ -794,7 +790,6 @@ describe('starting a subscription (Checkout)', () => {
       planKey,
       organizationName: 'Tenant Co',
       organizationEmail: null,
-      currency: 'CAD',
       successUrl: 'https://app.test/success',
       cancelUrl: 'https://app.test/cancel',
     });
@@ -841,7 +836,6 @@ describe('multi-line checkout and negotiated prices', () => {
       planKey,
       organizationName: 'Multiline Co',
       organizationEmail: null,
-      currency: 'CAD',
       successUrl: 'https://app.test/success',
       cancelUrl: 'https://app.test/cancel',
     });
@@ -904,7 +898,6 @@ describe('multi-line checkout and negotiated prices', () => {
       planKey: agreementPlanKey,
       organizationName: 'Agreement Co',
       organizationEmail: null,
-      currency: 'CAD',
       successUrl: 'https://app.test/success',
       cancelUrl: 'https://app.test/cancel',
     });
@@ -950,7 +943,6 @@ function checkoutInput(organizationId: string, planKey: string) {
     planKey,
     organizationName: 'Closeout Co',
     organizationEmail: null,
-    currency: 'CAD',
     successUrl: 'https://app.test/success',
     cancelUrl: 'https://app.test/cancel',
   };

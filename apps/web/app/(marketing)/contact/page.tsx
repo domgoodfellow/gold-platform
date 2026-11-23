@@ -35,10 +35,11 @@ export default async function ContactPage() {
             Questions? Send us a message.
           </h1>
           <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted">
-            For a general question, an existing account, billing or a partnership. Looking to see GildOps
-            on your own business?{' '}
-            <Link href="/demo" className="font-medium text-foreground underline underline-offset-4">Request a consultation</Link>{' '}
-            instead.
+            For a general question, an existing account, billing or a partnership. Want GildOps for your
+            own business?{' '}
+            <Link href="/pricing" className="font-medium text-foreground underline underline-offset-4">Choose a plan</Link>{' '}
+            or{' '}
+            <Link href="/demo" className="font-medium text-foreground underline underline-offset-4">talk to us</Link>.
           </p>
         </section>
       </MarketingSection>

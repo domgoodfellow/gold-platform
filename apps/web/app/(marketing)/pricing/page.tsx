@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   },
 };
 
-type Interval = 'month' | 'year';
+type Interval = 'month';
 
 /**
  * GildOps' plans and add-ons as its Finance prices them: `public_plan_catalog` reads the list
@@ -27,11 +27,11 @@ type Interval = 'month' | 'year';
  * business is charged. A plan with a price is started here; one priced by agreement is talked
  * through. `?product=` narrows the plans to those that include a product page's product.
  */
-export default async function PricingPage({ searchParams }: { searchParams: Promise<{ billing?: string; product?: string }> }) {
+export default async function PricingPage({ searchParams }: { searchParams: Promise<{ product?: string }> }) {
   const query = await searchParams;
   const catalog = await publicPlanCatalog(getPublicDb());
-  const hasYearly = catalog.some((plan) => plan.kind === 'plan' && plan.prices.some((price) => price.billingInterval === 'year'));
-  const interval: Interval = hasYearly && query.billing === 'year' ? 'year' : 'month';
+  // Plans are started monthly: the checkout charges monthly.
+  const interval: Interval = 'month';
   const offering = query.product ? offeringById(query.product) : undefined;
 
   const plans = catalog.filter((plan) => plan.kind === 'plan' && (!offering || planIncludesOffering(plan, offering)));
@@ -54,21 +54,6 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
       </MarketingSection>
 
       <MarketingSection kind="content">
-        {hasYearly ? (
-          <nav aria-label="Billing" className="mb-8 flex gap-6 text-sm">
-            {(['month', 'year'] as const).map((option) => (
-              <Link
-                key={option}
-                href={`/pricing?billing=${option}${offering ? `&product=${offering.id}` : ''}`}
-                aria-current={option === interval ? 'page' : undefined}
-                className={option === interval ? 'font-medium underline underline-offset-8' : 'text-muted hover:text-foreground'}
-              >
-                {option === 'month' ? 'Monthly' : 'Yearly'}
-              </Link>
-            ))}
-          </nav>
-        ) : null}
-
         {plans.length === 0 ? (
           <p className="max-w-xl text-muted">
             No plan is sold on its own for this yet. <Link href={consultationHref(offering)} className="underline underline-offset-4">Talk to us</Link>.
@@ -131,11 +116,11 @@ function PlanColumn({ plan, interval }: { plan: PublicPlan; interval: Interval }
             <span className="ms-1 text-base font-normal text-muted">{intervalWords(interval)}</span>
           </>
         ) : (
-          <span className="text-xl">{plan.requiresContactSales ? 'Priced with you' : `Not sold ${interval === 'year' ? 'yearly' : 'monthly'}`}</span>
+          <span className="text-xl">Priced with you</span>
         )}
       </p>
       {startable ? (
-        <ButtonLink href={`/start?plan=${plan.key}&billing=${interval}`} tone="primary" className="w-full sm:w-fit">Start with {plan.label}</ButtonLink>
+        <ButtonLink href={`/start?plan=${plan.key}`} tone="primary" className="w-full sm:w-fit">Start with {plan.label}</ButtonLink>
       ) : (
         <ButtonLink href="/demo" tone="secondary" className="w-full sm:w-fit">Talk to us</ButtonLink>
       )}
