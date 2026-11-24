@@ -1,8 +1,7 @@
 import type { ReactNode } from 'react';
 import { AppPage } from '../layout/app-page';
-import { PageLocation, type PageLocationCrumb } from '../navigation/page-location';
-import { SupportTrigger } from '../panels/workspace-right-rail';
-import { LocationHeading } from '../navigation/workspace-crumbs';
+import type { PageLocationCrumb } from '../navigation/page-location';
+import { PageHeader } from '../headers/page-header';
 
 /**
  * Workspace Home: what is happening here, what can I do, where can I go next (`docs/ui-system.md`
@@ -11,11 +10,15 @@ import { LocationHeading } from '../navigation/workspace-crumbs';
  * summaries, state, recent or attention-worthy items. `children` is the workspace's own content;
  * an empty workspace still renders its structure, with a real empty state inside that structure
  * rather than collapsing the whole page into one sentence.
+ *
+ * The page frame plus `PageHeader` with the workspace-home page type: the header is the same one
+ * every page uses, not a second implementation.
  */
 export function WorkspaceHome({
   title,
   crumbs,
   location,
+  meta,
   actions,
   insights = false,
   activity = false,
@@ -28,6 +31,8 @@ export function WorkspaceHome({
   crumbs?: PageLocationCrumb[];
   /** The route's location and heading come from `resolveLocation` (ADR-047); replaces `title` and `crumbs`. */
   location?: Record<string, never>;
+  /** Facts about what the dashboard is showing, in the header's leading region. Never a purpose sentence. */
+  meta?: ReactNode;
   actions?: ReactNode;
   insights?: boolean;
   /** Offers the page-support Activity panel; the page registers its feed there instead of drawing it inline. */
@@ -36,23 +41,10 @@ export function WorkspaceHome({
   dashboard?: boolean;
   children: ReactNode;
 }) {
-  // The workspace bar already names the page on every width, so a plain-text title stays for assistive
-  // technology only rather than being printed a second time.
-  const titleInBar = typeof title === 'string';
   return (
     <AppPage data-dashboard-page={dashboard || undefined}>
-      {location ? null : <PageLocation crumbs={crumbs} current={title} />}
-      <div data-slot="workspace-intro" className="mb-6 flex flex-wrap items-center justify-end gap-x-4 gap-y-3">
-        {location ? <LocationHeading required /> : <LocationHeading fallback={<h1 className={titleInBar ? 'sr-only' : 'mr-auto text-2xl font-semibold tracking-tight'}>{title}</h1>} />}
-        {actions || insights || activity || configure ? (
-          <div className="flex flex-wrap items-center gap-2">
-            {actions}
-            {activity ? <SupportTrigger mode="activity" /> : null}
-            {insights ? <SupportTrigger mode="insights" /> : null}
-            {configure ? <SupportTrigger mode="configure" /> : null}
-          </div>
-        ) : null}
-      </div>
+      {/* A workspace name is not passed through the business vocabulary, as before: `recordTitle`. */}
+      <PageHeader archetype="workspace-home" recordTitle title={title} crumbs={crumbs} location={location ? {} : undefined} meta={meta} actions={actions} activity={activity} insights={insights} configure={configure} />
       {children}
     </AppPage>
   );

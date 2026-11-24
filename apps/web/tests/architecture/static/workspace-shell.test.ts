@@ -691,11 +691,15 @@ describe('organization page composition', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('a page never places a support mode: only a screen pattern renders one, after the business actions', () => {
+  it('a page never places a support mode: only the one page header renders one, after the business actions', () => {
     const renderers = sources.filter((path) => /<SupportTrigger\b/.test(read(path)));
-    expect(renderers.map((path) => path.slice(WEB.length)).sort()).toEqual(
-      ['/components/headers/page-header.tsx', '/components/patterns/collection-header.tsx', '/components/patterns/workspace-home.tsx'].sort(),
-    );
+    expect(renderers.map((path) => path.slice(WEB.length))).toEqual(['/components/headers/page-header.tsx']);
+    // The named page types compose that header rather than drawing a second one.
+    for (const pattern of ['collection-header', 'workspace-home']) {
+      const source = code(read(`${WEB}/components/patterns/${pattern}.tsx`));
+      expect(source, pattern).toMatch(/<PageHeader archetype="(collection|workspace-home)"/);
+      expect(source, pattern).not.toMatch(/<h1\b|<HeaderControls\b|<PageLocation\b|<LocationHeading\b/);
+    }
     const header = code(read(`${WEB}/components/headers/page-header.tsx`));
     expect(header.indexOf('{actions}')).toBeGreaterThan(-1);
     expect(header.indexOf('{actions}')).toBeLessThan(header.indexOf('<SupportTrigger mode="activity"'));

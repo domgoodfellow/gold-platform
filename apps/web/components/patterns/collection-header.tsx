@@ -1,23 +1,20 @@
 import type { ReactNode } from 'react';
-import { cx } from '../class-names';
-import { PageLocation, type PageLocationCrumb } from '../navigation/page-location';
-import { SupportTrigger } from '../panels/workspace-right-rail';
-import { HeaderControls } from '../headers/header-controls';
-import { BusinessLabel } from '@/lib/context/business-vocabulary';
-import { LocationHeading, PageLocationRecords } from '../navigation/workspace-crumbs';
+import type { PageLocationCrumb } from '../navigation/page-location';
+import { PageHeader } from '../headers/page-header';
 import type { RecordLabel } from '@/lib/route/page-location';
 
 /**
  * Collection/Board: compact identity and controls, then the collection or board itself promptly —
  * never a large introductory block above the work surface the operator came to use
- * (`docs/ui-system.md`). Tighter default spacing than `PageHeader`'s `mb-6`, and no description
- * slot at all: the table or board explains itself.
+ * (`docs/ui-system.md`). It is `PageHeader` with the collection page type — a smaller visible title
+ * and tighter spacing — and no description slot at all: the table or board explains itself.
  */
 export function CollectionHeader({
   title,
   crumbs,
   breadcrumbLabel,
   location,
+  meta,
   actions,
   activity = false,
   insights = false,
@@ -34,6 +31,8 @@ export function CollectionHeader({
    */
   location?: { records?: Readonly<Record<string, RecordLabel>> };
   breadcrumbLabel?: ReactNode;
+  /** Facts about what the collection is showing, in the header's leading region. Never a purpose sentence. */
+  meta?: ReactNode;
   /** Board/collection controls, in reading order — a stage-settings control, a create trigger. */
   actions?: ReactNode;
   activity?: boolean;
@@ -41,30 +40,5 @@ export function CollectionHeader({
   configure?: boolean;
   className?: string;
 }) {
-  const titleInBar = location !== undefined || (breadcrumbLabel === undefined && typeof title === 'string');
-  return (
-    <header className={cx('@container/page-header flex flex-wrap items-center justify-between gap-x-4 gap-y-2', className ?? 'mb-4')}>
-      <div className={cx("min-w-0 flex-1 basis-64", titleInBar && 'sr-only')}>
-        {location ? (
-          <>
-            {location.records ? <PageLocationRecords records={location.records} /> : null}
-            <LocationHeading required />
-          </>
-        ) : (
-          <>
-            <PageLocation crumbs={crumbs} current={breadcrumbLabel ?? <BusinessLabel>{title}</BusinessLabel>} />
-            <h1 className="text-xl font-semibold tracking-tight"><BusinessLabel>{title}</BusinessLabel></h1>
-          </>
-        )}
-      </div>
-      {actions || activity || insights || configure ? (
-        <HeaderControls>
-          {actions}
-          {activity ? <SupportTrigger mode="activity" /> : null}
-          {insights ? <SupportTrigger mode="insights" /> : null}
-          {configure ? <SupportTrigger mode="configure" /> : null}
-        </HeaderControls>
-      ) : null}
-    </header>
-  );
+  return <PageHeader archetype="collection" title={title} crumbs={crumbs} breadcrumbLabel={breadcrumbLabel} location={location} meta={meta} actions={actions} activity={activity} insights={insights} configure={configure} className={className} />;
 }

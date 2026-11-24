@@ -11,10 +11,27 @@ import { HeaderControls } from './header-controls';
 export type PageHeaderCrumb = PageLocationCrumb;
 
 /**
- * One available page-identity composition — title, optional metadata, actions and support modes —
- * built on `PageLocation` (`docs/ui-system.md`). It is not the required representation of every
- * page: a screen pattern under `components/patterns/` may publish `PageLocation` directly and draw
- * its own identity where this generic title-row shape does not fit the task.
+ * The page types that share this one header. `PageHeader` itself is `page`; `WorkspaceHome` and
+ * `CollectionHeader` are named compositions over it and pass their own type, so every page header
+ * draws the same identity, context, controls and support modes from one implementation, and a page
+ * type differs only in the few values written here.
+ *
+ * `after` is the space below the header. It is listed here only so the current spacing is kept in one
+ * place; ownership of the space between a page's regions moves to the page frame (`docs/ui-system.md`,
+ * Vertical rhythm), and these values go with it.
+ */
+export type PageHeaderArchetype = 'page' | 'workspace-home' | 'collection';
+const ARCHETYPES: Record<PageHeaderArchetype, { slot: string; align: string; rowGap: string; title: string; after: string }> = {
+  page: { slot: 'page-header', align: 'items-start', rowGap: 'gap-y-3', title: 'text-2xl font-semibold tracking-tight', after: 'mb-6' },
+  // `workspace-intro` is the slot name browser checks already locate a workspace dashboard's header by.
+  'workspace-home': { slot: 'workspace-intro', align: 'items-center', rowGap: 'gap-y-3', title: 'text-2xl font-semibold tracking-tight', after: 'mb-6' },
+  collection: { slot: 'page-header', align: 'items-center', rowGap: 'gap-y-2', title: 'text-xl font-semibold tracking-tight', after: 'mb-4' },
+};
+
+/**
+ * The one page-header composition — title, optional metadata, actions and support modes — built on
+ * `PageLocation` (`docs/ui-system.md`). `WorkspaceHome` and `CollectionHeader` render it with their
+ * own `archetype` rather than drawing a header of their own, and `RecordHeader` renders it as is.
  *
  * It sits inside the page's own `AppPage`, so it shares the canvas its content sits on and is
  * never full-bleed; `WorkspaceHeader` above it is the global bar and holds none of this.
@@ -62,7 +79,10 @@ export function PageHeader({
   supportSize,
   className,
   recordTitle = false,
+  archetype = 'page',
 }: {
+  /** Set only by the named compositions over this header (`WorkspaceHome`, `CollectionHeader`). */
+  archetype?: PageHeaderArchetype;
   /** Required unless `location` is given. */
   title?: ReactNode;
   /**
@@ -93,12 +113,13 @@ export function PageHeader({
   insights?: boolean;
   /** Offers Configure. Courtesy only; the panel's own writes are guarded by RLS. */
   configure?: boolean;
-  /** Replaces the default bottom margin (`mb-6`) where the parent already spaces its children. */
+  /** Replaces the page type's default space below the header where the parent already spaces its children. */
   className?: string;
 }) {
+  const type = ARCHETYPES[archetype];
   const titleInBar = location !== undefined || (!section && breadcrumbLabel === undefined && typeof title === 'string');
   return (
-    <header className={cx('@container/page-header flex flex-wrap items-start gap-x-4 gap-y-3', titleInBar && !meta ? 'justify-end' : 'justify-between', className ?? 'mb-6')}>
+    <header data-slot={type.slot} data-archetype={archetype} className={cx('@container/page-header flex flex-wrap gap-x-4', type.align, type.rowGap, titleInBar && !meta ? 'justify-end' : 'justify-between', className ?? type.after)}>
       <div className={cx('min-w-0', titleInBar && !meta ? 'sr-only' : 'flex-1 basis-64')}>
         {location ? (
           <>
@@ -108,7 +129,7 @@ export function PageHeader({
         ) : (
           <>
             <PageLocation crumbs={section ? [] : crumbs} current={section ?? breadcrumbLabel ?? (recordTitle ? title : <BusinessLabel>{title}</BusinessLabel>)} />
-            <LocationHeading fallback={<h1 className={titleInBar ? 'sr-only' : 'text-2xl font-semibold tracking-tight'}>{recordTitle ? title : <BusinessLabel>{title}</BusinessLabel>}</h1>} />
+            <LocationHeading fallback={<h1 className={titleInBar ? 'sr-only' : type.title}>{recordTitle ? title : <BusinessLabel>{title}</BusinessLabel>}</h1>} />
           </>
         )}
         {meta ? <div className={cx('text-sm text-muted', !titleInBar && 'mt-1')}>{meta}</div> : null}

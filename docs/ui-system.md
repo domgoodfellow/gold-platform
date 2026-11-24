@@ -551,13 +551,13 @@ A pattern should express a recognizable user task, not merely a repeated visual 
 
 ---
 
-### Surface archetypes
+### Archetype per surface
 
 A surface archetype defines the **kind of task a page supports**.
 
 Every routed application surface should have one primary archetype or be explicitly specialized.
 
-The canonical archetypes are defined later in this document.
+The canonical archetypes are defined in [Surface archetypes](#surface-archetypes).
 
 ---
 
@@ -701,6 +701,8 @@ What can I do here?
 ```
 
 The shared page-identity components own this responsibility.
+
+**One page header.** `PageHeader` is the only page-header implementation. `WorkspaceHome`, `CollectionHeader` and `RecordHeader` are named compositions over it: each passes its page type and never draws its own title row, controls row or support-mode triggers. A page type changes only the visible title's scale, the row's vertical alignment and the space below the header; everything else (title-in-bar rule, `meta`, actions, support-mode order, location publishing) is shared. All three accept `meta`, the header's leading region.
 
 ### Page location contract (ADR-047)
 
@@ -2235,11 +2237,9 @@ Those belong to their respective canonical documents.
 
 Moved to [docs/surfaces/marketing.md](surfaces/marketing.md#marketing-workspace).
 
-
 ## Persistent application controls
 
 Moved to [docs/surfaces/shell.md](surfaces/shell.md#persistent-application-controls).
-
 
 ## Workspace Configuration navigation
 
@@ -2258,7 +2258,6 @@ a position in the same document; a drawer supports a focused temporary interacti
 do not earn navigation. Avoid duplicate titles, context, destinations and generic decorative icons.
 
 Configuration roots, Words & navigation and General Settings: [docs/surfaces/settings.md](surfaces/settings.md#words--navigation-and-general-settings). Platform navigation and the business telephone: [docs/surfaces/shell.md](surfaces/shell.md#platform-navigation-and-the-business-telephone). Channel diagnostics: [docs/surfaces/communications.md](surfaces/communications.md#channel-diagnostics).
-
 
 ### CRM Contacts and opportunity Pipeline
 
