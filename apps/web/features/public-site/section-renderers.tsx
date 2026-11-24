@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import Link from 'next/link';
 import { ArrowRight, CalendarDays, ClipboardList, MessageSquare, Users } from 'lucide-react';
 import type { PublicLink, SectionKind, SectionOf, WebsiteSection } from '@gold/schemas';
@@ -235,14 +235,21 @@ export function SectionView({ section, context, anchored = true }: { section: We
  * The sections of a page, in order. A page never holds two elements with one anchor id. The gap is
  * the whole rhythm of the page: sections carry no outer margin of their own.
  */
-export function PageSections({ sections, context = NO_FORMS }: { sections: WebsiteSection[]; context?: FormSectionContext }) {
+/**
+ * Authoring chrome around one rendered section — the Studio canvas's selection outline. It wraps
+ * the renderer's output and never changes it, so nothing it adds can reach a published page.
+ */
+export type SectionDecorator = (section: WebsiteSection, rendered: ReactNode) => ReactNode;
+
+export function PageSections({ sections, context = NO_FORMS, decorate }: { sections: WebsiteSection[]; context?: FormSectionContext; decorate?: SectionDecorator }) {
   const seen = new Set<SectionKind>();
   return (
     <div className="@container/site flex min-w-0 flex-col gap-14 py-6 @min-[40rem]/site:gap-20 @min-[40rem]/site:py-10">
       {sections.map((section) => {
         const anchored = !seen.has(section.kind);
         seen.add(section.kind);
-        return <SectionView key={section.id} section={section} context={context} anchored={anchored} />;
+        const rendered = <SectionView section={section} context={context} anchored={anchored} />;
+        return <Fragment key={section.id}>{decorate ? decorate(section, rendered) : rendered}</Fragment>;
       })}
     </div>
   );

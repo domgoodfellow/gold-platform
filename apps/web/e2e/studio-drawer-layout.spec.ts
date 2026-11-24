@@ -39,13 +39,14 @@ for (const width of [1440, 768, 390]) {
     await expect(frame.contentFrame().getByRole('heading').first()).toBeVisible();
     const overflow = await frame.contentFrame().locator('body').evaluate((body) => body.scrollWidth > body.clientWidth);
     expect(overflow).toBe(false);
-    const titleBefore = await preview.getByRole('heading').boundingBox();
-    await preview.locator('[data-drawer-body]').evaluate((body) => { body.scrollTop = body.scrollHeight; });
-    const titleAfter = await preview.getByRole('heading').boundingBox();
+    // The shared preview surface: its controls stay put while the preview body scrolls.
+    const titleBefore = await preview.getByRole('heading').first().boundingBox();
+    await preview.locator('[data-preview-body]').evaluate((body) => { body.scrollTop = body.scrollHeight; });
+    const titleAfter = await preview.getByRole('heading').first().boundingBox();
     expect(titleAfter!.y).toBe(titleBefore!.y);
-    await expect(preview.getByRole('button', { name: 'Close', exact: true })).toBeVisible();
+    await expect(preview.getByRole('button', { name: 'Close preview', exact: true })).toBeVisible();
     await page.screenshot({ path: path.join('test-results/studio-layout', `template-${width}.png`) });
-    await preview.getByRole('button', { name: 'Close', exact: true }).click();
+    await preview.getByRole('button', { name: 'Close preview', exact: true }).click();
     await expect(preview).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     expect(errors).toEqual([]);
@@ -80,11 +81,11 @@ test('form editing retains changes across compact drawers and tests responses lo
   await expect(page.getByText('Unsaved changes', { exact: true })).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.getByRole('button', { name: 'Show Inspector', exact: true }).click();
   await expect(page.getByRole('textbox', { name: 'Question', exact: true })).toHaveValue('Company');
   await page.screenshot({ path: 'test-results/studio-layout/form-inspector-390.png' });
   await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();
-  await page.getByRole('button', { name: 'Questions', exact: true }).click();
+  await page.getByRole('button', { name: 'Show Questions', exact: true }).click();
   await expect(page.getByRole('navigation', { name: 'Form structure' }).getByRole('button', { name: /^Your name/ })).toBeVisible();
   await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();
   await page.getByRole('button', { name: 'Submit', exact: true }).click();

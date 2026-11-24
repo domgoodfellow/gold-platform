@@ -1045,6 +1045,16 @@ correct Organization/site
 
 Do not mark a domain ready merely because the database row exists.
 
+### What serves gildops.com
+
+What a visitor sees at the GildOps root is three separate facts (ADR-058), each read from its own owner:
+
+1. **Deployment.** `vercel inspect gildops.com` (from `apps/web`, signed in to the `gild-ops` team) names the deployment the domain is assigned to and its aliases (`www`, `app`, `*.gildops.com`). Read-only.
+2. **Source revision.** `vercel api /v13/deployments/<deployment id>` returns `gitSource.sha` and `meta.githubCommitRef`: the commit whose renderers and compositions that deployment runs. In Git Bash set `MSYS_NO_PATHCONV=1` so the path is not rewritten. A commit on `main` that is not yet deployed is not live.
+3. **Content revision.** The published revision of the site `platform_settings.gold_public_site_id` names, in the Supabase project that deployment's `NEXT_PUBLIC_SUPABASE_URL` points at: `select s.current_published_revision_id, r.revision_number, r.created_source from public.public_sites s join public.public_site_revisions r on r.id = s.current_published_revision_id where s.id = (select gold_public_site_id from public.platform_settings where singleton);` (read-only, with the owner's hosted database access). The root caches this projection for up to an hour unless a Studio publish expires it, so a migration-published revision can take that long to appear.
+
+Studio's revision preview of GildOps' site names the build that drew it; it is the build serving gildops.com only when step 1 points at the same deployment. Never infer any of the three from `main`, a Studio label or another.
+
 ---
 
 ## Release evidence

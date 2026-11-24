@@ -1,10 +1,11 @@
+import { Fragment } from 'react';
 import { ArrowRight, ArrowUpRight } from 'lucide-react';
 import type { WebsiteSection } from '@gold/schemas';
 import { ButtonLink } from '@/components/controls/button';
 import { AvailabilityLabel } from '@/components/marketing/availability-label';
 import { ClosingComposition } from './closing';
 import { MarketingSection } from '@/components/marketing/marketing-page';
-import { SectionView } from '@/features/public-site/section-renderers';
+import { SectionView, type SectionDecorator } from '@/features/public-site/section-renderers';
 import type { FormSectionContext } from '@/features/public-site/form-section';
 import { FragmentGroup, type FragmentCell } from '@/features/visual-composition/fragment-group';
 import { HERO, PROCESS, PRODUCT_GROUPS, TRUST } from './compositions';
@@ -28,38 +29,47 @@ const LEADING_FRAGMENT: Partial<Record<keyof typeof PRODUCT_MATERIALS, string>> 
  * from the product inventory. A section without a composition, or one whose content does not
  * fit it, is drawn by the shared renderer exactly as before.
  */
-export function MarketingHomepage({ sections, context }: { sections: WebsiteSection[]; context: FormSectionContext }) {
+export function MarketingHomepage({ sections, context, decorate }: {
+  sections: WebsiteSection[];
+  context: FormSectionContext;
+  /** Authoring chrome around each section's composition (the Studio canvas); never on the live page. */
+  decorate?: SectionDecorator;
+}) {
   return (
     <div data-marketing-home data-marketing-page>
       {homepageBlocks(sections).map((block) => {
-        switch (block.kind) {
-          case 'hero': return <Hero key={block.section.id} block={block} />;
-          case 'products': return <ProductGroup key={block.section.id} block={block} />;
-          case 'process': return <Process key={block.section.id} block={block} />;
-          case 'trust': return <Trust key={block.section.id} block={block} />;
-          case 'closing': {
-            const { section } = block;
-            return (
-              <ClosingComposition
-                key={section.id}
-                id={`closing-${section.id}`}
-                heading={section.heading}
-                body={section.body}
-                primary={section.primaryCta}
-                secondary={section.secondaryCta}
-              />
-            );
-          }
-          default:
-            return (
-              <MarketingSection key={block.section.id} kind={block.section.kind}>
-                <SectionView section={block.section} context={context} anchored={block.anchored} />
-              </MarketingSection>
-            );
-        }
+        const rendered = renderBlock(block, context);
+        return <Fragment key={block.section.id}>{decorate ? decorate(block.section, rendered) : rendered}</Fragment>;
       })}
     </div>
   );
+}
+
+function renderBlock(block: HomepageBlock, context: FormSectionContext) {
+  switch (block.kind) {
+    case 'hero': return <Hero block={block} />;
+    case 'products': return <ProductGroup block={block} />;
+    case 'process': return <Process block={block} />;
+    case 'trust': return <Trust block={block} />;
+    case 'closing': {
+      const { section } = block;
+      return (
+        <ClosingComposition
+          id={`closing-${section.id}`}
+          heading={section.heading}
+          body={section.body}
+          primary={section.primaryCta}
+          secondary={section.secondaryCta}
+        />
+      );
+    }
+    default:
+      return (
+        <MarketingSection kind={block.section.kind}>
+          <SectionView section={block.section} context={context} anchored={block.anchored} />
+        </MarketingSection>
+      );
+  }
 }
 
 function Hero({ block: { section, groups } }: { block: Block<'hero'> }) {

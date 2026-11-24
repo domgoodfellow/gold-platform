@@ -104,18 +104,27 @@ describe('content no composition fits keeps the shared renderer', () => {
 
 describe('the composition system stays out of tenant websites and Studio', () => {
   it('leaves the shared section renderer, the tenant site and Studio\'s canvas without it', () => {
-    for (const file of ['features/public-site/section-renderers.tsx', 'features/studio/website/website-canvas.tsx', 'app/(public)/layout.tsx']) {
+    for (const file of ['features/public-site/section-renderers.tsx', 'features/public-site/site-view.tsx', 'features/studio/website/website-canvas.tsx', 'app/(public)/layout.tsx']) {
       const source = read(file);
       expect(source, file).not.toMatch(/visual-composition|marketing-site|FragmentGroup|data-material/);
     }
   });
 
+  it('reaches GildOps\' compositions outside its marketing routes only through the experience the database names', () => {
+    const view = read('features/public-site/experience-view.tsx');
+    expect(view).toContain("experience === 'gildops_marketing'");
+    expect(view).toContain('<MarketingHomepage');
+    expect(view).toContain('<SiteView');
+  });
+
   it('ships one light for the page as the only client code, and no fracture artwork', () => {
     expect(read('features/visual-composition/lighting-controller.tsx')).toMatch(/^'use client';/);
-    for (const file of ['features/visual-composition/fragment-group.tsx', 'features/visual-composition/seam-network.tsx', 'features/marketing-site/homepage.tsx', 'features/marketing-site/closing.tsx', 'features/marketing-site/product-landing.tsx']) {
+    for (const file of ['features/visual-composition/fragment-group.tsx', 'features/visual-composition/seam-network.tsx', 'features/marketing-site/homepage.tsx', 'features/marketing-site/closing.tsx', 'features/marketing-site/product-landing.tsx', 'features/marketing-site/frame.tsx']) {
       expect(read(file), file).not.toMatch(/^['"]use client['"]/);
     }
-    expect(read('app/(marketing)/layout.tsx')).toContain('<LightingController />');
+    // The marketing layout wears the one frame; the frame owns the light, only where it owns the window.
+    expect(read('app/(marketing)/layout.tsx')).toContain('<MarketingFrame');
+    expect(read('features/marketing-site/frame.tsx')).toContain('{standalone ? <LightingController /> : null}');
     expect(read('app/globals.css')).not.toMatch(/kintsugi|gilded/);
   });
 });

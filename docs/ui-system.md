@@ -851,6 +851,8 @@ Finance applies this contract first; every workspace follows it.
 
 Studio previews, editors and Studio Home: [docs/surfaces/studio.md](surfaces/studio.md#website-previews-and-editors).
 
+A visual preview or canvas is not a card. `PreviewFrame` (`components/display/preview-frame.tsx`) is the one viewport primitive: it renders an experience at a reference width in an isolated document and draws its own edge (`data-slot="preview-frame"`), one border with the Appearance radius and border strength, hugging the scaled viewport. Callers place it and never style its edge, and nothing inside it inherits the operator's Appearance. Large previews open it in `PreviewSurface`; thumbnails and canvases place it in their existing panel.
+
 Page geometry is semantic.
 
 Use the shared page container rather than route-local arbitrary widths.

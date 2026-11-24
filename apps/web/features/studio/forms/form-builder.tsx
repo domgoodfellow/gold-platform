@@ -7,13 +7,6 @@ import { Button, ButtonLink } from '@/components/controls/button';
 import { ConfirmSubmit } from '@/components/controls/confirm-submit';
 import { ErrorText, Hint } from '@/components/controls/inputs';
 import { cx } from '@/components/class-names';
-import {
-  PageDrawer,
-  PageDrawerContent,
-  PageDrawerHeader,
-  PageDrawerTitle,
-  PageDrawerTrigger,
-} from '@/components/panels/page-drawer';
 import { useUnsavedChanges } from '@/components/controls/use-unsaved-changes';
 import { EditorLayout } from '../editor-layout';
 import { FormRenderer, type FormValues, type FormErrors } from '@/features/forms/form-renderer';
@@ -192,22 +185,6 @@ export function FormBuilder({ organizationId, state, distribution }: {
           <span className={cx('text-xs font-medium', dirty ? 'text-foreground' : 'text-muted')} role="status">{dirty ? 'Unsaved changes' : 'Saved'}</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex gap-2 @min-[56rem]/editor:hidden">
-            <PageDrawer>
-              <PageDrawerTrigger asChild><Button tone="secondary" size="small">Questions</Button></PageDrawerTrigger>
-              <PageDrawerContent>
-                <PageDrawerHeader><PageDrawerTitle>Questions</PageDrawerTitle></PageDrawerHeader>
-                {structure}
-              </PageDrawerContent>
-            </PageDrawer>
-            <PageDrawer>
-              <PageDrawerTrigger asChild><Button tone="secondary" size="small">Settings</Button></PageDrawerTrigger>
-              <PageDrawerContent>
-                <PageDrawerHeader><PageDrawerTitle>{selectedField ? 'Question' : 'Form settings'}</PageDrawerTitle></PageDrawerHeader>
-                {inspector}
-              </PageDrawerContent>
-            </PageDrawer>
-          </div>
           <RevisionHistorySheet organizationId={organizationId} formId={form.id} history={history} />
           {publicLink}
           {shareLink}
@@ -234,7 +211,7 @@ export function FormBuilder({ organizationId, state, distribution }: {
       {!parsed.success ? <ErrorText role="alert">{parsed.error.issues[0]?.message ?? 'The form is not valid.'}</ErrorText> : null}
       {published ? <Hint>Visitors keep seeing Revision {published.number} until you publish this draft.</Hint> : null}
 
-      <EditorLayout structure={structure} inspector={inspector} structureLabel="Questions" canvasLabel="Live preview">
+      <EditorLayout id="form" structure={structure} inspector={inspector} structureLabel="Questions" canvasLabel="Live preview">
         <div data-public-design className="mx-auto w-full max-w-xl rounded-lg border border-border bg-surface p-4 sm:p-6">
           <p className="mb-4 text-xs text-muted">Test inputs here without sending a response.</p>
           {previewSent ? <div className="space-y-3" role="status"><h3 className="text-xl font-semibold">{definition.confirmation.title}</h3><p className="text-sm text-muted">{definition.confirmation.message}</p><p className="text-xs text-muted">Preview only. No response was sent.</p><Button tone="secondary" size="small" onClick={() => { setPreviewSent(false); setPreviewValues({}); }}>Test again</Button></div> : <FormRenderer

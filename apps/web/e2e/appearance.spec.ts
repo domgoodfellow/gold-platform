@@ -150,7 +150,7 @@ test('draft, durable save, opposite-system theme, account scope, public regressi
   const palette = brandPalette({ accent: '#ffffcc', headingFont: 'sans', bodyFont: 'sans' });
   expect(await shell.evaluate(el => getComputedStyle(el).getPropertyValue('--accent-text').trim())).toBe(`light-dark(${palette.accentTextLight},${palette.accentTextDark})`);
   await page.goto(`/organizations/${second}/studio/website`);
-  const canvas = page.locator('[data-public-design]').first();
+  const canvas = page.frameLocator('iframe[title^="Canvas"]').locator('[data-public-design]').first();
   await expect(canvas).toBeVisible();
   expect(await page.locator('button.text-accent-text').first().evaluate(el => getComputedStyle(el).color)).toBe(rgb(palette.accentTextLight));
   await expect.poll(() => canvas.evaluate(el => getComputedStyle(el).backgroundColor)).toBe('rgb(10, 10, 10)');

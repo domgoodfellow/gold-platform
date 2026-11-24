@@ -214,9 +214,15 @@ AI may assist with draft content.
 
 AI does not bypass the publish decision.
 
+A site has at most one working revision (a draft, or a revision in review). Starting one records its **base**, the revision published at that moment, and the revision whose content it copied (ADR-058). A working revision is **stale** once the published pointer has moved from its base, for example when a migration publishes a newer homepage; drafts started before bases were recorded are stale when anything was published after they were opened. Studio names the working and published revisions apart, says when a draft is stale, and distinguishes unsaved edits in the browser from the saved draft.
+
+Publishing a stale revision is refused unless the person confirms replacing the newer published revision by number; the publish event records that it did. A working revision can be **discarded**: it stays in history, read-only, with who discarded it and when, an event records it, and the published revision is untouched.
+
+Opening the editor, history or a preview, and changing a preview's width, never create a revision.
+
 ### Restore
 
-Restoring an older site state copies it forward into a new draft.
+Restoring an older site state copies it forward into a new draft, based on the revision published at that moment, so it is not stale. Any revision other than the working and published ones can be restored, including a discarded draft. Restoring while a draft is open is refused: discard or publish it first.
 
 Historical revisions are not rewritten.
 
@@ -486,7 +492,18 @@ Two lighting effects are separate. **Illumination**: one `LightingController` in
 
 `MarketingHomepage` (`features/marketing-site`) reads the published sections with the product inventory into a view model and gives each section a composition of its own: the hero's copy on open ground beside a cluster linking to the three product groups below it; each product group arranged differently, every product a whole-surface link with its published title, description and destination and its availability matched from the inventory by destination; the process as an ordered sequence; trust statements in a quieter material beside their heading; and the closing band as one dark region entered by a seam. Words, links and order come from the published revision. A section whose content does not fit its composition (an unknown destination, a product from another group, a different number of items) keeps `SectionView` exactly as authored, so nothing is dropped or given claims it did not make. Every other marketing page keeps its reading layout and ends with the same closing composition through `CtaBand` (`features/marketing-site/closing.tsx`); there is no standalone fracture artwork anywhere.
 
-Studio owns the homepage's saved sections, SEO and published revision; the marketing layout also reads its brand and public profile. Compositions, materials and lighting are code-owned, with no Studio controls or persisted settings. The generic Studio canvas and private website preview draw the shared sections without these compositions; preview parity for code-authored compositions is a remaining gap. Other marketing route copy remains code-authored, the public product inventory remains `lib/marketing/content.ts`, and the integration listing reads the published connector catalogue. None of this moves those pages into Studio or applies GildOps' look to tenant websites.
+Studio owns the homepage's saved sections, SEO and published revision; the marketing layout also reads its brand and public profile. Compositions, materials and lighting are code-owned, with no Studio controls or persisted settings. Other marketing route copy remains code-authored, the public product inventory remains `lib/marketing/content.ts`, and the integration listing reads the published connector catalogue. None of this moves those pages into Studio or applies GildOps' look to tenant websites.
+
+What Studio can and cannot change on GildOps' homepage:
+
+| Authored in Studio (the revision) | Code-owned (the source revision) |
+| --- | --- |
+| Section order; each section's kind, heading, body, items, card titles, bodies and links; hero and closing actions; page SEO title and description | Which composition draws each section and when content falls back to the shared renderer (`homepage-model.ts`); geometry, seams, materials, gold accents, lighting and shimmer; the marketing header, navigation menu, footer and `Get started`/`Log in`; the palette and gutters (`globals.css`, `marketing-site.css`); each product's availability label (`lib/marketing/content.ts` against the catalogue) |
+| Brand logo and lettering, public profile tagline and contact details (Organization Settings) | Every other marketing page (`/products`, `/pricing`, `/demo` and the product pages) |
+
+Editing content in Studio is therefore not visual editing of the homepage: a change that needs a different composition, material or navigation is a code change, shipped by deploying a new source revision.
+
+Studio draws GildOps' site as visitors see it. The database names each site's **experience** (`gildops_marketing` for the site platform settings name as GildOps' own, `organization_website` for every other), and `ExperienceView` (`features/public-site/experience-view.tsx`) is the one place the private surfaces choose a renderer from it: the revision preview, Studio's Dashboard thumbnail, the editor canvas and template previews. It uses the components the live surfaces use: `MarketingFrame` with `MarketingHomepage` for GildOps (`MarketingFrame` is also the `(marketing)` layout's frame), `SiteView` for a business. Only the homepage of GildOps' site is served at the platform root; another page in its revision is previewed in the same frame with the shared sections. Inside a preview frame the light is the stylesheet's static one; the `LightingController` runs only where the frame owns the window.
 
 The shared section renderer is the same for GildOps and for a business's website, so its defaults are the plain ones: hero actions form a row that wraps only when they do not fit; sections sit a little over half a screen's worth of spacing apart; capabilities, process steps and trust statements are ruled rows and columns rather than boxed panels, so the one dark closing band keeps its weight. A GildOps-only treatment (motion, palette) hangs off `data-marketing-page` or the frame's `data-marketing-site` scope, never off the renderer.
 
@@ -529,7 +546,9 @@ Where preview uses a token/session, it should be:
 - expiring where appropriate;
 - `noindex`.
 
-Draft preview and public rendering should reuse the same rendering implementation where practical so preview does not become a second website renderer.
+Draft preview and public rendering use the same rendering implementation, so preview does not become a second website renderer: every private surface draws a revision through `ExperienceView` (see *GildOps' own look*), and authoring chrome wraps sections without changing them. Visual previews are isolated viewports at reference widths (Desktop 1440, Tablet 768, Mobile 390), so a page's own breakpoints and container queries apply.
+
+A preview shows three different things, never under one number: the **content revision** (Studio's numbered snapshot, and where it stands against the published one), the **source revision** (the Git commit of the build that drew it, from the deployment's `VERCEL_GIT_COMMIT_SHA`; "Local build" elsewhere) and, outside the application, the **deployment** a hostname is assigned to. A preview is drawn by the build serving the preview, which is the one serving a hostname only when that hostname points at the same deployment. The revision preview of GildOps' site names its build; which deployment serves `gildops.com` is read from the deployment provider (`docs/deployment.md`).
 
 ---
 

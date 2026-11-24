@@ -1,12 +1,12 @@
 import {
-  PageTemplatesSchema, PublicSiteProjectionSchema, PublicWebsiteSnapshotSchema, SectionPatternsSchema, SiteTemplatesSchema,
-  WebsiteContentSchema, WebsiteEditorStateSchema,
-  type NavigationItem, type PageTemplate, type PublicSiteProjection, type PublicWebsiteSnapshot,
-  type SectionPattern, type SiteTemplate, type WebsiteContent, type WebsitePage,
+  PageTemplatesSchema, PublicSiteProjectionSchema, PublicWebsiteSnapshotSchema, RevisionContextSchema, SectionPatternsSchema,
+  SiteTemplatesSchema, WebsiteContentSchema, WebsiteEditorStateSchema,
+  type NavigationItem, type PageTemplate, type PublicSiteProjection, type PublicWebsiteSnapshot, type RevisionContext,
+  type SectionPattern, type SiteExperience, type SiteTemplate, type WebsiteContent, type WebsitePage,
 } from '@gold/schemas';
 import type { Db } from '@/lib/db/types';
 import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
-export type { PublicSiteProjection, PublicWebsiteSnapshot } from '@gold/schemas';
+export type { PublicSiteProjection, PublicWebsiteSnapshot, RevisionContext, SiteExperience } from '@gold/schemas';
 
 /**
  * The one public-site engine. A website is one revision of many pages: every read and write here
@@ -15,8 +15,14 @@ export type { PublicSiteProjection, PublicWebsiteSnapshot } from '@gold/schemas'
  * functions give it a typed face (the typed-RPC rule, `docs/data.md`).
  */
 
-export type RevisionStatus = 'draft' | 'in_review' | 'published' | 'archived';
+export type RevisionStatus = 'draft' | 'in_review' | 'published' | 'archived' | 'discarded';
 
+/**
+ * Three different things a website screen can be asked about, never one number:
+ * - the **content revision** (this file: an immutable snapshot of pages and navigation);
+ * - the **source revision** (the Git commit whose renderer draws it, `lib/source-revision.ts`);
+ * - the **deployment** serving a hostname (provider state, outside the application).
+ */
 export type EditorRevision = {
   id: string;
   number: number;
@@ -24,16 +30,27 @@ export type EditorRevision = {
   pages: WebsitePage[];
   navigation: NavigationItem[];
   createdAt: string;
+  /** `migration` when a GildOps release wrote the revision; `account` when someone did in Studio. */
+  createdSource: 'migration' | 'account';
+  updatedAt?: string | null;
   submittedAt?: string | null;
   publishedAt?: string | null;
+  baseRevisionId: string | null;
+  baseRevisionNumber: number | null;
+  copiedFromRevisionId: string | null;
+  copiedFromRevisionNumber: number | null;
+  /** Started before the currently published revision: publishing it would replace newer content. */
+  stale: boolean;
 };
 
 export type RevisionHistoryEntry = {
-  id: string; number: number; status: string; createdAt: string; publishedAt: string | null; archivedAt: string | null;
+  id: string; number: number; status: RevisionStatus; createdAt: string; createdSource: 'migration' | 'account';
+  publishedAt: string | null; archivedAt: string | null; discardedAt: string | null; copiedFromRevisionNumber: number | null;
 };
 
 export type WebsiteEditorState = {
   siteId: string;
+  experience: SiteExperience;
   published: EditorRevision | null;
   working: EditorRevision | null;
   history: RevisionHistoryEntry[];
@@ -108,9 +125,29 @@ export async function submitSiteRevision(db: Db, organizationId: string, revisio
   if (error) throw forbiddenOr(error, 'public_site.transition_failed');
 }
 
-export async function publishSiteRevision(db: Db, organizationId: string, revisionId: string): Promise<void> {
-  const { error } = await db.rpc('publish_public_site_revision', { p_organization_id: organizationId, p_revision_id: revisionId });
+/**
+ * Publishing a revision started before the current published one is refused (`public_site.stale`)
+ * unless `replaceNewer` says the person chose to replace that newer content.
+ */
+export async function publishSiteRevision(db: Db, organizationId: string, revisionId: string, options: { replaceNewer?: boolean } = {}): Promise<void> {
+  const { error } = await db.rpc('publish_public_site_revision', {
+    p_organization_id: organizationId, p_revision_id: revisionId, p_replace_newer: options.replaceNewer ?? false,
+  });
+  if (error) throw forbiddenOr(error, error.code === 'GD002' ? 'public_site.stale' : 'public_site.transition_failed');
+}
+
+/** Ends the working draft (or a revision in review) unpublished. It stays in history, read-only. */
+export async function discardSiteDraft(db: Db, organizationId: string, revisionId: string): Promise<void> {
+  const { error } = await db.rpc('discard_public_site_draft', { p_organization_id: organizationId, p_revision_id: revisionId });
   if (error) throw forbiddenOr(error, 'public_site.transition_failed');
+}
+
+/** Where one revision stands against the published one, and which experience draws it. */
+export async function siteRevisionContext(db: Db, input: { organizationId: string; revisionId: string }): Promise<RevisionContext> {
+  const { data, error } = await db.rpc('public_site_revision_context', { p_organization_id: input.organizationId, p_revision_id: input.revisionId });
+  if (error) throw forbiddenOr(error, 'public_site.preview_failed');
+  if (!data) throw new DomainError('That website revision does not exist.', 'public_site.revision_missing');
+  return RevisionContextSchema.parse(data);
 }
 
 export async function listSiteTemplates(db: Db): Promise<SiteTemplate[]> {

@@ -55,9 +55,12 @@ describe('the platform is named GildOps on its own surfaces', () => {
 
   it('draws the marketing chrome and metadata from the platform name, not the operator organization', () => {
     const layout = readFileSync(join(WEB, 'app/(marketing)/layout.tsx'), 'utf8');
-    expect(layout).toMatch(/name=\{PLATFORM_NAME\}/);
+    // The chrome is `MarketingFrame`, shared with Studio's previews of GildOps' site.
+    const frame = readFileSync(join(WEB, 'features/marketing-site/frame.tsx'), 'utf8');
+    expect(layout).toContain('<MarketingFrame');
+    expect(frame).toMatch(/name=\{PLATFORM_NAME\}/);
     expect(layout).toMatch(/siteName: PLATFORM_NAME/);
-    expect(layout).not.toMatch(/name=\{site\.profile\.displayName\}/);
+    for (const source of [layout, frame]) expect(source).not.toMatch(/name=\{(site\.)?profile\.displayName\}/);
   });
 
   it('seeds the published homepage under the platform name, so a fresh database matches the code', () => {

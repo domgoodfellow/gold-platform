@@ -7,7 +7,7 @@ import type { PageTemplate, SectionPattern, SiteTemplate } from '@gold/schemas';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import { TemplateList } from '@/features/studio/forms/template-list';
 import type { FormTemplate } from '@/lib/domain/forms/forms';
-import { PageTemplateList, SectionPatternList, SiteTemplateList } from './website-templates';
+import { PageTemplateList, SectionPatternList, SiteTemplateList, type TemplateFrame } from './website-templates';
 import { PORTAL_TEMPLATES } from '@/lib/domain/portal/composition';
 import { ButtonLink } from '@/components/controls/button';
 import { PortalTemplatePreview } from '@/features/studio/portal/portal-template-preview';
@@ -27,8 +27,10 @@ const FILTERS: { key: Filter; label: string }[] = [
  * its own typed templates — one catalogue to browse, never one table of untyped payloads — and the
  * filter says which kind of thing each row would create.
  */
-export function TemplatesBrowser({ organizationId, hasWebsite, hasPortal = false, siteTemplates, pageTemplates, sectionPatterns, formTemplates }: {
+export function TemplatesBrowser({ organizationId, hasWebsite, hasPortal = false, frame, siteTemplates, pageTemplates, sectionPatterns, formTemplates }: {
   organizationId: string;
+  /** The business's public frame website templates are previewed in. */
+  frame: TemplateFrame;
   hasWebsite: boolean;
   hasPortal?: boolean;
   siteTemplates: SiteTemplate[];
@@ -67,11 +69,11 @@ export function TemplatesBrowser({ organizationId, hasWebsite, hasPortal = false
           </button>
         ))}
       </div>
-      {show('website') ? <section aria-label="Website templates" className="grid min-w-0 gap-3 rounded-lg border border-border bg-surface p-4"><h2 className="text-base font-semibold">Website</h2><SiteTemplateList organizationId={organizationId} templates={visible(siteTemplates)} hasWebsite={hasWebsite} /></section> : null}
+      {show('website') ? <section aria-label="Website templates" className="grid min-w-0 gap-3 rounded-lg border border-border bg-surface p-4"><h2 className="text-base font-semibold">Website</h2><SiteTemplateList organizationId={organizationId} templates={visible(siteTemplates)} hasWebsite={hasWebsite} frame={frame} /></section> : null}
       {/* ui-copy-allow: each portal template's description is what a person chooses between */}
       {show('portal') ? <section aria-label="Portal templates" className="grid min-w-0 gap-3 rounded-lg border border-border bg-surface p-4"><h2 className="text-base font-semibold">Portal</h2>{visible([...PORTAL_TEMPLATES]).map(item => <article key={item.key} className="rounded-md border border-border p-3"><h3 className="font-medium">{item.name}</h3><p className="mt-2 text-sm text-muted">{item.description}</p>{hasPortal ? <p className="mt-2 text-sm text-muted">Your organization already owns a Portal. <ButtonLink href={`/organizations/${organizationId}/studio/portal`} tone="text">Open Portal draft</ButtonLink></p> : <ButtonLink href={`/organizations/${organizationId}/studio/portal?template=${item.key}`} tone="secondary">Start with {item.name}</ButtonLink>}<details className="mt-3"><summary>Preview template</summary><PortalTemplatePreview content={item.definition}/></details></article>)}</section> : null}
-      {show('pages') ? <section aria-label="Page templates" className="grid min-w-0 gap-3 rounded-lg border border-border bg-surface p-4"><h2 className="text-base font-semibold">Pages</h2><PageTemplateList organizationId={organizationId} templates={visible(pageTemplates)} /></section> : null}
-      {show('sections') ? <section aria-label="Section patterns" className="grid min-w-0 gap-3 rounded-lg border border-border bg-surface p-4"><h2 className="text-base font-semibold">Sections</h2><SectionPatternList organizationId={organizationId} patterns={visible(sectionPatterns)} /></section> : null}
+      {show('pages') ? <section aria-label="Page templates" className="grid min-w-0 gap-3 rounded-lg border border-border bg-surface p-4"><h2 className="text-base font-semibold">Pages</h2><PageTemplateList organizationId={organizationId} templates={visible(pageTemplates)} frame={frame} /></section> : null}
+      {show('sections') ? <section aria-label="Section patterns" className="grid min-w-0 gap-3 rounded-lg border border-border bg-surface p-4"><h2 className="text-base font-semibold">Sections</h2><SectionPatternList organizationId={organizationId} patterns={visible(sectionPatterns)} frame={frame} /></section> : null}
       {show('forms') ? <section aria-label="Form templates" className="grid min-w-0 gap-3 rounded-lg border border-border bg-surface p-4"><h2 className="text-base font-semibold">Forms</h2><TemplateList organizationId={organizationId} templates={visible(formTemplates)} /></section> : null}
       {![...(show('website') ? siteTemplates : []), ...(show('pages') ? pageTemplates : []), ...(show('sections') ? sectionPatterns : []), ...(show('forms') ? formTemplates : []), ...(show('portal') ? PORTAL_TEMPLATES : [])].some(matches) ? <p className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted">No templates match these filters.</p> : null}
     </div>

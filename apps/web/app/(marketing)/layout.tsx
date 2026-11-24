@@ -1,7 +1,5 @@
 import type { Metadata } from 'next';
-import { BrandStyle } from '@/features/branding/brand-style';
-import { MarketingShell } from '@/components/marketing/marketing-shell';
-import { LightingController } from '@/features/visual-composition/lighting-controller';
+import { MarketingFrame } from '@/features/marketing-site/frame';
 import { getPublishedGoldHomepage } from '@/lib/domain/public-site/cached';
 import { getPublicDb } from '@/lib/db/public';
 import { PLATFORM_NAME } from '@/lib/brand';
@@ -33,23 +31,18 @@ export async function generateMetadata(): Promise<Metadata> {
  * plain link beside it.
  *
  * `LightingController` is the one light for whichever marketing page is open; a page with no lit
- * composition costs it nothing. The sign-in screens share the shell but not the light.
+ * composition costs it nothing. The sign-in screens share the shell but not the light. The frame
+ * itself is `MarketingFrame`, which Studio's previews of GildOps' site also draw.
  */
 export default async function MarketingLayout({ children }: LayoutProps<'/'>) {
   const site = await getPublishedGoldHomepage();
   return (
-    <div data-brand>
-      <BrandStyle brand={site.brand} />
-      <MarketingShell
-        name={PLATFORM_NAME}
-        logoUrl={site.brand.logoPath ? getPublicDb().storage.from('brand').getPublicUrl(site.brand.logoPath).data.publicUrl : null}
-        tagline={site.profile.tagline ?? null}
-        contactEmail={site.profile.contactEmail}
-        contactPhone={site.profile.contactPhone}
-      >
-        {children}
-        <LightingController />
-      </MarketingShell>
-    </div>
+    <MarketingFrame
+      brand={site.brand}
+      profile={site.profile}
+      logoUrl={site.brand.logoPath ? getPublicDb().storage.from('brand').getPublicUrl(site.brand.logoPath).data.publicUrl : null}
+    >
+      {children}
+    </MarketingFrame>
   );
 }

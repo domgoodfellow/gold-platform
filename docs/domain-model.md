@@ -1337,6 +1337,8 @@ Drafting and publishing must preserve a distinction between editable draft and p
 
 Publishing selects approved revision state rather than making every editor keystroke public.
 
+A working revision records its base (the revision published when it was started); it is stale once a newer revision is published, and can be discarded without being deleted (ADR-058, `docs/public-web.md`). A site revision is content only: the Git commit whose renderer draws it and the deployment serving a hostname are separate facts.
+
 ---
 
 ### Form

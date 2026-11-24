@@ -177,7 +177,7 @@ It is not a duplicate specification.
 | ADR-029 | Public external actors use narrow sessions rather than Membership | [`ADR-029-external-actor-sessions.md`](ADR-029-external-actor-sessions.md) |
 | ADR-030 | Communications is multi-channel with one conversation ownership model | [`ADR-030-communications-multichannel.md`](ADR-030-communications-multichannel.md) |
 | ADR-031 | A Call is one business fact over provider legs | [`ADR-031-call-provider-legs.md`](ADR-031-call-provider-legs.md) |
-| ADR-032 | Studio publishes a whole site revision | [`ADR-032-site-revision-publishing.md`](ADR-032-site-revision-publishing.md) |
+| ADR-032 | Studio publishes a whole site revision. **Extended by ADR-058** (draft base, discard, stale-publish guard, experience rendering) | [`ADR-032-site-revision-publishing.md`](ADR-032-site-revision-publishing.md) |
 | ADR-033 | AI runtime selection, entitlement and metering are centralized | [`ADR-033-ai-runtime-entitlement-metering.md`](ADR-033-ai-runtime-entitlement-metering.md) |
 | ADR-034 | Organization Secret References are write-only and machine-resolved | [`ADR-034-secret-references.md`](ADR-034-secret-references.md) |
 | ADR-035 | Connector readiness is derived by the runtime that can know it | [`ADR-035-connector-readiness.md`](ADR-035-connector-readiness.md) |
@@ -201,6 +201,7 @@ It is not a duplicate specification.
 | ADR-055 | The workflow workbench draws stored rules; GildOps' own automated work is listed apart | [`ADR-055-workflow-workbench-projection.md`](ADR-055-workflow-workbench-projection.md) |
 | ADR-056 | Operations share one sidebar, Studio gathers creation, Administration stays apart; delivered first as a staff preview. **Point 4 superseded by ADR-057** (Administration drawn by the organization shell) | [`ADR-056-unified-operations-navigation.md`](ADR-056-unified-operations-navigation.md) |
 | ADR-057 | GildOps' commercial administration is its operating Organization's Finance; Administration is a context of its organization's shell; `platform.commercial` retired. Supersedes ADR-051 points 6–7, the rest of ADR-014 and ADR-056 point 4 | [`ADR-057-gildops-sells-through-its-own-finance.md`](ADR-057-gildops-sells-through-its-own-finance.md) |
+| ADR-058 | Website drafts record their base, can be discarded and cannot silently replace newer content; every private surface draws a site through its experience; content revision, source revision and deployment are separate facts. Extends ADR-032 | [`ADR-058-website-drafts-and-experience-rendering.md`](ADR-058-website-drafts-and-experience-rendering.md) |
 
 ## Adding a new decision
 

@@ -23,6 +23,7 @@ export function MarketingShell({
   tagline,
   contactEmail,
   contactPhone,
+  fillViewport = true,
   children,
 }: {
   name: string;
@@ -30,10 +31,12 @@ export function MarketingShell({
   tagline: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
+  /** Off inside a preview frame, whose document is exactly as tall as its content. */
+  fillViewport?: boolean;
   children: ReactNode;
 }) {
   return (
-    <div data-marketing-site className="flex min-h-dvh w-full flex-col overflow-x-clip bg-background text-foreground">
+    <div data-marketing-site className={`flex ${fillViewport ? 'min-h-dvh ' : ''}w-full flex-col overflow-x-clip bg-background text-foreground`}>
       <MarketingHeader name={name} logoUrl={logoUrl} />
       <main className="marketing-measure mx-auto flex w-full flex-1 flex-col p-6 sm:p-8">{children}</main>
       <MarketingFooter

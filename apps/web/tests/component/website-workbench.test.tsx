@@ -3,13 +3,13 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SECTION_KINDS, WebsiteContentSchema, type SiteTemplate, type WebsiteContent, type WebsiteSection } from '@gold/schemas';
-import { WorkspaceRailProvider } from '@/components/panels/workspace-right-rail';
+import { PagePanel, WorkspaceRailProvider } from '@/components/panels/workspace-right-rail';
 import { CreateWebsite } from '@/features/studio/website/create-website';
 import { SectionEditor } from '@/features/studio/website/section-editors';
 import { WebsiteWorkbench } from '@/features/studio/website/website-workbench';
 import { newId } from '@/lib/domain/public-site/composition';
 import { SECTION_REGISTRY } from '@/lib/domain/public-site/section-registry';
-import type { EditorRevision } from '@/lib/domain/public-site/public-site';
+import type { EditorRevision, RevisionHistoryEntry } from '@/lib/domain/public-site/public-site';
 
 const actions = vi.hoisted(() => {
   /** A server action as the form binds it: previous state and the submitted data in, a state out. */
@@ -17,31 +17,45 @@ const actions = vi.hoisted(() => {
   const idle = { error: null };
   return {
     createWebsiteAction: action(idle), createDraftAction: action(idle), saveDraftAction: action({ error: null, success: 'Draft saved.' }),
-    submitRevisionAction: action(idle), publishRevisionAction: action(idle),
+    submitRevisionAction: action(idle), publishRevisionAction: action(idle), discardDraftAction: action(idle),
   };
 });
 vi.mock('@/app/organizations/[organizationId]/studio/website/actions', () => actions);
 
 const FORM = { id: '11111111-1111-4111-8111-111111111111', name: 'Quote', published: true };
+const FRAME = {
+  experience: 'organization_website' as const,
+  profile: { displayName: 'Acme', tagline: null, intro: null, contactEmail: null, contactPhone: null, address: null },
+  brand: { accent: null, headingFont: 'sans' as const, bodyFont: 'sans' as const, logoPath: null },
+  logoSrc: null,
+};
 
 function revision(sections: WebsiteSection[] = [], overrides: Partial<EditorRevision> = {}): EditorRevision {
   return {
-    id: 'r1', number: 1, status: 'draft', createdAt: '2026-01-01T00:00:00Z',
+    id: 'r1', number: 1, status: 'draft', createdAt: '2026-01-01T00:00:00Z', createdSource: 'account',
     pages: [{ id: newId(), name: 'Home', slug: '', isHome: true, seoTitle: 'Home', seoDescription: 'Home', sections }],
-    navigation: [], ...overrides,
+    navigation: [], baseRevisionId: null, baseRevisionNumber: null, copiedFromRevisionId: null, copiedFromRevisionNumber: null, stale: false,
+    ...overrides,
   };
 }
 
-function renderWorkbench(working: EditorRevision | null, extra: { hasWebsite?: boolean; templates?: SiteTemplate[] } = {}) {
+function renderWorkbench(working: EditorRevision | null, extra: { hasWebsite?: boolean; templates?: SiteTemplate[]; published?: EditorRevision | null; history?: RevisionHistoryEntry[]; panel?: 'history' } = {}) {
   return render(
     <WorkspaceRailProvider>
       <WebsiteWorkbench
-        organizationId="o1" hasWebsite={extra.hasWebsite ?? true} working={working} published={null} history={[]} forms={[FORM]}
+        organizationId="o1" timezone="America/Toronto" hasWebsite={extra.hasWebsite ?? true} frame={FRAME} working={working} published={extra.published ?? null}
+        history={extra.history ?? []} forms={[FORM]} initialPanel={extra.panel ?? null}
         siteTemplates={extra.templates ?? []} pageTemplates={[]} sectionPatterns={[]}
       />
+      <PagePanel />
     </WorkspaceRailProvider>,
   );
 }
+
+const entry = (revision: EditorRevision, extra: Partial<RevisionHistoryEntry> = {}): RevisionHistoryEntry => ({
+  id: revision.id, number: revision.number, status: revision.status, createdAt: revision.createdAt, createdSource: revision.createdSource,
+  publishedAt: revision.publishedAt ?? null, archivedAt: null, discardedAt: null, copiedFromRevisionNumber: revision.copiedFromRevisionNumber, ...extra,
+});
 
 beforeEach(() => {
   globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} } as unknown as typeof ResizeObserver;
@@ -77,7 +91,7 @@ describe('composing a page', () => {
   it('adds a page, selects it, and marks the draft unsaved', async () => {
     const user = userEvent.setup();
     renderWorkbench(revision());
-    expect(screen.getByText('Saved')).toBeTruthy();
+    expect(screen.getByText(/^Draft created/)).toBeTruthy();
     await user.click(within(structure()).getByRole('button', { name: 'Add page' }));
     await user.type(screen.getByLabelText('Page name'), 'About us');
     await user.click(within(structure()).getByRole('button', { name: 'Add page' }));
@@ -110,7 +124,10 @@ describe('composing a page', () => {
     await user.type(screen.getByLabelText('Heading'), 'Kept');
     await user.click(within(structure()).getByRole('button', { name: /^New page/ }));
     await user.click(within(structure()).getByRole('button', { name: /^Home/ }));
-    expect(screen.getAllByText('Kept').length).toBeGreaterThan(0);
+    // The canvas draws the page in an isolated frame, which jsdom does not load; what it draws is
+    // proven in the browser (e2e/studio-stabilization.spec.ts). The edit is still the section's content.
+    await user.click(within(structure()).getByRole('button', { name: 'Text' }));
+    expect((screen.getByLabelText('Heading') as HTMLInputElement).value).toBe('Kept');
   });
 
   it('saves one whole website: every page and the navigation, as valid content', async () => {
@@ -171,5 +188,76 @@ describe('editing a section', () => {
     const changed = onChange.mock.calls.at(-1)![0] as WebsiteSection;
     expect(changed.id).toBe(section.id);
     expect(changed.kind).toBe(kind);
+  });
+});
+
+describe('the revision lifecycle', () => {
+  const published = revision([], { id: 'r7', number: 7, status: 'published', createdSource: 'migration', publishedAt: '2026-11-09T12:00:00Z' });
+  const archived = revision([], { id: 'r3', number: 3, status: 'archived', publishedAt: '2026-09-01T12:00:00Z' });
+  const stale = revision([], { id: 'r4', number: 4, createdAt: '2026-09-30T14:00:00Z', stale: true });
+  const history = [entry(published), entry(stale), entry(archived, { archivedAt: '2026-11-08T12:00:00Z' })];
+
+  it('names the working and published revisions apart and warns about a stale draft', () => {
+    renderWorkbench(stale, { published, history });
+    expect(screen.getByText('Revision 4 · Draft')).toBeTruthy();
+    expect(screen.getByText('Revision 7 is published (by a GildOps release)')).toBeTruthy();
+    expect(screen.getByText(/^Draft created/)).toBeTruthy();
+    expect(screen.getByText('Draft is based on an older revision.')).toBeTruthy();
+    expect(screen.getByText('Publishing this draft would replace revision 7.')).toBeTruthy();
+  });
+
+  it('does not warn about a draft that is current', () => {
+    renderWorkbench(revision([], { id: 'r8', number: 8, baseRevisionId: 'r7', baseRevisionNumber: 7 }), { published, history });
+    expect(screen.queryByText('Draft is based on an older revision.')).toBeNull();
+  });
+
+  it('discards the persisted draft only after confirming, naming it', async () => {
+    const user = userEvent.setup();
+    renderWorkbench(stale, { published, history });
+    await user.click(screen.getByRole('button', { name: 'Discard draft' }));
+    expect(actions.discardDraftAction).not.toHaveBeenCalled();
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText(/stays in history and can be restored. The published website does not change/)).toBeTruthy();
+    await user.click(within(dialog).getByRole('button', { name: 'Discard revision 4' }));
+    const data = actions.discardDraftAction.mock.calls[0]![1];
+    expect(data.get('revisionId')).toBe('r4');
+    expect(data.get('organizationId')).toBe('o1');
+  });
+
+  it('publishes a stale revision in review only after confirming it replaces the newer one', async () => {
+    const user = userEvent.setup();
+    renderWorkbench({ ...stale, status: 'in_review' }, { published, history });
+    await user.click(screen.getByRole('button', { name: 'Publish' }));
+    expect(actions.publishRevisionAction).not.toHaveBeenCalled();
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Replace revision 7' }));
+    const data = actions.publishRevisionAction.mock.calls[0]![1];
+    expect(data.get('replaceNewer')).toBe('true');
+    expect(data.get('revisionId')).toBe('r4');
+  });
+
+  it('publishes a current revision in review directly, without replacing anything', async () => {
+    const user = userEvent.setup();
+    renderWorkbench(revision([], { id: 'r8', number: 8, status: 'in_review', baseRevisionId: 'r7' }), { published, history });
+    await user.click(screen.getByRole('button', { name: 'Publish' }));
+    expect(actions.publishRevisionAction.mock.calls[0]![1].get('replaceNewer')).toBeNull();
+  });
+
+  it('opens history from a link, labels the published and working revisions, and blocks restoring while a draft is open', () => {
+    renderWorkbench(stale, { published, history, panel: 'history' });
+    const list = screen.getByRole('list', { name: 'Revisions' });
+    expect(within(list).getByText('Live')).toBeTruthy();
+    expect(within(list).getByText('Working')).toBeTruthy();
+    expect(screen.getByText('Discard or publish the working draft to restore an earlier revision.')).toBeTruthy();
+    expect((screen.getByRole('button', { name: 'Restore revision 3 as a draft' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('restores an earlier revision once no draft is open', async () => {
+    const user = userEvent.setup();
+    renderWorkbench(null, { published, history: [entry(published), entry({ ...stale, status: 'discarded' }, { discardedAt: '2026-11-24T12:00:00Z' }), entry(archived)], panel: 'history' });
+    expect(screen.getByText(/^Discarded Nov/)).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Restore revision 3 as a draft' }));
+    expect(actions.createDraftAction.mock.calls[0]![1].get('fromRevisionId')).toBe('r3');
+    // The discarded draft can come back the same way.
+    expect((screen.getByRole('button', { name: 'Restore revision 4 as a draft' }) as HTMLButtonElement).disabled).toBe(false);
   });
 });

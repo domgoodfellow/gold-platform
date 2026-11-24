@@ -226,7 +226,7 @@ export const PublicWebsiteSnapshotSchema = z.object({
   organizationId: z.string().uuid(),
   revisionId: z.string().uuid(),
   revisionNumber: z.number().int().positive(),
-  status: z.enum(['draft', 'in_review', 'published', 'archived']),
+  status: z.enum(['draft', 'in_review', 'published', 'archived', 'discarded']),
   pages: z.array(WebsitePageSchema),
   navigation: z.array(NavigationItemSchema),
   /** The published forms the sections name, by form id — read from the forms, not stored in the website. */
@@ -291,19 +291,56 @@ export const SiteTemplatesSchema = z.array(SiteTemplateSchema);
 export const PageTemplatesSchema = z.array(PageTemplateSchema);
 export const SectionPatternsSchema = z.array(SectionPatternSchema);
 
+/**
+ * Which renderer draws a site. GildOps' own marketing site has code-owned compositions; every other
+ * site is drawn in the business website frame. Chosen by the database from platform settings,
+ * never from a revision's content.
+ */
+export const SiteExperienceSchema = z.enum(['gildops_marketing', 'organization_website']);
+export type SiteExperience = z.infer<typeof SiteExperienceSchema>;
+
+export const RevisionStatusSchema = z.enum(['draft', 'in_review', 'published', 'archived', 'discarded']);
+
 const RevisionSchema = z.object({
-  id: z.string().uuid(), number: z.number().int(), status: z.enum(['draft', 'in_review', 'published', 'archived']),
+  id: z.string().uuid(), number: z.number().int(), status: RevisionStatusSchema,
   pages: z.array(WebsitePageSchema), navigation: z.array(NavigationItemSchema), createdAt: z.string(),
+  /** `migration` when a GildOps release wrote it; `account` when someone did in Studio. */
+  createdSource: z.enum(['migration', 'account']).default('account'),
+  updatedAt: z.string().nullable().optional(),
   submittedAt: z.string().nullable().optional(), publishedAt: z.string().nullable().optional(),
+  /** The published revision this draft was started from (null: nothing was published, or not recorded). */
+  baseRevisionId: z.string().uuid().nullable().default(null),
+  baseRevisionNumber: z.number().int().nullable().default(null),
+  copiedFromRevisionId: z.string().uuid().nullable().default(null),
+  copiedFromRevisionNumber: z.number().int().nullable().default(null),
+  /** A working revision started before the currently published one. */
+  stale: z.boolean().default(false),
 });
 
 /** What the editor reads: the published revision, the one working revision, and the history. */
 export const WebsiteEditorStateSchema = z.object({
   siteId: z.string().uuid(),
+  experience: SiteExperienceSchema.default('organization_website'),
   published: RevisionSchema.nullable(),
   working: RevisionSchema.nullable(),
   history: z.array(z.object({
-    id: z.string().uuid(), number: z.number().int(), status: z.string(), createdAt: z.string(),
+    id: z.string().uuid(), number: z.number().int(), status: RevisionStatusSchema, createdAt: z.string(),
+    createdSource: z.enum(['migration', 'account']).default('account'),
     publishedAt: z.string().nullable(), archivedAt: z.string().nullable(),
+    discardedAt: z.string().nullable().default(null),
+    copiedFromRevisionNumber: z.number().int().nullable().default(null),
   })),
 });
+
+/** Where one revision stands, read beside its snapshot by the private preview. */
+export const RevisionContextSchema = z.object({
+  experience: SiteExperienceSchema,
+  revisionId: z.string().uuid(),
+  number: z.number().int(),
+  status: RevisionStatusSchema,
+  createdSource: z.enum(['migration', 'account']),
+  stale: z.boolean(),
+  publishedRevisionId: z.string().uuid().nullable(),
+  publishedRevisionNumber: z.number().int().nullable(),
+});
+export type RevisionContext = z.infer<typeof RevisionContextSchema>;

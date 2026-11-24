@@ -7,14 +7,30 @@ import { PageHeader } from '@/components/headers/page-header';
 import { MetricTile, OperationalPanel, PanelState } from '@/components/operational/primitives';
 import { ButtonLink } from '@/components/controls/button';
 import { PreviewFrame } from '@/components/display/preview-frame';
-import type { StudioOverview } from '@/lib/application/studio/studio-overview';
+import type { StudioOverview, StudioWebsiteThumbnail } from '@/lib/application/studio/studio-overview';
+import { ExperienceView } from '@/features/public-site/experience-view';
 import { NewFormDrawer } from './forms/new-form-drawer';
 
 function State({ children }: { children: ReactNode }) {
   return <span className="inline-flex rounded-full bg-secondary px-2 py-0.5 text-xs font-medium">{children}</span>;
 }
 
-const REVISION_STATUS: Record<string, string> = { draft: 'Draft', in_review: 'In review', published: 'Published', archived: 'Archived' };
+const REVISION_STATUS: Record<string, string> = { draft: 'Draft', in_review: 'In review', published: 'Published', archived: 'Archived', discarded: 'Discarded' };
+
+/**
+ * The dashboard's picture of the website: the shown revision's home page, drawn by its experience's
+ * renderer at a desktop reference width and scaled to the panel, one screen tall. It is a picture —
+ * inert, with no preview banner or editor controls — and Open preview beside it opens the real one.
+ */
+function WebsiteThumbnail({ thumbnail, title }: { thumbnail: StudioWebsiteThumbnail; title: string }) {
+  const home = thumbnail.site.pages.find((page) => page.isHome) ?? thumbnail.site.pages[0];
+  if (!home) return null;
+  return (
+    <PreviewFrame title={title} width={1440} fit="viewport" viewportHeight={900} publicDesign>
+      <ExperienceView experience={thumbnail.experience} site={thumbnail.site} page={home} logoSrc={thumbnail.logoSrc} context={{ mode: 'preview', forms: thumbnail.site.forms }} />
+    </PreviewFrame>
+  );
+}
 
 export function StudioHome({ organizationId, timezone, mayManage, overview: data, configure }: { organizationId: string; timezone: string; mayManage: boolean; overview: StudioOverview; configure?: ReactNode }) {
   const base = `/organizations/${organizationId}`, studio = `${base}/studio`;
@@ -32,7 +48,6 @@ export function StudioHome({ organizationId, timezone, mayManage, overview: data
   return <AppPage className="@container/studio space-y-3">
     <PageHeader title="Studio" actions={<>
       {mayManage ? <><NewFormDrawer organizationId={organizationId} /><ButtonLink tone="secondary" href={website}>Edit website</ButtonLink></> : null}
-      {preview ? <ButtonLink tone="secondary" href={`/preview/${organizationId}/${preview.id}`} target="_blank">Preview</ButtonLink> : null}
       {data.publicUrl ? <ButtonLink tone="secondary" href={data.publicUrl} target="_blank" rel="noreferrer">View site <ArrowUpRight aria-hidden className="size-4" /></ButtonLink> : null}
       {configure}
     </>} />
@@ -42,11 +57,21 @@ export function StudioHome({ organizationId, timezone, mayManage, overview: data
     <div className="grid items-start gap-3 @min-[60rem]/studio:grid-cols-[minmax(0,2.5fr)_minmax(16rem,1fr)]">
       <div className="grid min-w-0 gap-3">
         <OperationalPanel title="Website overview">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><div><State>{websiteLabel}{preview ? ` · Revision ${preview.number}` : ''}</State><p className="mt-2 break-all text-xs text-muted">{data.hostname ?? 'A private preview is available without a public domain.'}</p></div>{mayManage ? <ButtonLink size="small" href={website}>{preview ? 'Open editor' : 'Create website'}</ButtonLink> : null}</div>
-          <div className="max-h-96 overflow-hidden rounded-lg bg-secondary">
-            {preview ? <PreviewFrame title="Website overview preview" src={`/preview/${organizationId}/${preview.id}`} /> : <div className="flex min-h-60 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border p-6 text-center"><Globe aria-hidden className="size-9 text-subtle" /><p className="font-medium">{mayManage ? 'Your website starts here' : 'Website preview is restricted'}</p><p className="text-sm text-muted">{mayManage ? 'Choose a starter or build a page from your own sections.' : 'An organization manager can author and preview the website.'}</p>{mayManage ? <ButtonLink size="small" href={templates}>Explore website templates</ButtonLink> : null}</div>}
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="min-w-0">
+              <State>{preview ? `${REVISION_STATUS[preview.status] ?? 'Draft'} · Revision ${preview.number}` : websiteLabel}</State>
+              <p className="mt-2 break-all text-xs text-muted">{data.hostname ?? 'A private preview is available without a public domain.'}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {preview ? <ButtonLink tone="secondary" size="small" href={`/preview/${organizationId}/${preview.id}`} target="_blank">Open preview</ButtonLink> : null}
+              {mayManage ? <ButtonLink size="small" href={website}>{preview ? 'Open editor' : 'Create website'}</ButtonLink> : null}
+            </div>
           </div>
-          {data.website?.working && data.website.state === 'published' ? <p className="mt-3 text-xs text-muted">Revision {data.website.working.number} is unpublished. Visitors still see Revision {data.website.revisionNumber}.</p> : null}
+          {preview && data.thumbnail ? (
+            <WebsiteThumbnail thumbnail={data.thumbnail} title={`Revision ${preview.number} home page`} />
+          ) : (
+            <div className="flex min-h-60 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border p-6 text-center"><Globe aria-hidden className="size-9 text-subtle" /><p className="font-medium">{mayManage ? 'Your website starts here' : 'Website preview is restricted'}</p><p className="text-sm text-muted">{mayManage ? 'Choose a starter or build a page from your own sections.' : 'An organization manager can author and preview the website.'}</p>{mayManage ? <ButtonLink size="small" href={templates}>Explore website templates</ButtonLink> : null}</div>
+          )}
           {data.website?.publishedAt ? <p className="mt-2 text-xs text-muted">Published {formatDate(data.website.publishedAt)}</p> : null}
         </OperationalPanel>
         <OperationalPanel title="Forms & content" href={forms}>
@@ -58,7 +83,7 @@ export function StudioHome({ organizationId, timezone, mayManage, overview: data
         <OperationalPanel title="Templates & creation" href={templates}><div className="grid gap-3 sm:grid-cols-3">{[['Website starters', 'A complete set of editable pages.', 'website'], ['Pages & sections', 'Build on your existing website.', 'pages'], ['Form templates', 'Start with useful questions.', 'forms']].map(([title, note, filter]) => <Link key={title} href={`${templates}?kind=${filter}`} className="rounded-md border border-border p-3 hover:bg-hover"><Layers aria-hidden className="mb-3 size-5 text-accent-text" /><p className="text-sm font-medium">{title}</p><p className="mt-1 text-xs text-muted">{note}</p></Link>)}</div></OperationalPanel>
       </div>
       <aside className="grid min-w-0 gap-3">
-        <OperationalPanel title="Publishing"><dl className="space-y-3 text-sm"><div className="flex justify-between gap-2"><dt className="text-muted">Website</dt><dd><State>{websiteLabel}</State></dd></div><div className="flex justify-between gap-2"><dt className="text-muted">Unpublished revision</dt><dd>{data.website?.working ? `Revision ${data.website.working.number}` : 'None'}</dd></div><div className="flex justify-between gap-2"><dt className="text-muted">Forms with drafts</dt><dd>{data.forms?.withDraft ?? 'Restricted'}</dd></div></dl><div className="mt-3"><ButtonLink tone="text" size="small" href={website}>Review publishing & history</ButtonLink></div></OperationalPanel>
+        <OperationalPanel title="Publishing"><dl className="space-y-3 text-sm"><div className="flex justify-between gap-2"><dt className="text-muted">Website</dt><dd><State>{websiteLabel}</State></dd></div><div className="flex justify-between gap-2"><dt className="text-muted">Unpublished revision</dt><dd>{data.website?.working ? `Revision ${data.website.working.number}` : 'None'}</dd></div><div className="flex justify-between gap-2"><dt className="text-muted">Forms with drafts</dt><dd>{data.forms?.withDraft ?? 'Restricted'}</dd></div></dl><div className="mt-3"><ButtonLink tone="text" size="small" href={`${website}?panel=history`}>Review publishing & history</ButtonLink></div></OperationalPanel>
         <OperationalPanel title="Needs attention">{data.attention.length ? <NavigationList label="Studio needs attention" density="compact" items={data.attention.map(item => ({ key: item.key, title: item.label, href: attentionHref(item.key), icon: <span className="block size-1.5 rounded-full bg-warning" /> }))} /> : <PanelState>Nothing needs attention.</PanelState>}</OperationalPanel>
         {data.suggestions.length ? <OperationalPanel title="Suggestions"><NavigationList label="Studio suggestions" density="compact" items={data.suggestions.map(item => ({ key: item.key, title: item.label, href: attentionHref(item.key) }))} /></OperationalPanel> : null}
         <OperationalPanel title="Public surfaces"><NavigationList label="Public surfaces" density="compact" items={[

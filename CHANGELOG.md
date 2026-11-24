@@ -32,6 +32,12 @@ Entries describe the product or operational change, not every file touched.
 
 ---
 
+## 2026-11-24
+
+- Studio's website drafts record which published revision they were started from. A draft older than the live website says so, cannot be published over the newer revision without confirming that by number, and can be discarded; discarded drafts stay in history and can be restored. Restoring any earlier revision starts a new draft from it. Opening the editor, history or a preview never creates a revision, and the Dashboard's Review publishing & history opens history.
+- Studio shows GildOps' own website as visitors see it: the revision preview, the Dashboard thumbnail and the editor canvas draw it with the marketing compositions the live site uses, at real Desktop, Tablet and Mobile widths. Previews of GildOps' site name the build that drew them.
+- Website, page and section templates open in a full-screen preview with each page and three widths. The website, form and portal editors share one workbench whose Structure and Inspector panels resize, collapse and restore, with a maximized canvas.
+
 ## 2026-11-23
 
 - GildOps can be bought without a consultation. Pricing lists GildOps' plans and add-ons at the prices Finance holds; a plan's Start leads to sign-up and founding a business, which is put on that plan as a GildOps subscription and customer. Plans are started monthly and charged in the plan's own currency, whatever currency the business works in; paying stays the checkout in Plan & usage, required before launch. The header and product pages lead with Get started. The consultation page is now Talk to us: GildOps' phone number when it has one, and a form asking GildOps to call back.

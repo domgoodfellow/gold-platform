@@ -1,34 +1,32 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import type { PageTemplate, SectionPattern, SiteTemplate, WebsiteContent, WebsiteSection } from '@gold/schemas';
+import { Alert, AlertDescription, AlertTitle } from '@gold/ui/components/alert';
 import { Button, ButtonLink } from '@/components/controls/button';
-import { ErrorText, Hint } from '@/components/controls/inputs';
-import { cx, FOCUS_RING } from '@/components/class-names';
-import {
-  PageDrawer,
-  PageDrawerContent,
-  PageDrawerHeader,
-  PageDrawerTitle,
-  PageDrawerTrigger,
-} from '@/components/panels/page-drawer';
+import { ConfirmSubmit } from '@/components/controls/confirm-submit';
+import { ErrorText } from '@/components/controls/inputs';
+import { ViewportControl } from '@/components/display/preview-surface';
+import { cx } from '@/components/class-names';
 import {
   addNavigationExternal, addNavigationPage, addPage, addSection, blankPage, duplicatePage, duplicateSection,
   moveNavigationItem, moveSection, pageFromTemplate, removeNavigationItem, removePage, removeSection,
   setHomepage, updateNavigationItem, updatePage, updateSection,
 } from '@/lib/domain/public-site/composition';
-import type { EditorRevision, RevisionHistoryEntry } from '@/lib/domain/public-site/public-site';
+import type { EditorRevision, PublicWebsiteSnapshot, RevisionHistoryEntry, SiteExperience } from '@/lib/domain/public-site/public-site';
 import {
+  createDraftAction,
+  discardDraftAction,
   publishRevisionAction,
   saveDraftAction,
   submitRevisionAction,
-  createDraftAction,
   type WebsiteActionState,
 } from '@/app/organizations/[organizationId]/studio/website/actions';
 import { useUnsavedChanges } from '@/components/controls/use-unsaved-changes';
 import { EditorLayout } from '../editor-layout';
 import { SiteStructure } from './site-structure';
-import { WebsiteCanvas, VIEWPORT_LABEL, type Viewport } from './website-canvas';
+import { WebsiteCanvas, type Viewport } from './website-canvas';
 import { PageInspector } from './page-inspector';
 import { SectionEditor } from './section-editors';
 import { SectionLibrary } from './section-library';
@@ -39,73 +37,110 @@ import type { FormOption, Selection } from './types';
 
 const INITIAL: WebsiteActionState = { error: null };
 
-function Feedback({ state }: { state: WebsiteActionState }) {
-  if (state.error) return <ErrorText>{state.error}</ErrorText>;
-  if (state.success) return <Hint role="status">{state.success}</Hint>;
-  return null;
+/** What frames the site wherever it is drawn: the experience, the business's public profile, brand and logo. */
+export type WebsiteFrame = {
+  experience: SiteExperience;
+  profile: PublicWebsiteSnapshot['profile'];
+  brand: PublicWebsiteSnapshot['brand'];
+  logoSrc: string | null;
+};
+
+/** Feedback after an action is a toast; a refusal stays on screen beside the control. */
+function useActionFeedback(state: WebsiteActionState) {
+  useEffect(() => { if (state.success) toast.success(state.success); }, [state]);
 }
 
-/** No working revision: the website is published and nothing is being changed, or was just restored from. */
-function NoDraftState({ organizationId, published, history }: { organizationId: string; published: EditorRevision | null; history: RevisionHistoryEntry[] }) {
+/** In the business's own time zone, so the server and the browser write the same words. */
+export const formatWhen = (value: string, timeZone: string) =>
+  new Intl.DateTimeFormat('en-CA', { timeZone, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(value));
+
+/** Opening history from a link (`?panel=history`), and forgetting the link once it is closed. */
+function useHistoryPanel(initiallyOpen: boolean) {
+  const [open, setOpen] = useState(initiallyOpen);
+  const onOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (!next && typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('panel')) { url.searchParams.delete('panel'); window.history.replaceState(window.history.state, '', url); }
+    }
+  };
+  return { open, onOpenChange };
+}
+
+/** No working revision: the website is published and nothing is being changed. */
+function NoDraftState({ organizationId, timezone, published, history, historyOpen }: { organizationId: string; timezone: string; published: EditorRevision | null; history: RevisionHistoryEntry[]; historyOpen: boolean }) {
   const [createState, createAction, creating] = useActionState(createDraftAction, INITIAL);
+  useActionFeedback(createState);
+  const panel = useHistoryPanel(historyOpen);
   return (
-    <div className="@container/editor grid min-w-0 gap-4">
-      <div className="flex justify-end gap-2">
-        <WebsiteHistorySheet organizationId={organizationId} history={history} canRestore />
-        {published ? <ButtonLink tone="secondary" size="small" href={`/preview/${organizationId}/${published.id}`} target="_blank">View published</ButtonLink> : null}
+    <div className="grid min-w-0 gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface p-3">
+        <span className="text-sm font-medium">{published ? `Revision ${published.number} · Published` : 'Nothing published'}</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <WebsiteHistorySheet organizationId={organizationId} timezone={timezone} history={history} workingId={null} publishedId={published?.id ?? null} {...panel} />
+          {published ? <ButtonLink tone="secondary" size="small" href={`/preview/${organizationId}/${published.id}`} target="_blank">View published</ButtonLink> : null}
+          <form action={createAction}>
+            <input type="hidden" name="organizationId" value={organizationId} />
+            <Button size="small" disabled={creating}>{published ? 'Create draft from published website' : 'Create draft'}</Button>
+          </form>
+        </div>
       </div>
-      <div className="grid gap-4 rounded-lg border border-border bg-secondary p-8 text-center">
-        <p className="font-medium">{published ? `Published · Revision ${published.number}` : 'Nothing has been published yet.'}</p>
-        <p className="text-sm text-muted">{published ? 'Create a draft from the published website to start editing.' : 'Create a draft to start editing.'}</p>
-        <form action={createAction} className="flex items-center justify-center gap-3">
-          <input type="hidden" name="organizationId" value={organizationId} />
-          <Button disabled={creating}>{published ? 'Create draft from published website' : 'Create draft'}</Button>
-        </form>
-        <Feedback state={createState} />
-      </div>
+      <ErrorText>{createState.error}</ErrorText>
     </div>
   );
 }
 
-function ViewportControl({ viewport, onChange }: { viewport: Viewport; onChange: (viewport: Viewport) => void }) {
+/**
+ * The working revision's standing against the published one. Only a stale draft — started before
+ * the revision visitors now see — gets a persistent alert: publishing it would replace newer content.
+ */
+function StaleAlert({ organizationId, working, published }: { organizationId: string; working: EditorRevision; published: EditorRevision | null }) {
+  if (!working.stale || !published) return null;
   return (
-    <div role="group" aria-label="Canvas width" className="flex gap-1 rounded-md border border-border p-0.5">
-      {(Object.keys(VIEWPORT_LABEL) as Viewport[]).map((key) => (
-        <button
-          key={key}
-          type="button"
-          onClick={() => onChange(key)}
-          aria-pressed={viewport === key}
-          className={cx('rounded px-2 py-1 text-xs font-medium transition', FOCUS_RING, viewport === key ? 'bg-foreground text-background' : 'text-muted hover:text-foreground')}
-        >
-          {VIEWPORT_LABEL[key]}
-        </button>
-      ))}
-    </div>
+    <Alert variant="warning" data-stale-draft>
+      <AlertTitle>Draft is based on an older revision.</AlertTitle>
+      <AlertDescription>
+        <p>Publishing this draft would replace revision {published.number}.</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <ButtonLink tone="secondary" size="small" href={`/preview/${organizationId}/${published.id}`} target="_blank">View revision {published.number}</ButtonLink>
+        </div>
+      </AlertDescription>
+    </Alert>
   );
 }
 
-function Editor({ organizationId, working, history, forms, pageTemplates, sectionPatterns }: {
+function Editor({ organizationId, timezone, frame, working, published, history, forms, pageTemplates, sectionPatterns, historyOpen }: {
   organizationId: string;
+  timezone: string;
+  frame: WebsiteFrame;
   working: EditorRevision;
+  published: EditorRevision | null;
   history: RevisionHistoryEntry[];
   forms: FormOption[];
   pageTemplates: PageTemplate[];
   sectionPatterns: SectionPattern[];
+  historyOpen: boolean;
 }) {
   const start: WebsiteContent = { pages: working.pages, navigation: working.navigation };
   const [content, setContent] = useState<WebsiteContent>(start);
   const [submittedSnapshot, setSubmittedSnapshot] = useState(() => JSON.stringify(start));
   const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(start));
+  const [savedAt, setSavedAt] = useState<string | null>(working.updatedAt ?? null);
   const [pageId, setPageId] = useState(() => (working.pages.find((page) => page.isHome) ?? working.pages[0]!).id);
   const [selected, setSelected] = useState<Selection>('page');
   const [viewport, setViewport] = useState<Viewport>('desktop');
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [navigationOpen, setNavigationOpen] = useState(false);
+  const panel = useHistoryPanel(historyOpen);
 
   const [saveState, saveAction, saving] = useActionState(saveDraftAction, INITIAL);
   const [submitState, submitAction, submitting] = useActionState(submitRevisionAction, INITIAL);
   const [publishState, publishAction, publishing] = useActionState(publishRevisionAction, INITIAL);
+  const [discardState, discardAction, discarding] = useActionState(discardDraftAction, INITIAL);
+  useActionFeedback(saveState);
+  useActionFeedback(submitState);
+  useActionFeedback(publishState);
+  useActionFeedback(discardState);
 
   // A successful save is what makes the just-saved content "the saved draft" — the snapshot Send
   // for review and the exact /preview route both read from here on. Adjusted during render (the
@@ -113,7 +148,7 @@ function Editor({ organizationId, working, history, forms, pageTemplates, sectio
   const [processedSaveState, setProcessedSaveState] = useState(saveState);
   if (saveState !== processedSaveState) {
     setProcessedSaveState(saveState);
-    if (saveState.success) setSavedSnapshot(submittedSnapshot);
+    if (saveState.success) { setSavedSnapshot(submittedSnapshot); setSavedAt(new Date().toISOString()); }
   }
 
   const dirty = JSON.stringify(content) !== savedSnapshot;
@@ -135,6 +170,8 @@ function Editor({ organizationId, working, history, forms, pageTemplates, sectio
   const previewBase = `/preview/${organizationId}/${working.id}`;
   const previewHref = page.isHome ? previewBase : `${previewBase}/${page.slug}`;
   const formNames = Object.fromEntries(forms.map((form) => [form.id, form.name]));
+  const discardFormId = `discard-${working.id}`;
+  const replaceFormId = `replace-${working.id}`;
 
   const onAddSection = (added: WebsiteSection) => {
     change(addSection(content, page.id, added));
@@ -201,42 +238,37 @@ function Editor({ organizationId, working, history, forms, pageTemplates, sectio
     </fieldset>
   );
 
+  // The persisted draft and the browser's unsaved edits are different things, said separately.
+  const saveStatus = !isDraft
+    ? 'Read-only while in review'
+    : dirty ? 'Unsaved changes' : savedAt ? `Draft saved ${formatWhen(savedAt, timezone)}` : `Draft created ${formatWhen(working.createdAt, timezone)}`;
+  const standing = published
+    ? (published.createdSource === 'migration' ? `Revision ${published.number} is published (by a GildOps release)` : `Revision ${published.number} is published`)
+    : 'Nothing published';
+
   return (
-    <div className="@container/editor grid min-w-0 gap-4">
+    <div className="grid min-w-0 gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface p-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-sm font-medium">Revision {working.number} · {isDraft ? 'Draft' : 'In review'}</span>
-          {isDraft ? (
-            <span className={cx('text-xs font-medium', dirty ? 'text-foreground' : 'text-muted')} role="status">
-              {dirty ? 'Unsaved changes' : 'Saved'}
-            </span>
-          ) : (
-            <span className="text-xs text-muted" role="status">Read-only while in review</span>
-          )}
+        <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
+          <span className="text-sm font-medium" data-working-revision={working.number}>Revision {working.number} · {isDraft ? 'Draft' : 'In review'}</span>
+          <span className={cx('text-xs', dirty ? 'font-medium text-foreground' : 'text-muted')} role="status">{saveStatus}</span>
+          <span className="text-xs text-muted" data-published-revision={published?.number}>{standing}</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex gap-2 @min-[56rem]/editor:hidden">
-            <PageDrawer>
-              <PageDrawerTrigger asChild><Button tone="secondary" size="small">Structure</Button></PageDrawerTrigger>
-              <PageDrawerContent>
-                <PageDrawerHeader><PageDrawerTitle>Structure</PageDrawerTitle></PageDrawerHeader>
-                {structure}
-              </PageDrawerContent>
-            </PageDrawer>
-            <PageDrawer>
-              <PageDrawerTrigger asChild><Button tone="secondary" size="small">Inspector</Button></PageDrawerTrigger>
-              <PageDrawerContent>
-                <PageDrawerHeader><PageDrawerTitle>{section ? 'Section' : 'Page'}</PageDrawerTitle></PageDrawerHeader>
-                {inspector}
-              </PageDrawerContent>
-            </PageDrawer>
-          </div>
           <Button type="button" tone="secondary" size="small" onClick={() => setNavigationOpen(true)}>Navigation</Button>
-          <ViewportControl viewport={viewport} onChange={setViewport} />
-          <WebsiteHistorySheet organizationId={organizationId} history={history} canRestore={false} />
+          <WebsiteHistorySheet organizationId={organizationId} timezone={timezone} history={history} workingId={working.id} publishedId={published?.id ?? null} {...panel} />
           <ButtonLink tone="secondary" size="small" href={previewHref} target="_blank">
             Preview{dirty ? ' (last saved)' : ''}
           </ButtonLink>
+          <form id={discardFormId} action={discardAction}>{identityFields}</form>
+          <ConfirmSubmit
+            formId={discardFormId}
+            label="Discard draft"
+            confirmLabel={`Discard revision ${working.number}`}
+            description={`Revision ${working.number}${dirty ? ' and your unsaved changes' : ''} will no longer be edited or published. It stays in history and can be restored. The published website does not change.`}
+            tone="secondary"
+            pending={discarding}
+          />
           {isDraft ? (
             <>
               <form action={saveAction} onSubmit={() => setSubmittedSnapshot(JSON.stringify(content))}>
@@ -251,6 +283,21 @@ function Editor({ organizationId, working, history, forms, pageTemplates, sectio
                 </Button>
               </form>
             </>
+          ) : working.stale && published ? (
+            <>
+              <form id={replaceFormId} action={publishAction}>
+                {identityFields}
+                <input type="hidden" name="replaceNewer" value="true" />
+              </form>
+              <ConfirmSubmit
+                formId={replaceFormId}
+                label="Publish"
+                confirmLabel={`Replace revision ${published.number}`}
+                description={`Revision ${published.number} was published after this draft was started. Publishing revision ${working.number} replaces it on the public website, with every page and the navigation.`}
+                tone="primary"
+                pending={publishing}
+              />
+            </>
           ) : (
             <form action={publishAction}>
               {identityFields}
@@ -259,17 +306,25 @@ function Editor({ organizationId, working, history, forms, pageTemplates, sectio
           )}
         </div>
       </div>
-      <div className="grid gap-2 sm:grid-cols-2">
-        <Feedback state={saveState} />
-        <Feedback state={submitState} />
-        <Feedback state={publishState} />
-      </div>
-      {!isDraft ? (
-        <Hint>Review the exact preview before publishing. Publishing changes every page and the navigation of the public website together.</Hint>
-      ) : null}
+      {[saveState, submitState, publishState, discardState].map((state, index) => <ErrorText key={index}>{state.error}</ErrorText>)}
+      <StaleAlert organizationId={organizationId} working={working} published={published} />
 
-      <EditorLayout structure={structure} inspector={inspector}>
-        <WebsiteCanvas page={page} selected={selected} onSelect={setSelected} viewport={viewport} formNames={formNames} />
+      <EditorLayout
+        id="website"
+        structure={structure}
+        inspector={inspector}
+        canvasTools={<ViewportControl value={viewport} onChange={setViewport} label="Canvas width" />}
+      >
+        <WebsiteCanvas
+          experience={frame.experience}
+          site={{ pages: content.pages, navigation: content.navigation, profile: frame.profile, brand: frame.brand }}
+          page={page}
+          logoSrc={frame.logoSrc}
+          selected={selected}
+          onSelect={setSelected}
+          viewport={viewport}
+          formNames={formNames}
+        />
       </EditorLayout>
 
       <SectionLibrary open={libraryOpen} onOpenChange={setLibraryOpen} forms={forms} patterns={sectionPatterns} onAdd={onAddSection} />
@@ -287,12 +342,16 @@ function Editor({ organizationId, working, history, forms, pageTemplates, sectio
 
 /**
  * Studio's Website workbench: Structure, Canvas and Inspector over one whole website, a toolbar that
- * knows whether there is a draft, and the review → publish path. With no website at all it offers to
- * create one; with a published website and no draft, to start one.
+ * names the working and published revisions apart, and the review → publish path. With no website
+ * at all it offers to create one; with a published website and no draft, to start one. Opening it,
+ * its history or a preview, and changing the canvas width, never creates a revision.
  */
-export function WebsiteWorkbench({ organizationId, hasWebsite, working, published, history, forms, siteTemplates, pageTemplates, sectionPatterns }: {
+export function WebsiteWorkbench({ organizationId, timezone = 'UTC', hasWebsite, frame, working, published, history, forms, siteTemplates, pageTemplates, sectionPatterns, initialPanel = null }: {
   organizationId: string;
+  /** The business's time zone, for every date shown. */
+  timezone?: string;
   hasWebsite: boolean;
+  frame: WebsiteFrame | null;
   forms: FormOption[];
   working: EditorRevision | null;
   published: EditorRevision | null;
@@ -300,16 +359,18 @@ export function WebsiteWorkbench({ organizationId, hasWebsite, working, publishe
   siteTemplates: SiteTemplate[];
   pageTemplates: PageTemplate[];
   sectionPatterns: SectionPattern[];
+  /** `history` when the page was opened to review publishing and history. */
+  initialPanel?: 'history' | null;
 }) {
-  if (!hasWebsite) return <CreateWebsite organizationId={organizationId} templates={siteTemplates} />;
-  if (!working) return <NoDraftState organizationId={organizationId} published={published} history={history} />;
+  if (!hasWebsite || !frame) return <CreateWebsite organizationId={organizationId} templates={siteTemplates} />;
+  if (!working) return <NoDraftState organizationId={organizationId} timezone={timezone} published={published} history={history} historyOpen={initialPanel === 'history'} />;
   return (
     <Editor
       // Local editing state is only meant to initialize once per revision; keying on the revision
       // id forces a fresh mount when a draft appears, is replaced, or moves to a different id.
       key={working.id}
-      organizationId={organizationId} working={working} history={history} forms={forms}
-      pageTemplates={pageTemplates} sectionPatterns={sectionPatterns}
+      organizationId={organizationId} timezone={timezone} frame={frame} working={working} published={published} history={history} forms={forms}
+      pageTemplates={pageTemplates} sectionPatterns={sectionPatterns} historyOpen={initialPanel === 'history'}
     />
   );
 }

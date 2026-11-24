@@ -1,11 +1,11 @@
 import type { Db } from '@/lib/db/types';
 import { listBookableTypes } from '@/lib/domain/booking/booking';
-import { getBrand } from '@/lib/domain/branding/brand';
+import { getBrand, logoUrl } from '@/lib/domain/branding/brand';
 import { getManagedHostname } from '@/lib/domain/domains/domains';
 import { organizationPortalInviteCount } from '@/lib/domain/portal/portal';
 import { listForms, studioResponses, type FormListEntry } from '@/lib/domain/forms/forms';
 import { listUsableModules } from '@/lib/domain/tenancy/modules';
-import { siteEditorState } from '@/lib/domain/public-site/public-site';
+import { siteEditorState, sitePreview, type PublicWebsiteSnapshot, type SiteExperience } from '@/lib/domain/public-site/public-site';
 import { publicProfile } from '@/lib/domain/tenancy/profile';
 
 /**
@@ -21,8 +21,16 @@ export type StudioWebsiteSummary = {
   state: StudioWebsiteState;
   revisionNumber: number | null;
   publishedAt: string | null;
+  /** The revision the dashboard shows: the published one, or the working draft when nothing is published. */
   preview: { id: string; number: number; status: string } | null;
-  working: { id: string; number: number; status: string } | null;
+  working: { id: string; number: number; status: string; stale: boolean } | null;
+};
+
+/** What the dashboard thumbnail draws: one revision's home page, through its experience's renderer. */
+export type StudioWebsiteThumbnail = {
+  experience: SiteExperience;
+  site: Pick<PublicWebsiteSnapshot, 'pages' | 'navigation' | 'profile' | 'brand' | 'forms'>;
+  logoSrc: string | null;
 };
 
 export type StudioAttentionItem = {
@@ -42,6 +50,8 @@ export type StudioFormsSummary = {
 export type StudioOverview = {
   /** Null when this member's role cannot see website state (the same gate `studio/website` uses). */
   website: StudioWebsiteSummary | null;
+  /** Null without a website revision to show, or without permission to see one. */
+  thumbnail: StudioWebsiteThumbnail | null;
   /** Null when this member's role cannot manage forms. */
   forms: StudioFormsSummary | null;
   formPreview: FormListEntry[];
@@ -59,7 +69,10 @@ export type StudioOverview = {
 
 function summarizeWebsite(state: Awaited<ReturnType<typeof siteEditorState>>): StudioWebsiteSummary {
   const revision = state?.published ?? state?.working;
-  const details = { preview: revision ? { id: revision.id, number: revision.number, status: revision.status } : null, working: state?.working ? { id: state.working.id, number: state.working.number, status: state.working.status } : null };
+  const details = {
+    preview: revision ? { id: revision.id, number: revision.number, status: revision.status } : null,
+    working: state?.working ? { id: state.working.id, number: state.working.number, status: state.working.status, stale: state.working.stale } : null,
+  };
   if (!state) return { state: 'not_configured', revisionNumber: null, publishedAt: null, ...details };
   if (state.published) {
     return { state: 'published', revisionNumber: state.published.number, publishedAt: state.published.publishedAt ?? null, ...details };
@@ -92,10 +105,20 @@ export async function studioOverview(
   const responses = forms ? await studioResponses(db, input.organizationId, forms) : null;
 
   const website = input.mayManageWebsite ? summarizeWebsite(siteState) : null;
+  const shown = website?.preview ? await sitePreview(db, { organizationId: input.organizationId, revisionId: website.preview.id }) : null;
+  const thumbnail: StudioWebsiteThumbnail | null = shown && siteState ? {
+    experience: siteState.experience,
+    site: { pages: shown.pages, navigation: shown.navigation, profile: shown.profile, brand: shown.brand, forms: shown.forms },
+    logoSrc: shown.brand.logoPath ? logoUrl(db, shown.brand.logoPath) : null,
+  } : null;
 
   const attention: StudioAttentionItem[] = [];
   if (website?.state === 'not_configured') attention.push({ key: 'website-not-published', label: 'No homepage has been published.' });
-  if (siteState?.working?.status === 'draft') attention.push({ key: 'website-draft', label: 'Website has an unpublished draft.' });
+  if (siteState?.working?.stale) {
+    const label = siteState.published ? `Website draft was started before revision ${siteState.published.number} was published.` : 'Website draft was started before the current website was published.';
+    attention.push({ key: 'website-stale-draft', label });
+  }
+  else if (siteState?.working?.status === 'draft') attention.push({ key: 'website-draft', label: 'Website has an unpublished draft.' });
   if (siteState?.working?.status === 'in_review') attention.push({ key: 'website-in-review', label: 'A website revision is waiting for review.' });
   const liveForms = (forms ?? []).filter((form) => !form.archived);
   const formsSummary: StudioFormsSummary | null = forms
@@ -116,6 +139,7 @@ export async function studioOverview(
 
   return {
     website,
+    thumbnail,
     suggestions,
     forms: formsSummary,
     formPreview: (forms ?? []).slice(0, 6),

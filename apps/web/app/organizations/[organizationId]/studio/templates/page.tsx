@@ -7,6 +7,8 @@ import { listPageTemplates, listSectionPatterns, listSiteTemplates, siteEditorSt
 import { areaLabel, workspaceAncestry } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 import { portalEditorState } from '@/lib/domain/portal/definitions';
+import { getBrand, logoUrl } from '@/lib/domain/branding/brand';
+import { publicProfile } from '@/lib/domain/tenancy/profile';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +26,13 @@ export default async function StudioTemplatesPage({ params }: PageProps<'/organi
   const [formTemplates, siteTemplates, pageTemplates, sectionPatterns, site] = mayManage
     ? await Promise.all([listFormTemplates(db), listSiteTemplates(db), listPageTemplates(db), listSectionPatterns(db), siteEditorState(db, organizationId)])
     : [[], [], [], [], null];
+  // Templates are previewed as this business's own website would draw them.
+  const [brand, profile] = await Promise.all([getBrand(db, { organizationId }), publicProfile(db, { organizationId, fallbackName: organization.name })]);
+  const frame = {
+    profile,
+    brand: { accent: brand.accent, headingFont: brand.headingFont, bodyFont: brand.bodyFont, logoPath: brand.logoPath },
+    logoSrc: brand.logoPath ? logoUrl(db, brand.logoPath) : null,
+  };
 
   return (
     <AppPage>
@@ -35,6 +44,7 @@ export default async function StudioTemplatesPage({ params }: PageProps<'/organi
           organizationId={organizationId}
           hasWebsite={site !== null}
           hasPortal={!!portal?.definition}
+          frame={frame}
           siteTemplates={siteTemplates}
           pageTemplates={pageTemplates}
           sectionPatterns={sectionPatterns}

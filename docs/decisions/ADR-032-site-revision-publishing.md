@@ -1,7 +1,7 @@
 # ADR-032 — Studio publishes a whole site revision
 
 **Recorded:** 2026-10-07
-**Status:** Accepted
+**Status:** Accepted; extended by ADR-058 (drafts record their base and can be discarded; publishing a stale draft needs confirmation; private surfaces render through the site's experience)
 **Origin:** Formalizes architecture already present before the documentation reset; exact implementation history remains in Git.
 
 ## Context

@@ -57,13 +57,35 @@ describe('the website has no escape hatch', () => {
 
 describe('Studio Canvas and the public site share one renderer', () => {
   it('draws sections only through SectionView, never its own copy', () => {
+    // The canvas draws the page through the experience renderer the live site and the preview use,
+    // which draws every section through the shared renderer.
     const canvas = read('features/studio/website/website-canvas.tsx');
-    expect(canvas).toContain("from '@/features/public-site/section-renderers'");
-    expect(canvas).toContain('<SectionView');
+    expect(canvas).toContain("from '@/features/public-site/experience-view'");
+    expect(canvas).toContain('<ExperienceView');
+    expect(read('features/public-site/experience-view.tsx')).toContain("from './section-renderers'");
+    expect(read('features/public-site/site-view.tsx')).toContain('<PageSections');
     for (const file of sourceFiles('features/studio')) {
       if (file.includes('section-editors') || file.includes('template')) continue;
       expect(read(file), file).not.toMatch(/<(section|h1)\b[^>]*className="[^"]*(rounded-2xl bg-secondary|lg:grid-cols-\[1fr_460px\])/);
     }
+  });
+
+  it('renders every private website surface through the one experience renderer', () => {
+    // The revision preview, the Studio thumbnail, the canvas and template previews choose their
+    // renderer from the site's experience, never by drawing the business frame themselves. Only the
+    // public hostname (hosted-page) and the experience renderer itself use SiteView directly.
+    for (const file of ['app/(preview)/preview/[organizationId]/[revisionId]/[[...page]]/page.tsx', 'features/studio/studio-home.tsx', 'features/studio/website/website-canvas.tsx', 'features/studio/templates/website-templates.tsx']) {
+      const source = read(file);
+      expect(source, file).toContain('<ExperienceView');
+      expect(source, file).not.toContain('<SiteView');
+    }
+    // The viewport primitive owns its edge; a caller places it and never draws a second frame.
+    for (const file of [...sourceFiles('features'), ...sourceFiles('components'), ...sourceFiles('app')]) {
+      for (const use of read(file).match(/<PreviewFrame[^>]*>/g) ?? []) expect(use, file).not.toMatch(/className="[^"]*(border|rounded|shadow)/);
+    }
+    expect(read('components/display/preview-frame.tsx')).toContain('data-slot="preview-frame"');
+    const direct = [...sourceFiles('features'), ...sourceFiles('app')].filter((file) => read(file).includes('<SiteView'));
+    expect(direct.map((file) => file.replace(/\\/g, '/').replace(/^.*?(features|app)\//, '$1/')).sort()).toEqual(['features/public-site/experience-view.tsx', 'features/public-site/hosted-page.tsx']);
   });
 
   it('keeps the public site free of Studio, and the website free of providers', () => {

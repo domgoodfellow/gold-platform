@@ -11508,9 +11508,13 @@ export type Database = {
       public_site_revisions: {
         Row: {
           archived_at: string | null
+          base_revision_id: string | null
+          copied_from_revision_id: string | null
           created_at: string
           created_by: string | null
           created_source: string
+          discarded_at: string | null
+          discarded_by: string | null
           id: string
           navigation: Json
           organization_id: string
@@ -11522,12 +11526,17 @@ export type Database = {
           status: string
           submitted_at: string | null
           submitted_by: string | null
+          updated_at: string | null
         }
         Insert: {
           archived_at?: string | null
+          base_revision_id?: string | null
+          copied_from_revision_id?: string | null
           created_at?: string
           created_by?: string | null
           created_source: string
+          discarded_at?: string | null
+          discarded_by?: string | null
           id?: string
           navigation?: Json
           organization_id: string
@@ -11539,12 +11548,17 @@ export type Database = {
           status: string
           submitted_at?: string | null
           submitted_by?: string | null
+          updated_at?: string | null
         }
         Update: {
           archived_at?: string | null
+          base_revision_id?: string | null
+          copied_from_revision_id?: string | null
           created_at?: string
           created_by?: string | null
           created_source?: string
+          discarded_at?: string | null
+          discarded_by?: string | null
           id?: string
           navigation?: Json
           organization_id?: string
@@ -11556,8 +11570,23 @@ export type Database = {
           status?: string
           submitted_at?: string | null
           submitted_by?: string | null
+          updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "public_site_revisions_base_in_site"
+            columns: ["organization_id", "site_id", "base_revision_id"]
+            isOneToOne: false
+            referencedRelation: "public_site_revisions"
+            referencedColumns: ["organization_id", "site_id", "id"]
+          },
+          {
+            foreignKeyName: "public_site_revisions_copied_from_in_site"
+            columns: ["organization_id", "site_id", "copied_from_revision_id"]
+            isOneToOne: false
+            referencedRelation: "public_site_revisions"
+            referencedColumns: ["organization_id", "site_id", "id"]
+          },
           {
             foreignKeyName: "public_site_revisions_organization_id_site_id_fkey"
             columns: ["organization_id", "site_id"]
@@ -17096,6 +17125,10 @@ export type Database = {
           title: string
         }[]
       }
+      discard_public_site_draft: {
+        Args: { p_organization_id: string; p_revision_id: string }
+        Returns: undefined
+      }
       disconnect_integration: {
         Args: { p_connection_id: string; p_organization_id: string }
         Returns: undefined
@@ -18105,6 +18138,10 @@ export type Database = {
         Args: { p_organization_id: string; p_revision_id: string }
         Returns: Json
       }
+      public_site_revision_context: {
+        Args: { p_organization_id: string; p_revision_id: string }
+        Returns: Json
+      }
       publish_ai_assistant: {
         Args: {
           p_expected_draft: number
@@ -18123,7 +18160,11 @@ export type Database = {
         Returns: string
       }
       publish_public_site_revision: {
-        Args: { p_organization_id: string; p_revision_id: string }
+        Args: {
+          p_organization_id: string
+          p_replace_newer?: boolean
+          p_revision_id: string
+        }
         Returns: undefined
       }
       publish_service_disclosure: {

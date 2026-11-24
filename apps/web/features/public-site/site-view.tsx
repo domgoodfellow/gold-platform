@@ -6,7 +6,7 @@ import { BrandStyle } from '@/features/branding/brand-style';
 import { FOCUS_RING, cx } from '@/components/class-names';
 import { pagePath } from '@/lib/domain/public-site/paths';
 import type { FormSectionContext } from './form-section';
-import { PageSections } from './section-renderers';
+import { PageSections, type SectionDecorator } from './section-renderers';
 
 /**
  * Where a page is, given where the site is being served: at a business's own hostname the root is
@@ -35,14 +35,16 @@ function NavLink({ item, pages, current, linkBase }: { item: NavigationItem; pag
  * string in the frame is one the business wrote — nothing here is GildOps' voice. The same
  * view serves the public hostname and the private preview, so the two cannot drift.
  */
-export function SiteView({ site, page, context, logoSrc = null, linkBase = '', banner }: {
-  site: PublicWebsiteSnapshot;
+export function SiteView({ site, page, context, logoSrc = null, linkBase = '', banner, decorate }: {
+  site: Pick<PublicWebsiteSnapshot, 'pages' | 'navigation' | 'profile' | 'brand'>;
   page: WebsitePage;
   context: FormSectionContext;
   logoSrc?: string | null;
   linkBase?: string;
   /** Preview chrome, outside the business's own frame. */
   banner?: ReactNode;
+  /** Authoring chrome around each section (the Studio canvas). */
+  decorate?: SectionDecorator;
 }) {
   const profile = site.profile;
   const contacts = [profile.contactPhone ? formatPhoneForDisplay(profile.contactPhone) : null, profile.contactEmail, profile.address].filter(Boolean);
@@ -71,7 +73,7 @@ export function SiteView({ site, page, context, logoSrc = null, linkBase = '', b
         </div>
       </header>
       <main className="mx-auto w-full max-w-5xl px-6 sm:px-8">
-        <PageSections sections={page.sections} context={{ ...context, linkBase: linkBase || undefined }} />
+        <PageSections sections={page.sections} context={{ ...context, linkBase: linkBase || undefined }} decorate={decorate} />
       </main>
       {contacts.length > 0 ? (
         <footer className="mt-8 border-t border-border">
