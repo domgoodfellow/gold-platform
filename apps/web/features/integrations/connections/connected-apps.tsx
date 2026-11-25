@@ -53,7 +53,7 @@ export function ConnectedApps({
   const connectedKeys = new Set(active.map((connection) => connection.connectorKey));
   const offered = connectable.filter((connector) => !connectedKeys.has(connector.key)).slice(0, 6);
   const addConnections = (
-    <CardSection headingId="add-connections-heading" title={active.length === 0 ? `Connect systems to ${organizationName}` : 'Add connections'} className="mt-6">
+    <CardSection headingId="add-connections-heading" title={active.length === 0 ? `Connect systems to ${organizationName}` : 'Add connections'}>
       {offered.length > 0 ? (
         <DividedList className="mt-2">
           {offered.map((connector) => (
@@ -82,7 +82,7 @@ export function ConnectedApps({
 
   return (
     <>
-      <WidgetGrid className="mt-6">
+      <WidgetGrid>
         <Widget title="Connected apps" value={active.length} />
         <Widget title="MCP servers" value={mcpServerCount} href={`/organizations/${organizationId}/settings/connections/mcp`} />
         <Widget
@@ -92,7 +92,7 @@ export function ConnectedApps({
         />
       </WidgetGrid>
 
-      <CardSection title="Connected" className="mt-6">
+      <CardSection title="Connected">
           <DividedList className="mt-2">
             {active.map((connection) => {
               const connector = connectorByKey.get(connection.connectorKey);

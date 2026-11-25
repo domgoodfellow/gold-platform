@@ -80,7 +80,7 @@ export default async function ResourcesPage({
             />
           </ConfigureRegistrar>
         ) : null}
-        <form method="get" className="mb-3 flex flex-wrap items-end gap-2 rounded-lg border border-border p-3">
+        <form method="get" className="flex flex-wrap items-end gap-2 rounded-lg border border-border p-3">
           <label className="text-xs text-muted">Resource class<SelectField name="class" defaultValue={resourceClass ?? ''} options={[{ value: '', label: 'All classes' }, ...Object.entries(RESOURCE_CLASS_LABELS).map(([id, label]) => ({ value: id, label: label }))]} /></label>
           <label className="text-xs text-muted">Skill<SelectField name="capability" defaultValue={typeof query.capability === 'string' ? query.capability : ''} options={[{ value: '', label: 'All skills' }, ...vocabulary.map((c) => ({ value: c.id, label: c.name }))]} /></label>
           <label className="text-xs text-muted">Availability date<TextInput type="date" name="on" defaultValue={date}/></label><Button size="small">Apply filters</Button>

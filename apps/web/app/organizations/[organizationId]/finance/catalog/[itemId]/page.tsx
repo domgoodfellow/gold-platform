@@ -85,7 +85,7 @@ export default async function CatalogItemPage({ params }: PageProps<'/organizati
           </div>
         ) : undefined}
       />
-      {item.description ? <p className="mt-2 max-w-prose text-sm">{item.description}</p> : null}
+      {item.description ? <p className="max-w-prose text-sm">{item.description}</p> : null}
       <PriceHistory
         organizationId={organizationId}
         item={item}

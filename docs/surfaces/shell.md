@@ -18,7 +18,7 @@ GildOps staff with the interface-design platform permission (`INTERFACE_DESIGN_C
 
 ## Shared Calendar
 
-Primary navigation is Home, Search, Calendar and Library at every organization depth. Calendar opens the canonical `/calendar` route without entering a workspace, defaults to authorized organization data and owns its selected state and page location. Workspace Calendar URLs redirect with date/view/filter intent preserved. Day, Week, Month, event editing and cancellation reuse the existing renderer and commands. Creation requires a visible workspace choice when the entry context supplies none. Loading, empty and partial-source states remain explicit. Calendar is not an operator workspace; Work Schedule remains the resource scheduling surface (ADR-052).
+Primary navigation is Home, Search, Calendar and Library at every organization depth. Calendar opens the canonical `/calendar` route without entering a workspace, defaults to authorized organization data and owns its selected state and page location. Workspace Calendar URLs redirect with date/view/filter intent preserved. Day, Week, Month, event editing and cancellation reuse the existing renderer and commands. Creation requires a visible workspace choice when the entry context supplies none. Calendar and Work Schedule share one calendar composition (`CalendarWorkspace`): a single control band above the board, then the board filling the remaining height. The band groups the period (previous, Today, next, and the period label, which opens a day picker), the organization timezone every time is read in, the view, the filters and creation (New event on Calendar, New work on Schedule), and wraps when the working area is narrow. An ordinary empty period is the empty board, with no separate message. An unavailable or restricted source is stated as a notice beneath the band. Loading stays explicit. Calendar is not an operator workspace; Work Schedule remains the resource scheduling surface (ADR-052).
 
 ## Library navigation
 
@@ -37,6 +37,8 @@ Its navigation may expose real Library capabilities such as:
 - Trash.
 
 Do not expose a destination merely because its eventual taxonomy has been named.
+
+Every Library section's header carries the section tab strip in its leading region and the section's own action in its trailing region. Files is a collection: its action, Upload, opens a focused dialog that uses the same file control and action as record uploads, and what the Library holds (file count, total size, files no record uses) heads the results. Search, type, use and sort are the shared collection toolbar. A Library with no files shows one empty state in place of the toolbar and table.
 
 Navigation requires a real surface.
 

@@ -10,7 +10,7 @@ import { getDb } from '@/lib/db/server';
 import { listCatalogFeatures, listCatalogModules, listCatalogProducts } from '@/lib/domain/catalogue/catalogue';
 import { listPlanProductGrants, listPlans } from '@/lib/domain/catalogue/plans';
 import { listManagedIndustryTemplates } from '@/lib/domain/configuration/proposals';
-import { DividedList, EmptyState } from '@/components/surfaces/section';
+import { DividedList, EmptyState, Section } from '@/components/surfaces/section';
 import { RenameTemplateSheet, TemplatePublishToggle } from '@/features/platform/catalog/family-forms';
 
 export const dynamic = 'force-dynamic';
@@ -137,44 +137,50 @@ export default async function CatalogPage({ params }: PageProps<'/organizations/
         </Link>
       </div>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {products.filter((product) => product.kind === 'product').map(renderProduct)}
       </div>
 
-      <h2 className="mt-10 text-lg font-semibold">Shared workspace</h2>
-      <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {products.filter((product) => product.kind === 'workspace').map(renderProduct)}
-      </div>
+      <Section className="flex flex-col gap-4">
+        <h2 className="text-lg font-semibold">Shared workspace</h2>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {products.filter((product) => product.kind === 'workspace').map(renderProduct)}
+        </div>
+      </Section>
 
-      <h2 className="mt-10 text-lg font-semibold">GildOps operations</h2>
-      <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {products.filter((product) => product.kind === 'operator').map(renderProduct)}
-      </div>
+      <Section className="flex flex-col gap-4">
+        <h2 className="text-lg font-semibold">GildOps operations</h2>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {products.filter((product) => product.kind === 'operator').map(renderProduct)}
+        </div>
+      </Section>
 
-      <h2 className="mt-10 text-lg font-semibold">Starting templates</h2>
-      {templates.length === 0 ? <EmptyState className="mt-4">Save a business as a template from its page under Organizations.</EmptyState> : (
-        <Card className="mt-4">
-          <CardContent className="py-0">
-            <DividedList>
-              {templates.map((template) => (
-                <li key={template.key} className="flex flex-wrap items-center justify-between gap-3 py-3">
-                  <div className="flex min-w-0 flex-col">
-                    <span className="flex items-center gap-2 font-medium">
-                      {template.name}
-                      {template.published ? null : <Badge>Unpublished</Badge>}
-                    </span>
-                    <span className="text-sm text-muted-foreground">{template.category}</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <RenameTemplateSheet templateKey={template.key} name={template.name} category={template.category} />
-                    <TemplatePublishToggle templateKey={template.key} name={template.name} published={template.published} />
-                  </div>
-                </li>
-              ))}
-            </DividedList>
-          </CardContent>
-        </Card>
-      )}
+      <Section className="flex flex-col gap-4">
+        <h2 className="text-lg font-semibold">Starting templates</h2>
+        {templates.length === 0 ? <EmptyState>Save a business as a template from its page under Organizations.</EmptyState> : (
+          <Card>
+            <CardContent className="py-0">
+              <DividedList>
+                {templates.map((template) => (
+                  <li key={template.key} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                    <div className="flex min-w-0 flex-col">
+                      <span className="flex items-center gap-2 font-medium">
+                        {template.name}
+                        {template.published ? null : <Badge>Unpublished</Badge>}
+                      </span>
+                      <span className="text-sm text-muted-foreground">{template.category}</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <RenameTemplateSheet templateKey={template.key} name={template.name} category={template.category} />
+                      <TemplatePublishToggle templateKey={template.key} name={template.name} published={template.published} />
+                    </div>
+                  </li>
+                ))}
+              </DividedList>
+            </CardContent>
+          </Card>
+        )}
+      </Section>
     </AppPage>
   );
 }

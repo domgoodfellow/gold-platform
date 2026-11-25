@@ -39,7 +39,7 @@ export default async function ConnectorPage({ params }: PageProps<'/organization
         redirectUri={detail?.redirectUri ?? null}
       />
 
-      <Section className="mt-6">
+      <Section>
         <SectionHeading>Identity</SectionHeading>
         {isBuiltInConnector(connector.key) ? (
           <Hint className="mt-1 block">
@@ -60,12 +60,12 @@ export default async function ConnectorPage({ params }: PageProps<'/organization
         )}
       </Section>
 
-      <Section className="mt-8">
+      <Section>
         <SectionHeading>Details</SectionHeading>
         <ConnectorForm connector={connector} />
       </Section>
 
-      <Section className="mt-8">
+      <Section>
         <SectionHeading>Apps inside this connector</SectionHeading>
         {connector.apps.length === 0 ? (
           <Hint className="mt-2 block">None.</Hint>

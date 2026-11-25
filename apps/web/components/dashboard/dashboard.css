@@ -1,13 +1,10 @@
 /* Dashboard geometry is independent of how much data a panel currently holds. The page
-   participates in AppShell's available height; minimums allow long content to keep scrolling. */
+   participates in AppShell's available height; minimums allow long content to keep scrolling.
+   The page frame (`AppPage`) already stacks and spaces the page's regions. */
 [data-dashboard-page] {
   --dashboard-panel-min-height: clamp(15rem, 27svh, 26rem);
-  display: flex;
   flex: 1;
-  flex-direction: column;
-  gap: 1rem;
 }
-[data-dashboard-page] > * { margin-block: 0; }
 [data-dashboard-panels] { flex: 1; }
 [data-dashboard-panels] > :is(div, aside):has(> [data-slot='operational-panel']) {
   display: flex;

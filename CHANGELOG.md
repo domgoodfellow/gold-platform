@@ -34,6 +34,10 @@ Entries describe the product or operational change, not every file touched.
 
 ## 2026-11-24
 
+- Every operator page spaces its parts the same way: the page frame sets one gap between its regions (header, local navigation, toolbar, sections, working surface), following the Display density (12, 16 or 24 px), and no part adds its own margin. A page header with nothing visible no longer leaves an empty band above the content.
+- Calendar and Work Schedule have one control band above the board: previous, Today and next, the period itself (which opens a day picker), the organization's timezone, the view, filters, and New event or New work. An empty period is the empty board, without a separate message.
+- Library Files is a collection: Library's section tabs and Upload, which opens a dialog, share the header row; search, type, use and sort are the shared collection toolbar; and the file count, total size and unused files head the results. An empty Library shows one empty state. Library Sources' action reads Import a file.
+- Page-wide period selectors on the Finance, Communications, AI, Automations and Marketing dashboards sit with the page's context, before its actions.
 - Studio's website drafts record which published revision they were started from. A draft older than the live website says so, cannot be published over the newer revision without confirming that by number, and can be discarded; discarded drafts stay in history and can be restored. Restoring any earlier revision starts a new draft from it. Opening the editor, history or a preview never creates a revision, and the Dashboard's Review publishing & history opens history.
 - Studio shows GildOps' own website as visitors see it: the revision preview, the Dashboard thumbnail and the editor canvas draw it with the marketing compositions the live site uses, at real Desktop, Tablet and Mobile widths. Previews of GildOps' site name the build that drew them.
 - Website, page and section templates open in a full-screen preview with each page and three widths. The website, form and portal editors share one workbench whose Structure and Inspector panels resize, collapse and restore, with a maximized canvas.
@@ -382,7 +386,6 @@ Entries describe the product or operational change, not every file touched.
 - Added a published-deployment voice receptionist adapter, business duration/budget controls, central voice-runtime assignment, signed session callbacks, atomic usage metering and restricted human fallback transfer. Unknown usage remains reserved; uncertain transfer effects do not retry automatically. Local implementation is separate from hosted or real-provider acceptance.
 - Replaced the agent contract with the accepted short draft and corrected Calendar authorization/navigation regression tests.
 
-
 - Customer discovery and GildOps subscription proposals now appear only for platform-authorized viewers in the configured operating organization. Communications has a Dialer at the existing `/calls` address, with real open call follow-ups, customer context, retained call history and a top-bar phone entry to the existing pop-out. Calling still requires current permission, entitlement and provider readiness; live-provider acceptance remains separate.
 
 - Customer notification delivery is safer under failure: an expired worker lease can no longer complete a send, and a late provider answer settles the job instead of a resend; a signed delivery or bounce callback that arrives before acceptance is held privately and applied once acceptance is recorded; retries keep the provider account pinned at first claim, and a delivery that may already have been sent is shown as "Delivery uncertain" rather than failed when its account changes or its retry window ends; the scheduled worker now works to a bounded time budget. Not yet exercised against a hosted environment or the real provider.
@@ -406,7 +409,6 @@ Entries describe the product or operational change, not every file touched.
 - Consolidated workspace configuration behind one contextual entry with responsive page sections. Communications, CRM, and Finance retain compatibility redirects; Work, Support, AI, and Studio retain their canonical domain ownership.
 - Communications configuration reports channel-specific readiness blockers without treating provider configuration as proof of delivery.
 - Work configuration separates choosing a work type, creating one, and editing one. Types list beside the selected type's tabs when there is room and drill in one level at a time when there is not; New type opens a focused drawer that asks only for a name and whether the work is scheduled, then lands on the new type's Workflow tab. Deep links (`?type=`, `?tab=`, `?new=1`) and the Work Configure rail keep working; the earlier `?tab=types` now opens General.
-
 
 - Workspace navigation now enters a contextual sidebar with Overview, eligible operating destinations and Back to Workspaces, preserving canonical URLs and the persistent Organization shell.
 
@@ -472,7 +474,6 @@ Entries describe the product or operational change, not every file touched.
 - Connect published Operator Copilot configuration to the existing global Agent rail and shared runtime. Add contextual supervised drafting in Communications and summaries in Support.
 - Add website conversation continuity and a Communications claim/reply/resolve workflow; restrict generated reply writes to the machine role and stop automated replies on handoff.
 - Keep unsupported SMS/email/Support autonomous runtimes, Voice and Customer Portal explicitly unavailable; configuration never implies a verified channel integration.
-
 
 ### 2026-10-08
 

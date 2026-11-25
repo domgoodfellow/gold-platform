@@ -11,8 +11,8 @@ export type SupportConfigurationKind = 'queue' | 'policy';
 /** One kind's records, each with its own editor. Shared by the configuration page and the Configure panel. */
 function SupportRecords({ organizationId, data, kind }: { organizationId: string; data: SupportConfiguration; kind: SupportConfigurationKind }) {
  const records = kind === 'queue' ? data.queues : data.policies;
- if (!records.length) return <EmptyState className="mt-6">{kind === 'queue' ? 'No queues yet.' : 'No service levels yet.'}</EmptyState>;
- return <ul className="mt-6 divide-y divide-border">{records.map(record => <li id={`${kind}-${record.id}`} key={record.id} className="flex flex-wrap items-center justify-between gap-3 py-4"><div><p className="font-medium">{record.name}</p><p className="text-sm text-muted">{record.active ? 'Active' : 'Inactive'}{'target_minutes' in record ? ` · ${record.priority} · ${record.target_minutes} min` : ` · ${record.description}`}</p></div><ConfigurationEditor organizationId={organizationId} data={data} kind={kind} queue={kind === 'queue' ? data.queues.find(item => item.id === record.id) : undefined} policy={kind === 'policy' ? data.policies.find(item => item.id === record.id) : undefined} /></li>)}</ul>;
+ if (!records.length) return <EmptyState>{kind === 'queue' ? 'No queues yet.' : 'No service levels yet.'}</EmptyState>;
+ return <ul className="divide-y divide-border">{records.map(record => <li id={`${kind}-${record.id}`} key={record.id} className="flex flex-wrap items-center justify-between gap-3 py-4"><div><p className="font-medium">{record.name}</p><p className="text-sm text-muted">{record.active ? 'Active' : 'Inactive'}{'target_minutes' in record ? ` · ${record.priority} · ${record.target_minutes} min` : ` · ${record.description}`}</p></div><ConfigurationEditor organizationId={organizationId} data={data} kind={kind} queue={kind === 'queue' ? data.queues.find(item => item.id === record.id) : undefined} policy={kind === 'policy' ? data.policies.find(item => item.id === record.id) : undefined} /></li>)}</ul>;
 }
 
 export async function SupportConfigurationPage({ organizationId, kind }: { organizationId: string; kind: SupportConfigurationKind }) {
@@ -26,7 +26,7 @@ export async function SupportConfigurationPage({ organizationId, kind }: { organ
 
 /** The Configure panel: each configuration concern the member may edit, with its own New control and records. */
 export function SupportConfigurePanel({ organizationId, data, kinds }: { organizationId: string; data: SupportConfiguration; kinds: readonly SupportConfigurationKind[] }) {
- return <div className="space-y-8 p-4">{kinds.map(kind => <section key={kind} aria-labelledby={`support-configure-${kind}`}>
+ return <div className="space-y-8 p-4">{kinds.map(kind => <section key={kind} aria-labelledby={`support-configure-${kind}`} className="flex flex-col gap-6">
   <div className="flex items-center justify-between gap-2">
    <h2 id={`support-configure-${kind}`} className="text-sm font-semibold">{kind === 'queue' ? 'Queues' : 'Service levels'}</h2>
    <ConfigurationEditor organizationId={organizationId} data={data} kind={kind} />

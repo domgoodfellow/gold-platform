@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { ScheduleDay } from '@/lib/domain/scheduling/availability';
 import { DaySchedule } from './day-schedule';
 import { WeekSchedule } from './week-schedule';
@@ -7,8 +8,8 @@ import { CalendarWorkspace } from '@/components/calendar/calendar-workspace';
 import type { ScheduleView } from './schedule-url';
 
 /**
- * The Schedule workspace: view navigation and the resource filter share a row, the toolbar sits
- * beneath it, and the board — Day, Week or Month — fills the rest of the available height. The
+ * The Schedule workspace: the shared calendar control band — period, timezone, view, the resource
+ * filter and creating work — and the board, Day, Week or Month, filling the rest of the height. The
  * route loads the data and resolves the URL into `view`/`date`/`selectedResourceIds`; everything
  * below this line is what Schedule actually looks like. The board itself is the primary content:
  * it fills the workspace and is never replaced by an empty-state sentence, even with zero
@@ -30,6 +31,7 @@ export function ScheduleWorkspace({
   resourcesHref,
   mayAddResource,
   hoursHref = null,
+  actions,
 }: {
   organizationId: string;
   view: ScheduleView;
@@ -52,6 +54,8 @@ export function ScheduleWorkspace({
   mayAddResource: boolean;
   /** The opening-hours editor, for someone who may change hours. */
   hoursHref?: string | null;
+  /** Creating work onto the schedule, for someone who may. */
+  actions?: ReactNode;
 }) {
   const activeDay = days.find((day) => day.date === date) ?? days[0];
 
@@ -61,6 +65,8 @@ export function ScheduleWorkspace({
       view={view}
       date={date}
       today={today}
+      timezone={timezone}
+      actions={actions}
       filters={{ resource: selectedResourceIds }}
       filterControls={<ScheduleResourceFilter organizationId={organizationId} view={view} date={date} resources={allResources} selectedIds={selectedResourceIds} />}
     >

@@ -144,12 +144,14 @@ export function AutomationDashboard({
     .slice(0, 5);
   const maxDay = Math.max(1, ...data.summary.days.map((d) => d.total));
   return (
-    <div className="flex min-w-0 flex-col gap-3">
+    <>
       <PageHeader
         title="Automations"
-        meta={<span className="text-xs">Execution period {data.period.dates[0]} – {data.period.dates.at(-1)} · {timezone}. Rule counts are as of now.</span>}
-        actions={<>
+        meta={<span className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <PeriodSelect label="Date range" value={data.period.when} options={[{ value: 'today', label: 'Today' }, { value: 'week', label: 'Last 7 days' }, { value: 'month', label: 'Last 30 days' }].map((period) => ({ ...period, href: `?when=${period.value}` }))} />
+          <span className="text-xs">Execution period {data.period.dates[0]} – {data.period.dates.at(-1)} · {timezone}. Rule counts are as of now.</span>
+        </span>}
+        actions={<>
           {mayManage && (
             <ButtonLink tone="primary" href={automationPaths(organizationId).newWorkflow}>
               <Plus aria-hidden className="size-4" /> New workflow
@@ -512,6 +514,6 @@ export function AutomationDashboard({
           </OperationalPanel>
         </aside>
       </div>
-    </div>
+    </>
   );
 }

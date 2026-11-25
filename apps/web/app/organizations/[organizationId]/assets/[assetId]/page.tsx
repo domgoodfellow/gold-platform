@@ -1,3 +1,4 @@
+import { AppPage } from '@/components/layout/app-page';
 import { notFound } from 'next/navigation';
 import { RecordHeader } from '@/components/headers/record-header';
 import { AssetDetail } from '@/features/assets/asset-detail';
@@ -37,7 +38,7 @@ export default async function AssetPage({
   const mayAttach = organization.capabilities.includes('document.create');
 
   return (
-    <>
+    <AppPage>
       <RecordHeader
         title={asset.name}
         crumbs={[
@@ -61,6 +62,6 @@ export default async function AssetPage({
         recordReadingAction={recordReadingAction}
         uploadAction={uploadAssetDocumentAction}
       />
-    </>
+    </AppPage>
   );
 }

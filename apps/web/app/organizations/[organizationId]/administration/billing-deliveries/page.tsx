@@ -36,7 +36,7 @@ export default async function BillingDeliveriesPage({ params }: PageProps<'/orga
   return (
     <AppPage>
       <PageHeader title="Billing deliveries" crumbs={platformAncestry(goldId, 'billing-deliveries')} />
-      <Hint className="mb-4">{environment ? `Environment: ${environment}` : 'No billing service is set up here.'}</Hint>
+      <Hint>{environment ? `Environment: ${environment}` : 'No billing service is set up here.'}</Hint>
       <DataTable
         rows={events}
         rowKey={(event) => event.id}

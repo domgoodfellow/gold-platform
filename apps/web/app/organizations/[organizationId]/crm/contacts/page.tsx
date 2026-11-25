@@ -160,7 +160,7 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
             ) : null}
         {/* Contacts owns relationship stages and contact fields; Pipeline owns opportunity stages. */}
         {emptyCollection ? (
-          <section className="mt-6 rounded-lg border border-border bg-surface px-5 py-12 text-center" aria-labelledby="customers-empty-heading">
+          <section className="rounded-lg border border-border bg-surface px-5 py-12 text-center" aria-labelledby="customers-empty-heading">
             <h2 id="customers-empty-heading" className="text-base font-semibold"><BusinessLabel>No contacts yet</BusinessLabel></h2>
             <p className="mx-auto mt-2 w-full max-w-lg text-sm text-muted">
               Add a person or company directly or bring existing contact records into this organization.
@@ -171,7 +171,7 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
           </section>
         ) : (
           <>
-          <div className="mt-4">
+          <div>
             <CustomerListToolbar
               organizationId={organizationId}
               stages={visibleStages}
@@ -181,7 +181,7 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
               companies={companies}
             />
           </div>
-          <div className="mt-4">
+          <div>
           <ContactSelection pageIds={mayAddToList ? customers.map((customer) => customer.id) : []}>
           {mayAddToList ? <ContactSelectionBar organizationId={organizationId} /> : null}
           <CustomerTable
@@ -201,7 +201,7 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
           </ContactSelection>
           </div>
           {customers.total > CONTACT_PAGE_SIZE ? (
-            <nav aria-label="Contact pages" className="mt-4 flex items-center justify-between gap-3 text-sm text-muted">
+            <nav aria-label="Contact pages" className="flex items-center justify-between gap-3 text-sm text-muted">
               {page > 1 ? <ButtonLink href={hrefFor(page - 1)} tone="secondary">Previous</ButtonLink> : <span />}
               <span>Page {page} of {lastPage} · {customers.total} contacts</span>
               {page < lastPage ? <ButtonLink href={hrefFor(page + 1)} tone="secondary">Next</ButtonLink> : <span />}

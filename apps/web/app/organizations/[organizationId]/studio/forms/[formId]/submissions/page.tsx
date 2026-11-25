@@ -20,7 +20,7 @@ export default async function FormSubmissionsPage({ params, searchParams }: Page
     return (
       <AppPage>
         <PageHeader title="Responses" crumbs={workspaceAncestry(organizationId, 'studio-forms')} />
-        <Hint className="mt-5">{`Your role, ${organization.role}, cannot read form responses.`}</Hint>
+        <Hint>{`Your role, ${organization.role}, cannot read form responses.`}</Hint>
       </AppPage>
     );
   }

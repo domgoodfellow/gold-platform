@@ -58,7 +58,7 @@ export async function AccessPage({
         }
       />
       {view === 'members' ? (
-        <div className="mt-4">
+        <div>
           {!mayManage ? (
             <Hint className="mb-3">Your role, {organization.role}, cannot add people here.</Hint>
           ) : null}
@@ -73,7 +73,7 @@ export async function AccessPage({
       ) : null}
 
       {view === 'invitations' ? (
-        <div className="mt-4">
+        <div>
           {!mayManage ? (
             <Hint className="mb-3">Your role, {organization.role}, cannot invite people here.</Hint>
           ) : null}
@@ -88,7 +88,7 @@ export async function AccessPage({
       ) : null}
 
       {view === 'roles' ? (
-        <div className="mt-4">
+        <div>
           {!mayManage ? (
             <Hint className="mb-3">Your role, {organization.role}, cannot manage roles here.</Hint>
           ) : null}

@@ -33,7 +33,7 @@ export default async function GeneralSettingsPage({
       {mayManage ? (
         <>
           {missing.length > 0 ? (
-            <Alert role="status" className="mb-6 block">
+            <Alert role="status" className="block">
               To complete your business profile, add {missing.join(', ').replace(/, ([^,]*)$/, ' and $1')}.
             </Alert>
           ) : null}

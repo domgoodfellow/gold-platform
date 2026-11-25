@@ -14,18 +14,15 @@ export type PageHeaderCrumb = PageLocationCrumb;
  * The page types that share this one header. `PageHeader` itself is `page`; `WorkspaceHome` and
  * `CollectionHeader` are named compositions over it and pass their own type, so every page header
  * draws the same identity, context, controls and support modes from one implementation, and a page
- * type differs only in the few values written here.
- *
- * `after` is the space below the header. It is listed here only so the current spacing is kept in one
- * place; ownership of the space between a page's regions moves to the page frame (`docs/ui-system.md`,
- * Vertical rhythm), and these values go with it.
+ * type differs only in the few values written here. None of them has an outer margin: the page
+ * frame (`AppPage`) spaces the header from what follows it.
  */
 export type PageHeaderArchetype = 'page' | 'workspace-home' | 'collection';
-const ARCHETYPES: Record<PageHeaderArchetype, { slot: string; align: string; rowGap: string; title: string; after: string }> = {
-  page: { slot: 'page-header', align: 'items-start', rowGap: 'gap-y-3', title: 'text-2xl font-semibold tracking-tight', after: 'mb-6' },
+const ARCHETYPES: Record<PageHeaderArchetype, { slot: string; align: string; rowGap: string; title: string }> = {
+  page: { slot: 'page-header', align: 'items-start', rowGap: 'gap-y-3', title: 'text-2xl font-semibold tracking-tight' },
   // `workspace-intro` is the slot name browser checks already locate a workspace dashboard's header by.
-  'workspace-home': { slot: 'workspace-intro', align: 'items-center', rowGap: 'gap-y-3', title: 'text-2xl font-semibold tracking-tight', after: 'mb-6' },
-  collection: { slot: 'page-header', align: 'items-center', rowGap: 'gap-y-2', title: 'text-xl font-semibold tracking-tight', after: 'mb-4' },
+  'workspace-home': { slot: 'workspace-intro', align: 'items-center', rowGap: 'gap-y-3', title: 'text-2xl font-semibold tracking-tight' },
+  collection: { slot: 'page-header', align: 'items-center', rowGap: 'gap-y-2', title: 'text-xl font-semibold tracking-tight' },
 };
 
 /**
@@ -46,6 +43,13 @@ const ARCHETYPES: Record<PageHeaderArchetype, { slot: string; align: string; row
  * a mode with `activity`, `insights` or `configure` — only a mode it genuinely supports — and never
  * places one, which is what makes the order impossible to get wrong; `SupportTrigger` is rendered
  * nowhere else. Each is paired with a `SupportRegistrar` on the page that holds its content.
+ *
+ * **Two regions.** The leading region is the page's context: the visible title when the bar does not
+ * already say it, and `meta` — dates, a period, a record's status, a compact summary, a page-wide
+ * presentation control. The trailing region holds the page's own actions, then its support modes.
+ * Either may be absent; a page needs no primary action and no header actions at all. A header with
+ * nothing visible in either region takes no space: it keeps its `h1` for assistive technology and
+ * still publishes the location, but the page's first region starts where the header would have.
  *
  * `crumbs` are ancestors only; `title` is the current page and the page's single `<h1>`. This
  * always publishes a trail into the workspace bar — `ancestors + current page` — even when
@@ -113,13 +117,16 @@ export function PageHeader({
   insights?: boolean;
   /** Offers Configure. Courtesy only; the panel's own writes are guarded by RLS. */
   configure?: boolean;
-  /** Replaces the page type's default space below the header where the parent already spaces its children. */
+  /** Classes for the header row itself. Never an outer margin: the page frame spaces its regions. */
   className?: string;
 }) {
   const type = ARCHETYPES[archetype];
   const titleInBar = location !== undefined || (!section && breadcrumbLabel === undefined && typeof title === 'string');
+  const controls = Boolean(actions || activity || insights || configure);
+  // Nothing to see: the heading and location stay, out of the page's flow.
+  const empty = titleInBar && !meta && !controls;
   return (
-    <header data-slot={type.slot} data-archetype={archetype} className={cx('@container/page-header flex flex-wrap gap-x-4', type.align, type.rowGap, titleInBar && !meta ? 'justify-end' : 'justify-between', className ?? type.after)}>
+    <header data-slot={type.slot} data-archetype={archetype} data-empty={empty || undefined} className={empty ? 'sr-only' : cx('@container/page-header flex flex-wrap gap-x-4', type.align, type.rowGap, titleInBar && !meta ? 'justify-end' : 'justify-between', className)}>
       <div className={cx('min-w-0', titleInBar && !meta ? 'sr-only' : 'flex-1 basis-64')}>
         {location ? (
           <>
@@ -134,7 +141,7 @@ export function PageHeader({
         )}
         {meta ? <div className={cx('text-sm text-muted', !titleInBar && 'mt-1')}>{meta}</div> : null}
       </div>
-      {actions || activity || insights || configure ? (
+      {controls ? (
         <HeaderControls>
           {actions}
           {activity ? <SupportTrigger mode="activity" size={supportSize} /> : null}

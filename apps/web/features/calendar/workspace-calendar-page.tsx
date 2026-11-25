@@ -38,18 +38,19 @@ export async function SharedCalendarPage({params, searchParams}: {
   const calendarPath=areaHref(organizationId,'calendar');
   const filters={...(workspace?{workspace}:{}),...(source!=='all'?{source}:{})};
   const options={organizationId,timezone:organization.timezone,members:data.members,mayManage:data.mayManageTasks};
-  return <AppPage className="flex h-full min-h-0 flex-1 flex-col">
-    <CollectionHeader location={{}} actions={<EventSheet organizationId={organizationId} workspace={workspace} timezone={organization.timezone} startsAt={localDateTimeToInstant(`${date}T09:00`,organization.timezone)}/>}/>
-    <p className="mb-3 text-xs text-muted">{organization.timezone}</p>
-    {!data.events.length&&!data.notices.length&&!(source==='follow-ups'&&!data.tasksAvailable)?<p role="status" className="mb-3 text-sm text-muted">No events in this period.</p>:null}
-    {source==='follow-ups'&&!data.tasksAvailable?<p role="status" className="mb-3 text-sm text-muted">CRM tasks are unavailable for this business.</p>:null}
-    {data.notices.map(notice=><p key={notice} role="status" className="mb-3 text-sm text-muted">{notice}</p>)}
-    <CalendarWorkspace basePath={calendarPath} view={view} date={date} today={today} filters={filters} filterControls={<form method="get" className="flex flex-wrap items-center gap-2">
-      <input type="hidden" name="view" value={view}/><input type="hidden" name="on" value={date}/>
-      <SelectField aria-label="Calendar workspace" name="workspace" defaultValue={workspace??''} options={[{value:'',label:'All workspaces'},...WORKSPACES.map(item=>({value:item.key,label:item.label}))]}/>
-      <SelectField aria-label="Calendar sources" name="source" defaultValue={source} options={[{value:'all',label:'All sources'},{value:'events',label:'Calendar events'},{value:'follow-ups',label:'CRM tasks',disabled:!data.tasksAvailable},{value:'work',label:'Scheduled Work'}]}/>
-      <Button type="submit">Apply</Button>
-    </form>}>
+  // Only real conditions about what the board can show; an ordinary empty period is the empty board itself.
+  const notices=[...(source==='follow-ups'&&!data.tasksAvailable?['CRM tasks are unavailable for this business.']:[]),...data.notices];
+  return <AppPage fill>
+    <CollectionHeader location={{}}/>
+    <CalendarWorkspace basePath={calendarPath} view={view} date={date} today={today} timezone={organization.timezone} filters={filters}
+      actions={<EventSheet organizationId={organizationId} workspace={workspace} timezone={organization.timezone} startsAt={localDateTimeToInstant(`${date}T09:00`,organization.timezone)}/>}
+      notices={notices.length?<div className="flex flex-col gap-1">{notices.map(notice=><p key={notice} role="status" className="text-sm text-muted">{notice}</p>)}</div>:null}
+      filterControls={<form method="get" className="flex flex-wrap items-center gap-2" aria-label="Filter the calendar">
+        <input type="hidden" name="view" value={view}/><input type="hidden" name="on" value={date}/>
+        <SelectField aria-label="Calendar workspace" name="workspace" defaultValue={workspace??''} options={[{value:'',label:'All workspaces'},...WORKSPACES.map(item=>({value:item.key,label:item.label}))]}/>
+        <SelectField aria-label="Calendar sources" name="source" defaultValue={source} options={[{value:'all',label:'All sources'},{value:'events',label:'Calendar events'},{value:'follow-ups',label:'CRM tasks',disabled:!data.tasksAvailable},{value:'work',label:'Scheduled Work'}]}/>
+        <Button type="submit" tone="secondary">Apply</Button>
+      </form>}>
       <OrganizationCalendar selectedDate={date} workspace={workspace} actorId={actor.id} mayManageCalendar={organization.capabilities.includes('organization.manage')} basePath={calendarPath} {...options} events={data.events} dates={dates} view={view} month={startOfMonth(date)} today={today} filters={filters}/>
     </CalendarWorkspace>
   </AppPage>;

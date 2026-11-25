@@ -120,7 +120,7 @@ export default async function SchedulePage({
   }));
 
   return (
-    <AppPage className="flex h-full min-h-0 flex-1 flex-col">
+    <AppPage fill>
       {mayConfigure ? (
         <ConfigureRegistrar
           title={`${areaLabel('schedule')} settings`}
@@ -141,7 +141,7 @@ export default async function SchedulePage({
         title={areaLabel('schedule')}
         crumbs={workspaceAncestry(organizationId, 'schedule')}
         configure={mayConfigure}
-        actions={<>{organization.capabilities.includes('work_item.create') ? <NewWorkAction organizationId={organizationId}/> : null}<ButtonLink size="small" tone="secondary" href={`/organizations/${organizationId}/work/dispatch?on=${date}`}>Dispatch board</ButtonLink></>}
+        actions={<ButtonLink size="small" tone="secondary" href={`/organizations/${organizationId}/work/dispatch?on=${date}`}>Dispatch board</ButtonLink>}
       />
 
       <ScheduleWorkspace
@@ -159,6 +159,7 @@ export default async function SchedulePage({
         resourcesHref={resourcesHref}
         mayAddResource={mayAddResource}
         hoursHref={mayConfigure ? `/organizations/${organizationId}/schedule/configuration` : null}
+        actions={organization.capabilities.includes('work_item.create') ? <NewWorkAction organizationId={organizationId}/> : null}
       />
     </AppPage>
   );

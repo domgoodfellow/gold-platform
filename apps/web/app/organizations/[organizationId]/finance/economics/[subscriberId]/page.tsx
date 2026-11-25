@@ -55,7 +55,7 @@ export default async function CostToServePage({ params }: PageProps<'/organizati
         crumbs={[{ label: 'Finance', href: finance }, { label: 'Economics', href: `${finance}/economics` }]}
         actions={subscriptionId ? <ButtonLink href={`${finance}/subscriptions/${subscriptionId}`} tone="secondary" size="small">Subscription</ButtonLink> : undefined}
       />
-      <Hint className="mb-5">
+      <Hint>
         {new Date(period.start).toLocaleDateString('en-CA', { month: 'long', year: 'numeric', timeZone: 'UTC' })} · amounts in {revenue.reportingCurrency}
         {revenue.hasMixedCurrency ? ' · parts in another currency are left out of these totals' : ''}
       </Hint>
@@ -74,7 +74,7 @@ export default async function CostToServePage({ params }: PageProps<'/organizati
         </DividedList>
       </Section>
 
-      <Section className="mt-8">
+      <Section>
         <SectionHeading>Known cost to serve</SectionHeading>
         <DividedList as="div" className="mt-2">
           <Row label="Usage" value={cost.directUsageCogsMicros / 1_000_000} currency={cost.reportingCurrency} />
@@ -93,7 +93,7 @@ export default async function CostToServePage({ params }: PageProps<'/organizati
         </DividedList>
       </Section>
 
-      <Section className="mt-8">
+      <Section>
         <SectionHeading>Contribution</SectionHeading>
         <DividedList as="div" className="mt-2">
           <Row label="Known contribution" value={revenue.knownContributionMinor} currency={revenue.reportingCurrency} strong />
@@ -105,7 +105,7 @@ export default async function CostToServePage({ params }: PageProps<'/organizati
       </Section>
 
       {storage ? (
-        <Section className="mt-8">
+        <Section>
           <SectionHeading>Storage</SectionHeading>
           <DividedList as="div" className="mt-2">
             <div className="flex items-baseline justify-between gap-x-3 py-2 text-sm">
@@ -120,7 +120,7 @@ export default async function CostToServePage({ params }: PageProps<'/organizati
         </Section>
       ) : null}
 
-      <Section className="mt-8">
+      <Section>
         <SectionHeading>Recorded costs</SectionHeading>
         {infrastructureCosts.length === 0 ? (
           <p className="mt-2 text-sm text-muted">Nothing recorded for this business this month.</p>

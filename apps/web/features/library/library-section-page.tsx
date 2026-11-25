@@ -28,8 +28,7 @@ export function LibrarySectionPage({
 }) {
   return (
     <AppPage>
-      <CollectionHeader title={label} crumbs={[{ label: areaLabel('library'), href: libraryHref(organizationId, 'files') }]} />
-      <LibraryNav organizationId={organizationId} active={active} />
+      <CollectionHeader title={label} crumbs={[{ label: areaLabel('library'), href: libraryHref(organizationId, 'files') }]} meta={<LibraryNav organizationId={organizationId} active={active} />} />
       <EmptyState title={empty} description={description} />
     </AppPage>
   );

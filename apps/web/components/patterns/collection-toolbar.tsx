@@ -30,7 +30,7 @@ export function CollectionToolbar({ action, scopes, scopeLabel = 'Views', leadin
   viewId?: string;
 }) {
   return <div data-slot="collection-toolbar" className={cx('flex flex-col gap-3', className)}>
-    {scopes?.length ? <ViewNav label={scopeLabel} items={scopes} className="mb-0 max-sm:max-w-full max-sm:flex-nowrap max-sm:overflow-x-auto" /> : null}
+    {scopes?.length ? <ViewNav label={scopeLabel} items={scopes} className="max-sm:max-w-full max-sm:flex-nowrap max-sm:overflow-x-auto" /> : null}
     {/* Keyed by the current view: after a chip removes a filter in place, the form starts again from
         the URL rather than keeping the removed value in an untouched field and sending it back. */}
     <form key={JSON.stringify([hidden, search?.value ?? '', active.map(filter => filter.key + String(filter.removeHref))])} method="get" action={action} role="search" className="relative flex flex-wrap items-start gap-2">

@@ -105,7 +105,7 @@ export async function FinanceCollection({ organizationId, kind, query }: { organ
         {kind === 'invoices' ? <label className="flex flex-col gap-1 text-sm">Due on<TextInput name="due" type="date" aria-label="Due on" defaultValue={value('due')} /></label> : null}
       </>}
       sort={<SelectField name="sort" aria-label={`Sort ${TITLES[kind].toLowerCase()}`} defaultValue={value('sort')} className="w-full md:w-44" options={[...view.sorts.map(([key, label]) => ({ value: key, label: label }))]} />}
-      active={active} resetHref={filtered ? path : undefined} className="mb-4" />
+      active={active} resetHref={filtered ? path : undefined} />
     <section aria-label={`${TITLES[kind]} results`} className="min-w-0">
       <p role="status" className="mb-2 text-sm text-muted"><span className="font-medium text-foreground tabular-nums">{result.total}</span> {result.total === 1 ? one : many}{filtered ? ' match this view' : ''}</p>
       {kind === 'invoices' ? <InvoicesTable timezone={organization.timezone} organizationId={organizationId} today={today} inspectHref={inspectHref} rows={result.rows as Awaited<ReturnType<typeof readFinanceInvoices>>['rows']} empty={filtered ? 'No invoices match this view.' : 'No invoices issued yet. Invoices are issued from priced Work.'} mayRecord={billing && may('payment.record')} />
@@ -116,7 +116,7 @@ export async function FinanceCollection({ organizationId, kind, query }: { organ
     {inspected && inspectedInvoice ? <InvoiceInspector key={inspected.id} organizationId={organizationId} row={inspected} invoice={inspectedInvoice} timezone={organization.timezone} today={today} closeHref={here} mayRecord={billing && may('payment.record')} document={{ available: Boolean(inspectedDocument), mayCreate: billing && may('invoice.issue') }}
       email={{ may: mayEmail, inboxOpen, senderProblem: sending && sending.state !== 'ready' ? sending.detail ?? 'This business cannot send email yet.' : null,
         sends: inspectedSends.map(send => ({ id: send.id, conversationId: send.conversationId, recipient: send.recipient, fromAddress: send.fromAddress, createdAt: send.createdAt, sentAgain: send.sentAgain, ...invoiceEmailState(send.status, send.failureReason) })) }} /> : null}
-    {result.total > PAGE_SIZE || page > 1 ? <nav aria-label="Pagination" className="mt-4 flex items-center justify-between gap-3 text-sm">
+    {result.total > PAGE_SIZE || page > 1 ? <nav aria-label="Pagination" className="flex items-center justify-between gap-3 text-sm">
       {page > 1 ? <ButtonLink tone="secondary" size="small" href={href({ page: String(page - 1) })}>Previous</ButtonLink> : <span />}
       <span className="tabular-nums text-muted">Page {page} of {pages} · {result.total} records</span>
       {page * PAGE_SIZE < result.total ? <ButtonLink tone="secondary" size="small" href={href({ page: String(page + 1) })}>Next</ButtonLink> : <span />}

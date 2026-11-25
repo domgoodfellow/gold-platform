@@ -228,7 +228,7 @@ export function AgentWorkbench({
     });
   }
   return (
-    <AppPage className="space-y-4">
+    <AppPage>
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
         <div className="flex min-w-0 items-center gap-3">
           <Link aria-label="Back to agents" href={`${base}/agents`}>

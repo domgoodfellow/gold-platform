@@ -74,7 +74,7 @@ export async function DispatchWorkspace({ organizationId, query, db, organizatio
   const labels: Record<string, string> = { q: `Search: ${one('q')}`, type: `Type: ${types.find(t => t.id === typeId)?.name}`, status: `Stage: ${statuses.find(s => s.id === statusId)?.name}`, resource: `Resource: ${resources.find(r => r.id === resourceId)?.name}`, class: `Class: ${isResourceClass(resourceClass) ? RESOURCE_CLASS_LABELS[resourceClass] : ''}`, assignment: DISPATCH_ASSIGNMENTS.find(([key]) => key === assignment)?.[1] ?? '' };
   const active: ActiveFilter[] = Object.entries(labels).filter(([key]) => state[key as keyof typeof state]).map(([key, label]) => ({ key, label, removeHref: href({ [key]: '' }) }));
   const markers = queue.flatMap(w => { const l = locations.find(l => l.id === w.location?.id); return l?.coordinates ? [{ id: w.id, label: `${w.title} · ${l.label}`, ...l.coordinates }] : []; });
-  return <AppPage className="space-y-3">
+  return <AppPage>
     <PageHeader title="Dispatch" crumbs={[{ label: 'Work', href: `${base}/field` }]} actions={<><ButtonLink size="small" tone="secondary" href={calendar()}>Schedule</ButtonLink><ButtonLink size="small" tone="secondary" href={`${base}/work`}><BusinessLabel>Work items</BusinessLabel></ButtonLink></>}/>
     <CollectionToolbar action={`${base}/work/dispatch`} viewId="dispatch"
       leading={<div className="flex flex-wrap gap-2"><label className="sr-only" htmlFor="dispatch-date">Date</label><TextInput id="dispatch-date" name="on" type="date" defaultValue={date} title={organization.timezone} className="w-full sm:w-40"/><WorkTypeSelect value={typeId ?? ''} types={[{ id: '', name: 'All work types' }, ...types]} hrefs={Object.fromEntries([{ id: '' }, ...types].map(t => [t.id, href({ type: t.id })]))}/></div>}
@@ -87,7 +87,7 @@ export async function DispatchWorkspace({ organizationId, query, db, organizatio
         <label className="text-sm">Resource class<SelectField name="class" defaultValue={resourceClass} options={[{ value: '', label: 'All classes' }, ...Object.entries(RESOURCE_CLASS_LABELS).map(([id, label]) => ({ value: id, label: label }))]} /></label>
         <label className="text-sm">Assignment<SelectField name="assignment" defaultValue={assignment} options={[...DISPATCH_ASSIGNMENTS.map(([key, label]) => ({ value: key, label: label }))]} /></label>
       </>}
-      display={<ViewNav label="Dispatch presentation" size="small" className="mb-0" items={[['list', 'Queue'], ['schedule', 'Availability'], ['map', 'Map']].map(([key, label]) => ({ key, label, href: href({ mode: key }), current: mode === key }))}/>}
+      display={<ViewNav label="Dispatch presentation" size="small" items={[['list', 'Queue'], ['schedule', 'Availability'], ['map', 'Map']].map(([key, label]) => ({ key, label, href: href({ mode: key }), current: mode === key }))}/>}
       active={active} resetHref={active.length ? dispatchHref(organizationId, { on: date, mode }) : undefined}/>
     <p className="text-xs text-muted">{assignment === 'upcoming' ? 'The 7 days after this day.' : ['scheduled', 'shortfall', 'conflict'].includes(assignment) ? `Selected day: ${date}.` : 'Active work across all dates.'}</p>
     <div className="grid min-w-0 items-start gap-3 lg:grid-cols-[minmax(0,3fr)_minmax(18rem,2fr)]">

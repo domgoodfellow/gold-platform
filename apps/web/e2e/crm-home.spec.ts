@@ -87,13 +87,13 @@ test.describe('Shared Work calendar foundation',()=>{
       expect(new URL(page.url()).searchParams.getAll('resource')).toEqual(resources);
       await page.screenshot({path:testInfo.outputPath(`work-calendar-${view.toLowerCase()}-desktop.png`),fullPage:true});
     }
-    await page.getByRole('link',{name:'Next →',exact:true}).click();
+    await page.getByRole('link',{name:'Next month',exact:true}).click();
     await expect(page).toHaveURL(/view=month/);
     expect(new URL(page.url()).searchParams.getAll('resource')).toEqual(resources);
     await page.getByRole('link',{name:/^View [0-9]{4}-/}).first().click();
     await expect(page).toHaveURL(/view=day/);
     expect(new URL(page.url()).searchParams.getAll('resource')).toEqual(resources);
-    await page.getByRole('button',{name:'Show this day',exact:true}).click();
+    await page.getByRole('button',{name:/, show this day$/}).click();
     await expect(page.getByRole('grid')).toBeVisible();
     await page.keyboard.press('Escape');
     await page.setViewportSize({width:390,height:844});

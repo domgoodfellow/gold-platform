@@ -28,7 +28,7 @@ export default async function OpportunitiesPage({ params, searchParams }: { para
   const pageHref = (next: number) => { const state = new URLSearchParams(); for (const key of ['q', 'stage', 'owner', 'kind', 'customer','next','closeFrom','closeBefore']) if (value(key)) state.set(key, value(key)); state.set('page', String(next)); return `${href}?${state}`; };
   return <AppPage>
     <CollectionHeader location={{}} actions={<><ButtonLink href={areaHref(organizationId, 'opportunity-pipeline')}>Opportunity pipeline</ButtonLink>{organization.capabilities.includes('opportunity.create') ? <OpportunitySheet organizationId={organizationId} stages={stages} members={members} defaultCurrency={organization.currency ?? ''} customer={customer ?? undefined} /> : null}</>} />
-    <form method="get" className="mb-4 grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-5" role="search">
+    <form method="get" className="grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-5" role="search">
       <FormField id="opportunity-search" label="Search opportunities">{(props) => <TextInput {...props} name="q" type="search" defaultValue={value('q')} />}</FormField>
       <FormField id="opportunity-kind" label="Classification">{(props) => <SelectField {...props} name="kind" defaultValue={kind ?? ''} options={[{ value: '', label: 'All' }, { value: 'open', label: 'Open' }, { value: 'won', label: 'Won' }, { value: 'lost', label: 'Lost' }]} />}</FormField>
       <FormField id="opportunity-stage" label="Opportunity stage">{(props) => <SelectField {...props} name="stage" defaultValue={value('stage')} options={[{ value: '', label: 'All stages' }, { value: 'unstaged', label: 'Unstaged' }, ...stages.map((stage) => ({ value: stage.id, label: stage.name }))]} />}</FormField>
@@ -36,8 +36,8 @@ export default async function OpportunitiesPage({ params, searchParams }: { para
       {value('customer') ? <input name="customer" type="hidden" value={value('customer')} /> : null}<Button type="submit" tone="secondary">Apply filters</Button>
       {['next','closeFrom','closeBefore'].map(key=>value(key)?<input key={key} name={key} type="hidden" value={value(key)}/>:null)}
     </form>
-    {value('customer') ? <p className="mb-3 text-sm">Contact: {customer?.name ?? 'Unavailable'} · <ButtonLink tone="text" href={href}>Clear customer filter</ButtonLink></p> : null}
+    {value('customer') ? <p className="text-sm">Contact: {customer?.name ?? 'Unavailable'} · <ButtonLink tone="text" href={href}>Clear customer filter</ButtonLink></p> : null}
     <OpportunityTable organizationId={organizationId} opportunities={items} timezone={organization.timezone} followUpOptions={followUpsEnabled?{organizationId,timezone:organization.timezone,members,mayManage:organization.capabilities.includes('follow_up.manage')}:undefined}/>
-    <div className="mt-4 flex flex-wrap items-center gap-3 text-sm"><span>{items.total} opportunities · Page {page}</span>{page > 1 ? <ButtonLink href={pageHref(page - 1)}>Previous</ButtonLink> : null}{page * 50 < items.total ? <ButtonLink href={pageHref(page + 1)}>Next</ButtonLink> : null}</div>
+    <div className="flex flex-wrap items-center gap-3 text-sm"><span>{items.total} opportunities · Page {page}</span>{page > 1 ? <ButtonLink href={pageHref(page - 1)}>Previous</ButtonLink> : null}{page * 50 < items.total ? <ButtonLink href={pageHref(page + 1)}>Next</ButtonLink> : null}</div>
   </AppPage>;
 }

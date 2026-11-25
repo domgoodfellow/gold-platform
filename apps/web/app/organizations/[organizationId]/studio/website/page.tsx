@@ -66,7 +66,7 @@ export default async function StudioWebsitePage({ params, searchParams }: PagePr
           sectionPatterns={sectionPatterns}
         />
       ) : (
-        <Hint className="mt-5">{`Your role, ${organization.role}, cannot edit or preview this website.`}</Hint>
+        <Hint>{`Your role, ${organization.role}, cannot edit or preview this website.`}</Hint>
       )}
     </AppPage>
   );

@@ -1,3 +1,4 @@
+import { AppPage } from '@/components/layout/app-page';
 import { CollectionHeader } from '@/components/patterns/collection-header';
 import { requireOrganization } from '@/lib/route/organization';
 import {
@@ -71,16 +72,16 @@ export default async function AutomationWorkflowsPage({
     return `?${p}`;
   };
   return (
-    <div className="min-w-0">
+    <AppPage>
       <CollectionHeader
         title="Workflows"
         crumbs={workspaceAncestry(organizationId, 'automation-rules')}
         actions={create}
       />
       {rules.length === 0 ? (
-        <EmptyState className="my-6" title="No workflows yet" action={create} />
+        <EmptyState title="No workflows yet" />
       ) : (<>
-      <form className="my-3 flex flex-wrap items-center gap-2">
+      <form className="flex flex-wrap items-center gap-2">
         <TextInput
           name="q"
           aria-label="Search workflows"
@@ -108,12 +109,12 @@ export default async function AutomationWorkflowsPage({
         summary={summary}
         timezone={organization.timezone}
       />
-      <div className="mt-3 flex gap-4 text-sm">
+      <div className="flex gap-4 text-sm">
         {page > 1 && <a href={href(page - 1)}>Previous</a>}
         {filtered.length > page * 25 && <a href={href(page + 1)}>Next</a>}
       </div>
       </>)}
       <ManagedAutomations organizationId={organizationId} entries={managed} />
-    </div>
+    </AppPage>
   );
 }

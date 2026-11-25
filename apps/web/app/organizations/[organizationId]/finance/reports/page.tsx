@@ -28,11 +28,11 @@ export default async function FinanceReports({ params, searchParams }: PageProps
   ]);
   return <AppPage>
     <CollectionHeader title="Financial performance" crumbs={[{ label: 'Finance', href: `/organizations/${organizationId}/finance` }]} />
-    <form className="mb-4 flex flex-wrap gap-2">
+    <form className="flex flex-wrap gap-2">
       <TextInput type="month" name="month" aria-label="Reporting month" defaultValue={period.month} className="w-48" />
       <Button tone="secondary" type="submit">Apply</Button>
     </form>
-    <p className="mb-4 text-sm text-muted">Recorded: invoiced and incurred by Customer · {organization.timezone}. Margin uses recorded costs; missing entries do not establish the full cost of delivery.</p>
+    <p className="text-sm text-muted">Recorded: invoiced and incurred by Customer · {organization.timezone}. Margin uses recorded costs; missing entries do not establish the full cost of delivery.</p>
     <DataTable rows={rows} rowKey={r => `${r.groupId}-${r.currency}`} empty="No financial activity in this period." columns={[
       { key: 'customer', header: 'Customer', emphasis: 'primary', cell: r => r.label ?? 'Unattributed' },
       { key: 'currency', header: 'Currency', cell: r => r.currency },
@@ -41,6 +41,6 @@ export default async function FinanceReports({ params, searchParams }: PageProps
       { key: 'margin', header: 'Margin on recorded costs', numeric: true, cell: r => r.marginMinor === null ? 'Unknown' : formatMoney(r.marginMinor, r.currency) },
     ]} />
     {economics && currency ? <ExpectedEconomicsReport organizationId={organizationId} currency={currency} month={period.month} {...economics} /> : null}
-    <div className="mt-6"><PricingPlanner key={organizationId} currency={organization.currency} items={items} /></div>
+    <div><PricingPlanner key={organizationId} currency={organization.currency} items={items} /></div>
   </AppPage>;
 }

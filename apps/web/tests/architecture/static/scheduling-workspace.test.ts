@@ -422,12 +422,11 @@ describe('the Schedule workspace and every board fill the available height throu
     expect(shell).toMatch(/overflow-y-auto/);
   });
 
-  it('the Schedule page opts into that height chain explicitly, through AppPage', () => {
+  it('the Schedule page opts into that height chain explicitly, through AppPage fill', () => {
     const page = read(`${ROUTES}/schedule/page.tsx`);
-    const match = /<AppPage className="([^"]*)"/.exec(page);
-    expect(match, 'AppPage should carry an explicit className').not.toBeNull();
-    expect(match![1]).toMatch(/flex-1/);
-    expect(match![1]).toMatch(/min-h-0/);
+    expect(page).toMatch(/<AppPage fill>/);
+    const frame = read(`${WEB}/components/layout/app-page.tsx`);
+    expect(frame).toMatch(/fill && 'h-full min-h-0 flex-1'/);
   });
 });
 

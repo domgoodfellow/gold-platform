@@ -38,9 +38,9 @@ export default async function CommunicationsPage({
       />
       <ChannelReadiness gate={gate} organizationId={organizationId} diagnostics={channels.diagnostics} maySend={organization.capabilities.includes('message.send')} channel="sms" />
 
-      <Section className="mt-8"><SectionHeading>Numbers & assignments</SectionHeading><ButtonLink href={`/organizations/${organizationId}/comms/configuration/numbers`} tone="text">Manage numbers & assignments</ButtonLink></Section>
+      <Section><SectionHeading>Numbers & assignments</SectionHeading><ButtonLink href={`/organizations/${organizationId}/comms/configuration/numbers`} tone="text">Manage numbers & assignments</ButtonLink></Section>
 
-      <Section className="mt-8">
+      <Section>
         <SectionHeading>Email</SectionHeading>
         <ButtonLink
           href={`/organizations/${organizationId}/${configTarget('email').path}`}

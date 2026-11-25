@@ -61,6 +61,7 @@ export function designProperties(selection: DesignSelection): CSSProperties {
   if (selection.density === 'compact' || selection.density === 'comfortable') {
     values['--control-height'] = selection.density === 'compact' ? '2rem' : '2.75rem';
     values['--visual-spacing'] = selection.density === 'compact' ? '0.75rem' : '1rem';
+    values['--page-gap'] = selection.density === 'compact' ? '0.75rem' : '1.5rem';
   }
   return values as CSSProperties;
 }

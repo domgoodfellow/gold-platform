@@ -21,11 +21,21 @@ const widths: Record<PageWidth, string> = {
   reading: 'w-full max-w-3xl mx-auto',
 };
 
+/**
+ * **The frame owns the space between the page's regions** (`docs/ui-system.md`, Vertical rhythm):
+ * its direct children — header, local navigation, toolbar, sections, the working surface — are
+ * stacked one `--page-gap` apart, and none of them carries an outer margin of its own. The gap
+ * follows the person's Display density. What is inside a region is that region's own composition.
+ *
+ * `fill` is for a height-constrained working surface — a calendar, a board, an inbox, an editor:
+ * the frame takes the canvas's remaining height and its last region can fill it and scroll inside.
+ */
 export function AppPage({
   width = 'fluid',
+  fill = false,
   className,
   ...props
-}: ComponentProps<'div'> & { width?: PageWidth }) {
+}: ComponentProps<'div'> & { width?: PageWidth; fill?: boolean }) {
   const { children, ...rest } = props;
-  return <div {...rest} className={cx('min-w-0', widths[width], className)}><Suspense fallback={null}><SetupReturnLink /></Suspense>{children}</div>;
+  return <div data-app-page={fill ? 'fill' : ''} {...rest} className={cx('flex min-w-0 flex-col gap-(--page-gap)', fill && 'h-full min-h-0 flex-1', widths[width], className)}><Suspense fallback={null}><SetupReturnLink /></Suspense>{children}</div>;
 }

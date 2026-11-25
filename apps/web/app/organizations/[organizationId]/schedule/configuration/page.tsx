@@ -20,7 +20,7 @@ export default async function ScheduleConfigurationPage({
   return (
     <SettingsPageFrame>
       <PageHeader title={`${areaLabel('schedule')} settings`} crumbs={[{ label: areaLabel('schedule'), href: `/organizations/${organizationId}/schedule` }]} />
-      <div className="mt-6">
+      <div>
         <ScheduleConfiguration
           organizationId={organizationId}
           role={organization.role}

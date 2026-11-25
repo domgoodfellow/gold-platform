@@ -702,7 +702,7 @@ What can I do here?
 
 The shared page-identity components own this responsibility.
 
-**One page header.** `PageHeader` is the only page-header implementation. `WorkspaceHome`, `CollectionHeader` and `RecordHeader` are named compositions over it: each passes its page type and never draws its own title row, controls row or support-mode triggers. A page type changes only the visible title's scale, the row's vertical alignment and the space below the header; everything else (title-in-bar rule, `meta`, actions, support-mode order, location publishing) is shared. All three accept `meta`, the header's leading region.
+**One page header.** `PageHeader` is the only page-header implementation. `WorkspaceHome`, `CollectionHeader` and `RecordHeader` are named compositions over it: each passes its page type and never draws its own title row, controls row or support-mode triggers. A page type changes only the visible title's scale, the row's vertical alignment and the space between its rows when it wraps. The space below the header belongs to the page frame (Vertical rhythm). Everything else (title-in-bar rule, `meta`, actions, support-mode order, location publishing) is shared. All three accept `meta`, the header's leading region.
 
 ### Page location contract (ADR-047)
 
@@ -745,6 +745,13 @@ It supports:
 - ancestor breadcrumbs;
 - optional factual metadata;
 - page-level actions.
+
+It has two regions, either of which may be absent:
+
+- **Leading context.** The visible title when the workspace bar does not already show it, and `meta`: dates, a period, a record's status, short facts, a compact summary, a page-wide presentation control such as a reporting period, or page-local view navigation such as Library's section tabs (ADR-048), so it shares a row with the page's actions instead of taking one of its own. No cards in the header, and a compact summary is not a set of metric tiles. Filters that narrow a collection stay in that collection's toolbar.
+- **Trailing controls.** The page's own actions, then its support modes (Activity, Insights, Configure). An action belongs here when it acts on the whole page. An action that acts on one working surface (creating an event on a calendar, uploading into a file list) belongs to that surface's toolbar when it has one. A page may have no primary action and no header actions. Configure appears only where the page has configuration. An action already offered by another entry point on the same page is not repeated.
+
+A header with nothing visible in either region takes no space. Its `h1` and location registration remain.
 
 It deliberately does **not** expose a generic `description` slot.
 
@@ -935,13 +942,22 @@ Route-local spacing is reserved for exceptional internal composition.
 
 Do not solve a shared rhythm problem by repeating the same utility class in dozens of pages.
 
+**One owner for every space.** A parent owns the space between its children; a component owns only its internal geometry. No component carries an outer margin by default, and no parent cancels a child's margin to fix the rhythm.
+
+- **The page frame owns the space between regions.** `AppPage`'s direct children are the page's regions: header, local navigation, toolbar, sections and the working surface. The frame stacks them one `--page-gap` apart, and none of them sets an outer margin of its own. A layout that wraps `AppPage` (`SettingsPageFrame`, `WorkspaceHome`) passes its children straight through as regions.
+- **Display density sets the gap.** `--page-gap` is 1rem by default, 0.75rem at compact and 1.5rem at comfortable (`designProperties`). Personal density, a surface's own working density and responsive geometry stay separate settings.
+- **A region owns what is inside it.** A collection toolbar spaces its scopes, search and chips; a calendar spaces its control band and board; a section spaces its heading and body. That inner spacing is the region's, not the page's. A heading that introduces content is part of that content's region, never a region of its own.
+- **Height-constrained surfaces.** A calendar, board, inbox or editor that fills the remaining height uses `AppPage fill`. The frame takes the canvas's height and the working surface fills the rest and scrolls inside itself. No other page fills.
+- **Empty regions take no space.** A region with nothing to show is not rendered. A page header with nothing visible stays in the page for its `h1` and location, but out of the flow, so the first region starts where the header would have.
+- **Exceptions.** A specialized composition keeps local geometry where the layout itself is the content (a board's columns, a dashboard's grid, an editor's panes), and may use its own borders and grids inside its region.
+
 ---
 
 ### Section rhythm
 
 A semantic `Section` represents a meaningful peer region of a page.
 
-It should own the standard relationship to adjacent peer sections.
+Its parent owns the relationship to adjacent peer sections: on a page, the frame's gap. `Section` itself draws only its rule, the space beneath the rule and its type scale.
 
 A page should not choose among arbitrary `mt-6`, `mt-8`, and `mt-10` values merely because each route was authored independently.
 

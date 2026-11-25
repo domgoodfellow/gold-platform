@@ -74,7 +74,7 @@ export default async function CallDetailPage({
 
       {live ? (
         // ui-copy-allow: persistent notice for an unresolved condition: a live call no one from the business may be on
-        <Hint className="mb-4">
+        <Hint>
           This call is still going. It is operated from the call bar at the bottom of the screen on the browser that placed it; if that
           browser was closed or reloaded, no one from the business is on it until it ends.
         </Hint>
@@ -101,7 +101,7 @@ export default async function CallDetailPage({
         </DefinitionList>
       </section>
 
-      <section className="mt-6">
+      <section>
         <GroupHeading>Contact</GroupHeading>
         {call.customerId ? (
           <p className="mt-2 text-sm">
@@ -117,7 +117,7 @@ export default async function CallDetailPage({
         )}
       </section>
 
-      <section className="mt-6">
+      <section>
         <GroupHeading>Outcome</GroupHeading>
         <DefinitionList className="mt-2">
           <Detail label="How it went">{call.outcome?.name ?? <span className="text-subtle">Not written up</span>}</Detail>
@@ -125,7 +125,7 @@ export default async function CallDetailPage({
         </DefinitionList>
       </section>
 
-      <section className="mt-6">
+      <section>
         <GroupHeading>Recording</GroupHeading>
         {call.hasRecording && mayPlay ? (
           <audio controls preload="none" className="mt-2 w-full max-w-md" src={`/organizations/${organizationId}/calls/${call.id}/recording`} />
@@ -136,7 +136,7 @@ export default async function CallDetailPage({
         )}
       </section>
 
-      <section className="mt-6">
+      <section>
         <GroupHeading>Who was on it</GroupHeading>
         {call.legs.length === 0 ? (
           <Hint className="mt-2">Nobody is recorded on this call — it was written down by hand.</Hint>
@@ -153,7 +153,7 @@ export default async function CallDetailPage({
         )}
       </section>
 
-      <section className="mt-6">
+      <section>
         <GroupHeading>Timeline</GroupHeading>
         <ol className="mt-2 flex flex-col gap-1 text-sm">
           {timeline.map((entry, index) => (

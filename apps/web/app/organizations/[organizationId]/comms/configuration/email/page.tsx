@@ -28,7 +28,7 @@ export default async function InboxEmailPage({ params }: PageProps<'/organizatio
   return (
     <SettingsPageFrame>
       <PageHeader title="Incoming email" crumbs={[...workspaceConfigCrumbs(organizationId, 'inbox-email', gate)]} />
-      <div className="mt-6">
+      <div>
         <ChannelReadiness gate={gate} organizationId={organizationId} diagnostics={channels.diagnostics} maySend={organization.capabilities.includes('message.send')} channel="email" />
       </div>
       <EmailAddresses organizationId={organizationId} identities={identities} domains={[]} allowAdding={false} />

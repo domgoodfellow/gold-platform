@@ -24,7 +24,7 @@ export default async function AdministrationOrganizationUsage({ params }: PagePr
   return (
     <AppPage>
       <TenantWorkspaceHeader goldId={goldId} id={organizationId} slug={tenant.slug} name={tenant.name} currency={tenant.currency} />
-      <div className="mt-6">
+      <div>
         {allowances.length === 0 ? (
           <EmptyState>No allowance is metered for this business.</EmptyState>
         ) : (

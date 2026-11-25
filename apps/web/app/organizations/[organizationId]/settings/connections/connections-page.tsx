@@ -73,7 +73,7 @@ export async function ConnectionsPage({
       <SettingsPageHeader title="Connections" />
       <IntegrationsNav organizationId={organizationId} current="connected" />
       {oauthError ? (
-        <Hint className="mt-4 block" role="alert">
+        <Hint className="block" role="alert">
           {oauthError}
         </Hint>
       ) : null}

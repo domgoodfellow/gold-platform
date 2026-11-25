@@ -61,7 +61,7 @@ export default async function FeaturesSettingsPage({
   return (
     <SettingsPageFrame>
       <SettingsPageHeader title="Features" />
-      <Hint className="mt-1">
+      <Hint>
         An included feature is on unless switched off here; switching one off keeps everything it has recorded.
       </Hint>
       <FeatureCatalogue organizationId={organizationId} features={items} mayManage={mayManage} />

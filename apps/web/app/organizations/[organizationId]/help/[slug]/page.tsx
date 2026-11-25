@@ -17,7 +17,7 @@ export default async function HelpArticlePage({ params }: PageProps<'/organizati
 
   return (
     <AppPage width="reading">
-      <Link href={`/organizations/${organizationId}/help`} className="mb-3 inline-block text-sm text-accent-text hover:underline">All help articles</Link>
+      <Link href={`/organizations/${organizationId}/help`} className="self-start text-sm text-accent-text hover:underline">All help articles</Link>
       <PageHeader
         section="Help"
         title={article.title}

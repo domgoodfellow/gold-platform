@@ -46,7 +46,7 @@ export function TwilioProviderScreen({ goldId, tab, model }: { goldId: string; t
         configure
       />
 
-      <nav aria-label="Twilio" className="mb-6 flex gap-1 border-b border-border">
+      <nav aria-label="Twilio" className="flex gap-1 border-b border-border">
         {TABS.map(([key, label]) => (
           <Link
             key={key}

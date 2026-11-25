@@ -68,7 +68,7 @@ function Examples({ preset, appearance, density }: { preset: VisualPreset; appea
         </Toolbar>
       </div>
       <Card variant="quiet"><h3 className="mb-3 font-semibold">Navigation</h3>
-        <ViewNav label={`${preset} ${appearance} sibling views`} current="files" views={['Home', 'Files', 'Media', 'Templates', 'Knowledge', 'Collections', 'Sources', 'Imports', 'Trash'].map(label => ({ key: label.toLowerCase(), label, href: `/dev/design-system?view=${label.toLowerCase()}#gallery-controls` }))} />
+        <ViewNav label={`${preset} ${appearance} sibling views`} className="mb-4" current="files" views={['Home', 'Files', 'Media', 'Templates', 'Knowledge', 'Collections', 'Sources', 'Imports', 'Trash'].map(label => ({ key: label.toLowerCase(), label, href: `/dev/design-system?view=${label.toLowerCase()}#gallery-controls` }))} />
         <NavigationList label={`${preset} ${appearance} destinations`} density="compact" current="files" className="sm:grid-cols-2" items={[
           { key: 'files', title: 'Files', description: 'Shared content', href: '/dev/design-system?view=files#gallery-controls', chevron: true },
           { key: 'media', title: 'Media', href: '/dev/design-system?view=media#gallery-controls', chevron: true },

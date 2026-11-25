@@ -36,13 +36,13 @@ export default async function McpServersPage({ params }: PageProps<'/organizatio
       <IntegrationsNav organizationId={organizationId} current="mcp" />
       {!mayManage ? (
         <EmptyState
-          className="mt-6"
+         
           title="Only people who manage integrations can see this"
           description="Ask someone with access to integrations if you need a server added or reviewed."
         />
       ) : !operational && servers.length === 0 ? (
         <EmptyState
-          className="mt-6"
+         
           title="Custom MCP servers are not available here yet"
           description="Connecting a server of your own isn’t available yet."
         />

@@ -45,7 +45,7 @@ export default async function TenantProviders({ params }: PageProps<'/organizati
     <AppPage>
       <TenantWorkspaceHeader goldId={goldId} id={organizationId} name={tenant.name} currency={tenant.currency} />
 
-      <section className="mt-6">
+      <section>
         <SectionHeading>Communications infrastructure</SectionHeading>
         <div className="mt-3 flex flex-col gap-4">
           <div className="flex items-center gap-3">
@@ -76,7 +76,7 @@ export default async function TenantProviders({ params }: PageProps<'/organizati
         </div>
       </section>
 
-      <div className="mt-8 grid gap-4 xl:grid-cols-2">
+      <div className="grid gap-4 xl:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Register number</CardTitle>
@@ -95,7 +95,7 @@ export default async function TenantProviders({ params }: PageProps<'/organizati
         </Card>
       </div>
 
-      <div className="mt-6">
+      <div>
         <DataTable
           rows={bindings}
           rowKey={(row) => row.id}
@@ -109,7 +109,7 @@ export default async function TenantProviders({ params }: PageProps<'/organizati
           ]}
         />
       </div>
-      <div className="mt-6">
+      <div>
         <DataTable
           rows={resources}
           rowKey={(row) => row.id}

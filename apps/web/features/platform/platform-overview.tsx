@@ -46,7 +46,7 @@ export function PlatformOverview({
         />
       </WidgetGrid>
 
-      <section className="mt-8">
+      <section>
         <SectionHeading>Recently provisioned</SectionHeading>
         <div className="mt-3">
           <DataTable

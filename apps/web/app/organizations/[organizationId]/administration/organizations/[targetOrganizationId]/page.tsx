@@ -72,7 +72,7 @@ export default async function AdministrationOrganization({ params }: PageProps<'
         }
       />
       {canInitializeGold ? (
-        <Card variant="accent" className="mt-6">
+        <Card variant="accent">
           <CardHeader><CardTitle>Use as GildOps workspace</CardTitle></CardHeader>
           <CardContent className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
             <span>Makes this organization GildOps&apos; operating organization and assigns the non-billable GildOps Internal plan.</span>
@@ -80,7 +80,7 @@ export default async function AdministrationOrganization({ params }: PageProps<'
           </CardContent>
         </Card>
       ) : null}
-      <div className="mt-6 grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-3">
         <MetricTile
           label="Service access"
           value={access.permitted ? 'Available' : 'Locked'}
@@ -89,7 +89,7 @@ export default async function AdministrationOrganization({ params }: PageProps<'
         <MetricTile label="Lifecycle" value={tenant.operationalState === 'live' ? 'Live' : 'Setting up'} detail={`Created ${new Date(tenant.createdAt).toLocaleDateString()} · ${tenant.timezone}`} />
         <MetricTile label="Last activity" value={tenant.lastActivityAt ? new Date(tenant.lastActivityAt).toLocaleDateString() : 'No activity'} detail={tenant.moduleKeys.length ? `Optional features: ${tenant.moduleKeys.join(', ')}` : 'No optional features recorded.'} />
       </div>
-      <div className="mt-6">{session ? <SupportSessionBanner organizationId={organizationId} session={session} members={members} /> : <SupportSessionOpener organizationId={organizationId} />}</div>
+      <div>{session ? <SupportSessionBanner organizationId={organizationId} session={session} members={members} /> : <SupportSessionOpener organizationId={organizationId} />}</div>
     </AppPage>
   );
 }

@@ -1,3 +1,4 @@
+import { AppPage } from '@/components/layout/app-page';
 import Link from 'next/link';
 import { ActivityList } from '@/features/timeline/activity-list';
 import { WorkItemIntake } from '@/features/work/work-item-intake';
@@ -64,7 +65,7 @@ export function WorkItemDetailScreen({ organizationId, organization, model, sect
   } satisfies Record<WorkSection, () => React.ReactNode>;
 
   return (
-    <>
+    <AppPage>
       <WorkRecordHeader organizationId={organizationId} workItem={workItem} timezone={organization.timezone}
         actions={mayEditDetails ? <EditWorkItemDialog organizationId={organizationId} workItem={workItem}
           customers={customers.map((item) => ({ id: item.id, label: item.name }))}
@@ -73,6 +74,6 @@ export function WorkItemDetailScreen({ organizationId, organization, model, sect
           assetsEnabled={assetsEnabled} definitions={definitions} /> : undefined} />
       <WorkRecordNavigation organizationId={organizationId} workItemId={workItemId} current={section} />
       <div className="min-w-0">{content[section]()}</div>
-    </>
+    </AppPage>
   );
 }

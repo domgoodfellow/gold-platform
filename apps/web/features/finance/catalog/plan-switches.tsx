@@ -26,7 +26,7 @@ import {
 export function PlanSwitchesEditor({ target, model }: { target: PlanTarget; model: PlanSwitchesModel }) {
   const { plan, products, productGrantSet, moduleGrantSet, featureOverrideByFeature, entitled, quotas, modulesByProduct, featuresByModule } = model;
   return (
-    <section aria-labelledby="plan-switches-heading" className="mt-8">
+    <section aria-labelledby="plan-switches-heading">
       <SectionHeader
         id="plan-switches-heading"
         title="What it switches on"
@@ -132,7 +132,7 @@ export function PlanSwitchesEditor({ target, model }: { target: PlanTarget; mode
 /** The businesses holding a plan, each opening its subscription. Drawn for members who may read subscriptions. */
 export function PlanSubscribers({ organizationId, model }: { organizationId: string; model: PlanSwitchesModel }) {
   return (
-    <section aria-labelledby="plan-subscribers-heading" className="mt-8">
+    <section aria-labelledby="plan-subscribers-heading">
       <SectionHeader id="plan-subscribers-heading" title={<>Subscribers <span className="text-sm font-normal text-muted">({model.assignedOrganizations.length})</span></>} />
       <div className="mt-3">
         <DataTable

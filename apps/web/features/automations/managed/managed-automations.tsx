@@ -27,7 +27,7 @@ export function ManagedAutomations({
   if (!entries.length) return null;
   const href = (path: string) => `/organizations/${organizationId}/${path}`;
   return (
-    <section aria-labelledby="managed-automations" className="mt-8">
+    <section aria-labelledby="managed-automations">
       <SectionHeader id="managed-automations" title="Managed by GildOps" />
       <DividedList className="mt-2 border-y border-border">
         {entries.map((entry) => (

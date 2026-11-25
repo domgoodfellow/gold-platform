@@ -10,8 +10,8 @@ export function RecordSubnavigation({ label, sections, current, subsections, cur
   label: string; sections: readonly ViewNavItem[]; current: string;
   subsections?: readonly ViewNavItem[]; currentSubsection?: string;
 }) {
-  return <div data-slot="record-subnavigation" className="mb-4 flex flex-col gap-2">
-    <ViewNav label={label} items={sections} current={current} variant="line" scroll={false} className="mb-0 w-full" />
-    {subsections && subsections.length > 1 ? <ViewNav label={`${label}: sections`} items={subsections} current={currentSubsection} size="small" scroll={false} className="mb-0" /> : null}
+  return <div data-slot="record-subnavigation" className="flex flex-col gap-2">
+    <ViewNav label={label} items={sections} current={current} variant="line" scroll={false} className="w-full" />
+    {subsections && subsections.length > 1 ? <ViewNav label={`${label}: sections`} items={subsections} current={currentSubsection} size="small" scroll={false} /> : null}
   </div>;
 }

@@ -28,7 +28,7 @@ export default async function AccessHistoryPage({
   return (
     <SettingsPageFrame width="fluid">
       <SettingsPageHeader title="Access history" />
-      <div className="mt-4">
+      <div>
         <DataTable
           rows={changes.slice(0, pageSize)}
           rowKey={(change) => change.id}

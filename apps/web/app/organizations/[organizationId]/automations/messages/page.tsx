@@ -1,3 +1,4 @@
+import { AppPage } from '@/components/layout/app-page';
 import { listAutomationRules } from '@/lib/domain/automation/rules';
 import { PageHeader } from '@/components/headers/page-header';
 import { requireOrganization } from '@/lib/route/organization';
@@ -16,7 +17,7 @@ export default async function AutomationMessagesPage({
   const [templates, rules] = await Promise.all([listMessageTemplates(db, { organizationId }), listAutomationRules(db, { organizationId })]);
 
   return (
-    <>
+    <AppPage>
       <PageHeader title={areaLabel('automation-messages')} crumbs={workspaceAncestry(organizationId, 'automation-messages')} />
       <MessagesView
         organizationId={organizationId}
@@ -25,6 +26,6 @@ export default async function AutomationMessagesPage({
         mayManage={organization.capabilities.includes('automation.manage')}
         role={organization.role}
       />
-    </>
+    </AppPage>
   );
 }

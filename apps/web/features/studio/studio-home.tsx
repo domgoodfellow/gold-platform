@@ -45,7 +45,7 @@ export function StudioHome({ organizationId, timezone, mayManage, overview: data
     { title: 'Public experience', value: data.publicUrl ? 'Website live' : data.website?.state === 'published' ? 'No public address' : 'Not published', note: data.publicUrl ? (data.booking.available ? 'Public booking available' : 'Public booking is not set up') : data.website?.state === 'published' ? 'Published, but no public address is ready' : 'Publish a website to make it public', icon: ShieldCheck, href: data.website?.state === 'published' ? `${base}/settings/domains` : website },
   ];
   const attentionHref = (key: string) => key.startsWith('website') ? website : key.startsWith('form') ? forms : key === 'brand-logo' ? `${base}/settings/branding` : key === 'profile-incomplete' ? `${base}/settings/public-profile` : key === 'no-bookable-type' ? `${base}/work/configuration` : `${base}/settings/organization`;
-  return <AppPage className="@container/studio space-y-3">
+  return <AppPage className="@container/studio">
     <PageHeader title="Studio" actions={<>
       {mayManage ? <><NewFormDrawer organizationId={organizationId} /><ButtonLink tone="secondary" href={website}>Edit website</ButtonLink></> : null}
       {data.publicUrl ? <ButtonLink tone="secondary" href={data.publicUrl} target="_blank" rel="noreferrer">View site <ArrowUpRight aria-hidden className="size-4" /></ButtonLink> : null}

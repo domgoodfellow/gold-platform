@@ -100,7 +100,7 @@ export function WorkConfiguration(props: WorkConfigurationData) {
     return (
       <div className="flex min-w-0 flex-col gap-4">
         <div className="flex flex-wrap items-start gap-2">
-          <ViewNav label="Work types" className="mb-0 flex-1" current={selectedType?.id} views={types.map(type => ({ key: type.id, label: type.name, href: typeHref(type.id) }))} />
+          <ViewNav label="Work types" className="flex-1" current={selectedType?.id} views={types.map(type => ({ key: type.id, label: type.name, href: typeHref(type.id) }))} />
           {newType}
         </div>
         <TypeDetail {...props} />

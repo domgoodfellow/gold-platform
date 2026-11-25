@@ -63,7 +63,7 @@ export function TenantWorkspaceHeader({
       <Hint className="block">
         ID {id}{slug ? ` · ${slug}` : ''} · {currency || 'No currency set'}
       </Hint>
-      <nav aria-label="Business" className="mt-4 flex gap-1 overflow-x-auto border-b border-border">
+      <nav aria-label="Business" className="flex gap-1 overflow-x-auto border-b border-border">
         {sections.map(([label, suffix]) => {
           const href = `${base}${suffix}`;
           const active = pathname === href;

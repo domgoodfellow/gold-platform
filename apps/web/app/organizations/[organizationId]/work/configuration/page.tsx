@@ -85,7 +85,7 @@ export default async function WorkConfigurationPage({
         title={<span className="sr-only">Work type settings</span>}
         breadcrumbLabel={fieldsOpen ? 'Fields' : selectedType?.name ?? 'Work types'}
         crumbs={[...workspaceConfigCrumbs(organizationId, 'work-configuration', gate), ...(selectedType ? [{ label: 'Work types', href: listHref }] : [])]}
-        className="mb-0"
+       
         actions={!selectedType?.archivedAt && (returnTo === 'create' || statuses.length > 0) && organization.capabilities.includes('work_item.create') ? <NewWorkAction organizationId={organizationId} typeId={selectedType?.id} returnTo={quote === '1' ? 'quote' : undefined} setupStep={step ?? undefined} /> : undefined}
       />
       <WorkConfiguration

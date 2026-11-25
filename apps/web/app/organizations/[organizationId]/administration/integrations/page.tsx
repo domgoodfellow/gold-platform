@@ -35,7 +35,7 @@ export default async function PlatformIntegrationsPage({ params }: PageProps<'/o
         actions={<ButtonLink href={platformHref(goldId, 'integrations/new')} size="small">New connector</ButtonLink>}
       />
       {detail === null ? (
-        <Hint className="mb-4 block" role="status">
+        <Hint className="block" role="status">
           The API did not answer, so adapter and registration state cannot be shown. Nothing below is guessed.
         </Hint>
       ) : null}

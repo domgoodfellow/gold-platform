@@ -581,7 +581,7 @@ export function SupportWorkspace({
     </OperationalPanel>
   ) : null;
   return (
-    <AppPage data-dashboard-page={view === "home" || undefined} className={`@container ${view === "home" ? "space-y-3" : "space-y-4"}`}>
+    <AppPage data-dashboard-page={view === "home" || undefined} className="@container">
       <PageHeader
         crumbs={view === "home" ? [] : [{ label: "Support", href: base }]}
         title={view === "detail" ? `${c?.case_number} · ${c?.title}` : titles[view]}
@@ -787,7 +787,7 @@ export function SupportWorkspace({
       )}
       {view === "detail" && c && (
         <div className="grid min-w-0 gap-4 @4xl:grid-cols-[minmax(0,2.5fr)_minmax(260px,1fr)]">
-          <main className="min-w-0 space-y-4">
+          <div className="min-w-0 space-y-4">
             <OperationalPanel
               title="Problem description"
               action={
@@ -836,7 +836,7 @@ export function SupportWorkspace({
                 )}{" "}
               {timeline(true)}
             </OperationalPanel>
-          </main>
+          </div>
           <aside className="min-w-0 space-y-4">
             {inspector}
             <OperationalPanel body="edge-to-edge"

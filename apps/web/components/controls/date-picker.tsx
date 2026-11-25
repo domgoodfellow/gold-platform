@@ -26,6 +26,7 @@ export function DatePicker({
   basePath,
   param = 'on',
   label = 'Choose a day',
+  display,
   extraParams,
 }: {
   /** ISO `yyyy-mm-dd`, read in the caller's own timezone — this control only ever displays it. */
@@ -35,6 +36,8 @@ export function DatePicker({
   /** The query parameter the picked day is written to. */
   param?: string;
   label?: string;
+  /** What the trigger shows instead of the chosen day — a calendar's whole period. It starts the control's accessible name. */
+  display?: string;
   /**
    * Other query state to carry over when a day is picked — a view, a set of filter ids. Written
    * through exactly as given, one entry per array value: this control never learns what a key
@@ -53,13 +56,13 @@ export function DatePicker({
           type="button"
           variant="outline"
           size="sm"
-          aria-label={label}
+          aria-label={display ? `${display}, ${label.charAt(0).toLowerCase()}${label.slice(1)}` : label}
           className={cx(FOCUS_RING, 'gap-1.5')}
         >
           <CalendarIcon aria-hidden size={14} />
           {/* A fixed locale, not the runtime's own — the server and the browser rarely agree on
               one, and an implicit locale here is a hydration mismatch waiting to happen. */}
-          {selected.toLocaleDateString('en-GB', {
+          {display ?? selected.toLocaleDateString('en-GB', {
             weekday: 'short',
             year: 'numeric',
             month: 'short',

@@ -1,3 +1,4 @@
+import { AppPage } from '@/components/layout/app-page';
 import { notFound } from 'next/navigation';
 import { RecordHeader } from '@/components/headers/record-header';
 import { LocationDetail } from '@/features/locations/location-detail';
@@ -41,7 +42,7 @@ export default async function LocationPage({
   const mayAttach = organization.capabilities.includes('document.create');
 
   return (
-    <>
+    <AppPage>
       <RecordHeader
         title={location.label}
         crumbs={[
@@ -68,6 +69,6 @@ export default async function LocationPage({
         linkCustomerAction={linkCustomerAction}
         uploadAction={uploadLocationDocumentAction}
       />
-    </>
+    </AppPage>
   );
 }

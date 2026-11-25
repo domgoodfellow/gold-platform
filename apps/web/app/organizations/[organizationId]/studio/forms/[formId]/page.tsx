@@ -23,7 +23,7 @@ export default async function StudioFormPage({ params }: PageProps<'/organizatio
     return (
       <AppPage>
         <PageHeader title={areaLabel('studio-forms')} crumbs={workspaceAncestry(organizationId, 'studio-forms')} />
-        <Hint className="mt-5">{`Your role, ${organization.role}, cannot manage forms.`}</Hint>
+        <Hint>{`Your role, ${organization.role}, cannot manage forms.`}</Hint>
       </AppPage>
     );
   }

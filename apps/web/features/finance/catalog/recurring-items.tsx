@@ -56,7 +56,7 @@ function kindLabel(item: RecurringItem): string | null {
 export function RecurringItemsSection({ organizationId, items, mayManage, sellsPlans = false }: { organizationId: string; items: RecurringItemRow[]; mayManage: boolean; sellsPlans?: boolean }) {
   const href = (item: RecurringItem) => `/organizations/${organizationId}/finance/catalog/${item.id}`;
   return (
-    <section aria-labelledby="recurring-items-heading" className="@container mt-8">
+    <section aria-labelledby="recurring-items-heading" className="@container">
       <SectionHeader
         id="recurring-items-heading"
         title={<>Recurring items <span className="text-sm font-normal text-muted">({items.length})</span></>}
@@ -203,7 +203,7 @@ export function PriceHistory({
   const currentIds = new Set(current.map((price) => price.id));
   const checkout = item.plan !== null;
   return (
-    <section aria-labelledby="prices-heading" className="@container mt-8">
+    <section aria-labelledby="prices-heading" className="@container">
       <SectionHeader id="prices-heading" title="Prices" action={mayManage ? <RecordPriceDrawer organizationId={organizationId} itemId={item.id} defaultCurrency={defaultCurrency} /> : undefined} />
       <div className="mt-3">
         <DataTable
@@ -299,7 +299,7 @@ export function AddonsSection({ organizationId, itemId, addons, options, mayMana
   organizationId: string; itemId: string; addons: RecurringItem[]; options: RecurringItem[]; mayManage: boolean;
 }) {
   return (
-    <section aria-labelledby="addons-heading" className="mt-8">
+    <section aria-labelledby="addons-heading">
       <SectionHeader id="addons-heading" title="Add-ons" action={mayManage && options.length > 0 ? <AddAddonForm organizationId={organizationId} itemId={itemId} options={options} /> : undefined} />
       {addons.length === 0 ? <p className="mt-3 text-sm text-muted">No add-ons are offered with this item.</p> : (
         <ul className="mt-3 flex flex-col divide-y divide-border">
@@ -356,7 +356,7 @@ export function SwitchesSection({ switches }: { switches: ItemSwitch[] }) {
     .map((kind) => ({ kind, rows: switches.filter((row) => row.kind === kind) }))
     .filter((group) => group.rows.length > 0);
   return (
-    <section aria-labelledby="switches-heading" className="mt-8">
+    <section aria-labelledby="switches-heading">
       <SectionHeader id="switches-heading" title="Includes" />
       {groups.length === 0 ? <p className="mt-3 text-sm text-muted">This plan switches nothing on yet.</p> : (
         <dl className="mt-3 grid gap-4 @min-[40rem]:grid-cols-2">
@@ -381,7 +381,7 @@ export function UsagePricesSection({ organizationId, itemId, allowances, usagePr
 }) {
   if (allowances.length === 0) return null;
   return (
-    <section aria-labelledby="usage-prices-heading" className="mt-8">
+    <section aria-labelledby="usage-prices-heading">
       <SectionHeader id="usage-prices-heading" title="Usage beyond the allowance" />
       <ul className="mt-3 flex flex-col divide-y divide-border">
         {allowances.map((allowance) => {

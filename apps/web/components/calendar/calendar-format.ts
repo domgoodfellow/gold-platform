@@ -25,3 +25,14 @@ export function formatMonthLabel(date: string): string {
     new Date(`${date}T00:00:00Z`),
   );
 }
+
+/** The period a calendar shows, as one label: a day, a Monday-to-Sunday week, or a month. */
+export function formatPeriodLabel(view: 'day' | 'week' | 'month', dates: readonly string[]): string {
+  const format = (date: string, options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('en-GB', { ...options, timeZone: 'UTC' }).format(new Date(`${date}T00:00:00Z`));
+  if (view === 'month') return formatMonthLabel(dates[Math.floor(dates.length / 2)]);
+  if (view === 'day') return format(dates[0], { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  const first = dates[0], last = dates[dates.length - 1];
+  if (first.slice(0, 4) !== last.slice(0, 4)) return `${format(first, { day: 'numeric', month: 'short', year: 'numeric' })} – ${format(last, { day: 'numeric', month: 'short', year: 'numeric' })}`;
+  if (first.slice(0, 7) !== last.slice(0, 7)) return `${format(first, { day: 'numeric', month: 'short' })} – ${format(last, { day: 'numeric', month: 'short', year: 'numeric' })}`;
+  return `${format(first, { day: 'numeric' })} – ${format(last, { day: 'numeric', month: 'short', year: 'numeric' })}`;
+}

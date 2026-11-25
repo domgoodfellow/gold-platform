@@ -98,14 +98,14 @@ export function WorkList({ title, crumbs, organizationId, timezone, types, selec
 
   return <>
     {header}
-    <CollectionToolbar action={`${base}/work`} viewId="work" className="mb-4"
+    <CollectionToolbar action={`${base}/work`} viewId="work"
       leading={typeSelect}
       search={{ name: 'q', value: view.q, label: 'Search work', placeholder: 'Search work titles' }}
       hidden={{ view: view.view === 'board' ? 'board' : undefined }}
       filterCount={view.status ? 1 : 0}
       filters={view.view === 'list' ? <label className="flex flex-col gap-1 text-sm sm:col-span-2">Stage<SelectField name="status" aria-label="Filter by stage" defaultValue={view.status ?? ''} options={[{ value: '', label: 'Any stage' }, ...statuses.map((s) => ({ value: s.id, label: s.name }))]} /></label> : undefined}
       sort={<SelectField name="sort" aria-label="Sort work" defaultValue={view.sort} className="w-full md:w-40" options={[...WORK_SORTS.filter(([key]) => scheduled || key !== 'schedule').map(([key, label]) => ({ value: key, label: label }))]} />}
-      display={<ViewNav label="Work presentation" size="small" className="mb-0" items={[{ key: 'list', label: 'List', href: href({ view: 'list' }), current: view.view === 'list' }, { key: 'board', label: 'Board', href: href({ view: 'board' }), current: view.view === 'board' }]} />}
+      display={<ViewNav label="Work presentation" size="small" items={[{ key: 'list', label: 'List', href: href({ view: 'list' }), current: view.view === 'list' }, { key: 'board', label: 'Board', href: href({ view: 'board' }), current: view.view === 'board' }]} />}
       active={active} resetHref={filtered ? href({ q: '', status: undefined }) : undefined} />
     <section aria-label={`${typeName} work`} className="min-w-0">
       <p role="status" className="mb-2 text-sm text-muted"><span className="font-medium tabular-nums text-foreground">{total}</span> {total === 1 ? 'work item' : 'work items'}{filtered ? (total === 1 ? ' matches this view' : ' match this view') : ''}</p>

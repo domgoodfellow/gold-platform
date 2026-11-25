@@ -430,11 +430,11 @@ export function AiWorkspace({
     </OperationalPanel>
   );
   return (
-    <AppPage className="space-y-4">
+    <AppPage>
       <PageHeader
         title={title}
+        meta={!view || view === "activity" ? <SelectField aria-label="Date range" value={String(data.days)} onValueChange={(next) => filter("days", next)} options={[{ value: '30', label: 'Last 30 days' }, { value: '7', label: 'Last 7 days' }]} /> : undefined}
         actions={<>
-          {(!view || view === "activity") && <SelectField aria-label="Date range" value={String(data.days)} onValueChange={(next) => filter("days", next)} options={[{ value: '30', label: 'Last 30 days' }, { value: '7', label: 'Last 7 days' }]} />}
           <NewAgent organizationId={organizationId} canManage={canManage} />
           {canManage ? <ButtonLink tone="secondary" href={`${base}/agents`}>
             <Play aria-hidden />

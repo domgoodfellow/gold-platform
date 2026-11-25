@@ -47,7 +47,7 @@ export default async function SalesStagesSettingsPage({
         })}
         empty="No relationship stages yet."
       />
-      {!mayConfigure ? <Hint className="mt-3">Your role, {organization.role}, cannot change relationship stages.</Hint> : null}
+      {!mayConfigure ? <Hint>Your role, {organization.role}, cannot change relationship stages.</Hint> : null}
     </SettingsPageFrame>
   );
 }

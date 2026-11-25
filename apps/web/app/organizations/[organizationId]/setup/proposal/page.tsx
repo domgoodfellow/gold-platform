@@ -66,7 +66,7 @@ export default async function ConfigurationProposalPage({ params }: PageProps<'/
         <SectionHeading id="describe-heading">Describe your business</SectionHeading>
         <DescribeForm organizationId={organizationId} refining={false} disabled={false} />
       </section>
-      <section aria-labelledby="templates-heading" className="mt-10">
+      <section aria-labelledby="templates-heading">
         <SectionHeading id="templates-heading">Or start from</SectionHeading>
         {chooser}
       </section>

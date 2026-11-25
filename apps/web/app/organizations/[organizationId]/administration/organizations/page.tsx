@@ -36,7 +36,7 @@ export default async function PlatformOrganizationsPage({
         <Search aria-hidden size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
         <TextInput name="q" defaultValue={query} placeholder="Search businesses or business IDs" aria-label="Search organizations" className="pl-9" />
       </form>
-      <div className="mt-6">
+      <div>
         <DataTable
           rows={visible}
           rowKey={(tenant) => tenant.id}

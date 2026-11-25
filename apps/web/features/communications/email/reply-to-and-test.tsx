@@ -24,7 +24,7 @@ export function ReplyToForm({ organizationId, senders, hasDefault }: { organizat
   const eligible = senders.filter((sender) => sender.canTakeReplies);
   const current = senders.find((sender) => sender.isReplyTo) ?? null;
   return (
-    <CardSection title="Where replies go" className="mt-6">
+    <CardSection title="Where replies go">
       {!hasDefault ? (
         <Hint className="mt-3">Choose a default sender first.</Hint>
       ) : (
@@ -59,7 +59,7 @@ const REPORT: Record<string, string> = { delivered: 'Delivered', delayed: 'Deliv
 export function TestSendForm({ organizationId, ready, tests }: { organizationId: string; ready: boolean; tests: EmailTestSend[] }) {
   const [state, run, pending] = useActionState(sendTestEmailAction, INITIAL);
   return (
-    <CardSection title="Send a test email" className="mt-6">
+    <CardSection title="Send a test email">
       <form action={run} className="mt-3 flex flex-wrap items-center gap-2">
         <input type="hidden" name="organizationId" value={organizationId} />
         <Button type="submit" tone="secondary" disabled={pending || !ready}>{pending ? 'Sending…' : 'Send test email to me'}</Button>

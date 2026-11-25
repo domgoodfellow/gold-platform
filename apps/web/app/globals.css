@@ -422,6 +422,8 @@ h1, h2, h3, h4 {
   --visual-elevation: 0 2px 8px rgb(0 0 0 / .08);
   --visual-overlay-shadow: 0 8px 24px rgb(0 0 0 / .18);
   --visual-spacing: 1rem;
+  /* The space between a page's regions (`AppPage`); personal Display density changes it. */
+  --page-gap: 1rem;
   --control-height: 2rem;
   --motion-fast: 150ms;
   --motion-normal: 200ms;
@@ -612,4 +614,18 @@ h1, h2, h3, h4 {
   flex-shrink: 0;
   pointer-events: none;
   z-index: -1;
+}
+
+/* A page header whose actions all rendered nothing is as empty as one given none (`PageHeader`):
+   its heading stays for assistive technology, out of the page's flow, so it takes no gap. */
+:is([data-slot=page-header], [data-slot=workspace-intro]):has(> [data-header-controls]:empty):not(:has(> :not([data-header-controls], .sr-only))) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border-width: 0;
 }

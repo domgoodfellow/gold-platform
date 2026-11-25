@@ -38,7 +38,7 @@ export function DocumentsSection({
       {/* Hiding the form is a courtesy, not the guard — the underlying write is refused by the
           database for anyone without document.create regardless of what this renders. */}
       {mayAttach ? (
-        <DocumentUploadForm action={uploadAction} hiddenFields={hiddenFields} />
+        <DocumentUploadForm action={uploadAction} hiddenFields={hiddenFields} className="mt-4" />
       ) : roleLabel ? (
         <Hint className="mt-4">Your role, {roleLabel}, cannot attach documents here.</Hint>
       ) : null}

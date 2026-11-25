@@ -42,7 +42,7 @@ export default async function TenantIntegrations({ params }: PageProps<'/organiz
   return (
     <AppPage>
       <TenantWorkspaceHeader goldId={goldId} id={organizationId} name={tenant.name} currency={tenant.currency} />
-      <section className="mt-6">
+      <section>
         <SectionHeading>Connected apps</SectionHeading>
         <div className="mt-3">
           <DataTable

@@ -74,8 +74,9 @@ export function CommunicationsHome({ organizationId, timezone, data, configure, 
   const noAttention = !attentionTabs.some(tab => tab.count > 0);
 
   return <AppPage data-dashboard-page data-communications-dashboard className="@container/comms pb-14 md:pb-0">
-    <PageHeader title="Dashboard" crumbs={workspaceAncestry(organizationId, 'comms')} className="mb-0" actions={<>
-      <PeriodSelect label="Communication date range" size="default" value={params.when} options={PERIODS.map(entry => ({ ...entry, href: link({ when: entry.value }) }))} />
+    <PageHeader title="Dashboard" crumbs={workspaceAncestry(organizationId, 'comms')}
+      meta={<PeriodSelect label="Communication date range" size="default" value={params.when} options={PERIODS.map(entry => ({ ...entry, href: link({ when: entry.value }) }))} />}
+      actions={<>
       {mayMessage ? <ButtonLink tone="primary" href={inbox}><MessageSquare aria-hidden /> Conversations</ButtonLink> : null}
       {data.canCall ? <NewCallButton organizationId={organizationId} /> : null}
       {data.canCompose ? <ButtonLink tone="secondary" href={`${inbox}/new?channel=${data.composeChannel}`}><Mail aria-hidden /> New message</ButtonLink> : null}

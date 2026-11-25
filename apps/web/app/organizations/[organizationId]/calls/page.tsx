@@ -65,7 +65,7 @@ export default async function CallsPage({ params, searchParams }: PageProps<'/or
 
   return (
     <AppPage>
-      <PageHeader title={areaLabel('calls')} crumbs={workspaceAncestry(organizationId, 'calls')} className="mb-0" />
+      <PageHeader title={areaLabel('calls')} crumbs={workspaceAncestry(organizationId, 'calls')} />
       <DialerWorkspace
         organizationId={organizationId}
         timezone={organization.timezone}
@@ -89,7 +89,7 @@ export default async function CallsPage({ params, searchParams }: PageProps<'/or
         wrapUp={toWrapUp && counts.needsWrapUp > 0 ? <DialerWrapUp organizationId={organizationId} timeZone={organization.timezone} calls={toWrapUp.items} total={counts.needsWrapUp} outcomes={outcomes} href={`${callsHref(base, { wrap: '1' })}#call-history`} /> : undefined}
       />
       {/* Rendered by the page, not the console: Focus hides it with the console's presentation state. */}
-      <div className="mt-4 peer-data-[presentation=focus]:hidden">
+      <div className="peer-data-[presentation=focus]:hidden">
         <CallHistoryDisclosure open={filtered || !!cursor} summary={<h2 id="call-history-heading" className="text-sm font-semibold tracking-tight">Call history</h2>}>
           <VoiceCounters organizationId={organizationId} counts={counts} todaysCalls={todays.items} />
           <div className="mt-4"><CallFilters

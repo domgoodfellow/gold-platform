@@ -9,5 +9,5 @@ export function SetupReturnLink() {
   const pathname = usePathname();
   const query = useSearchParams();
   const href = setupReturnHref(pathname, query?.get('setupStep') ?? null);
-  return href ? <div className="mb-3"><ButtonLink size="small" tone="text" href={href}>Return to setup</ButtonLink></div> : null;
+  return href ? <div><ButtonLink size="small" tone="text" href={href}>Return to setup</ButtonLink></div> : null;
 }

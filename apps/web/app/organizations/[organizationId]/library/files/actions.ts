@@ -38,5 +38,5 @@ export async function uploadLibraryFileAction(
   }
 
   revalidatePath(`/organizations/${organizationId}/library/files`);
-  return { error: null };
+  return { error: null, uploaded: file.name };
 }

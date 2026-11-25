@@ -25,7 +25,7 @@ export default async function SecretsSettingsPage({ params }: PageProps<'/organi
       {mayManage ? (
         <SecretsList organizationId={organizationId} references={references} />
       ) : (
-        <Hint className="mt-5">Your role, {organization.role}, cannot see or manage this business’s private credentials.</Hint>
+        <Hint>Your role, {organization.role}, cannot see or manage this business’s private credentials.</Hint>
       )}
     </SettingsPageFrame>
   );

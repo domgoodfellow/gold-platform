@@ -1,3 +1,4 @@
+import { AppPage } from '@/components/layout/app-page';
 import { CollectionHeader } from '@/components/patterns/collection-header';
 import { ButtonLink } from '@/components/controls/button';
 import { Section, SectionHeading } from '@/components/surfaces/section';
@@ -34,33 +35,33 @@ export default async function LibrarySourcesPage({
   const mayImport = organization.capabilities.includes('integration.manage');
 
   return (
-    <>
+    <AppPage>
       <CollectionHeader
         title="Sources"
         crumbs={[{ label: 'Library', href: libraryHref(organizationId, 'files') }]}
+        meta={<LibraryNav organizationId={organizationId} active="sources" />}
         actions={
           mayImport ? (
             <ButtonLink href={libraryNewImportHref(organizationId)} tone="primary" size="small">
-              Upload a file
+              Import a file
             </ButtonLink>
           ) : null
         }
       />
-      <LibraryNav organizationId={organizationId} active="sources" />
 
-      <Section className="mt-6" aria-labelledby="sources-heading">
+      <Section aria-labelledby="sources-heading">
         <SectionHeading id="sources-heading">Sources</SectionHeading>
         <div className="mt-2">
           <SourcesTable organizationId={organizationId} resources={resources} mayImport={mayImport} connectionLabel={connectionLabel} />
         </div>
       </Section>
 
-      <Section className="mt-10" aria-labelledby="imports-heading">
+      <Section aria-labelledby="imports-heading">
         <SectionHeading id="imports-heading">Imports</SectionHeading>
         <div className="mt-2">
           <ImportRunsTable organizationId={organizationId} runs={runs} resourceName={resourceName} connectorLabel={connectorLabel} />
         </div>
       </Section>
-    </>
+    </AppPage>
   );
 }

@@ -67,7 +67,7 @@ export default async function EmailSendingSettingsPage({ params }: PageProps<'/o
       {hasDefault ? <ReplyToForm organizationId={organizationId} senders={senders} hasDefault /> : null}
       {hasDefault || tests.length > 0 ? <TestSendForm organizationId={organizationId} ready={status.state === 'ready'} tests={tests} /> : null}
 
-      <Hint className="mt-6">
+      <Hint>
         Which addresses receive replies into Conversations is set in{' '}
         <Link className="text-accent-text underline" href={`/organizations/${organizationId}/comms/configuration/email`}>Communications → Incoming email</Link>.
       </Hint>
@@ -104,7 +104,7 @@ function NextStep({ step, status, domains }: { step: EmailSetupStep; status: Ema
     }
   })();
   return (
-    <CardSection title={heading} headingId="email-sending-status" className="mt-6">
+    <CardSection title={heading} headingId="email-sending-status">
       <p role="status" className={warning ? 'mt-1 text-sm text-danger' : 'mt-1 text-sm'}>{sentence}</p>
     </CardSection>
   );

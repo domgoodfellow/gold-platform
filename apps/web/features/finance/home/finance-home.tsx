@@ -95,7 +95,7 @@ export function FinanceHome({ organizationId, timezone, today, data, capabilitie
     } : {}),
   };
   return <DashboardEditingProvider available>
-    <WorkspaceHome dashboard title="Finance" actions={<FinanceHeaderActions organizationId={organizationId} today={today} period={periodControl} firstRun={!data.started}
+    <WorkspaceHome dashboard title="Finance" meta={periodControl ?? undefined} actions={<FinanceHeaderActions organizationId={organizationId} today={today} firstRun={!data.started}
       mayQuote={may('work_item.price') || mayManageCatalog} mayRecord={may('payment.record') && data.started} mayInvoice={may('invoice.issue') && data.started} mayCreateWork={has('work_item.create')} mayManageCatalog={mayManageCatalog} />}>
       <DashboardLayoutGrid label="Finance dashboard" registry={FINANCE_WIDGETS} saved={layout} readable={[...readable]} widgets={widgets}
         onSave={saveFinanceDashboardLayout.bind(null, organizationId)} onReset={resetFinanceDashboardLayout.bind(null, organizationId)} />

@@ -144,7 +144,7 @@ export function SubscriptionRecord({
         }
       />
 
-      <Card className="mt-6">
+      <Card>
         <CardHeader>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <CardTitle className="text-xl">{primary?.item?.name ?? 'Nothing in force'}</CardTitle>
@@ -179,7 +179,7 @@ export function SubscriptionRecord({
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="invoices" className="mt-8">
+      <Tabs defaultValue="invoices">
         <TabsList>
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
           {platform ? <TabsTrigger value="entitlements">What it switches on</TabsTrigger> : null}

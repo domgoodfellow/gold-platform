@@ -10,9 +10,12 @@ import { ViewNav } from '@/components/navigation/view-nav';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import { activeLibrarySection, LIBRARY_SECTIONS, LIBRARY_TABS, libraryHref, type LibrarySectionKey } from '@/lib/route/library';
 
-/** The section tab strip every Library page renders, so a section is one click away from any other. */
+/**
+ * The section tab strip every Library page renders, so a section is one click away from any other. It
+ * is page-local navigation, so it sits in the page header's leading region beside the page's action.
+ */
 export function LibraryNav({ organizationId, active }: { organizationId: string; active: LibrarySectionKey }) {
-  return <ViewNav label="Library" current={active} className="mb-6" views={LIBRARY_TABS.map(section => ({
+  return <ViewNav label="Library" current={active} views={LIBRARY_TABS.map(section => ({
     key: section.key, label: section.label, href: libraryHref(organizationId, section.key),
   }))} />;
 }

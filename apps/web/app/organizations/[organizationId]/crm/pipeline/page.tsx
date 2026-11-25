@@ -46,7 +46,7 @@ export default async function OpportunityPipelinePage({ params, searchParams }: 
   const dateFormat = new Intl.DateTimeFormat('en-CA', { timeZone: organization.timezone, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   return <AppPage>
     <CollectionHeader location={{}} actions={<><ButtonLink tone="secondary" href={collection}>List view</ButtonLink>{!firstRun && organization.capabilities.includes('field.manage') ? <ButtonLink tone="secondary" href={`/organizations/${organizationId}/${configTarget('opportunity-stages').path}`}>Opportunity stages</ButtonLink> : null}{organization.capabilities.includes('opportunity.create') ? <OpportunitySheet organizationId={organizationId} stages={stages} members={members} defaultCurrency={organization.currency ?? ''} /> : null}</>} />
-    {firstRun ? null : <CollectionToolbar className="mb-4" action={base} search={{ name: 'q', value: value('q'), label: 'Search opportunities' }} filterCount={['stage', 'owner', 'customer'].filter(key => value(key)).length}
+    {firstRun ? null : <CollectionToolbar action={base} search={{ name: 'q', value: value('q'), label: 'Search opportunities' }} filterCount={['stage', 'owner', 'customer'].filter(key => value(key)).length}
       filters={<>
         <label className="flex flex-col gap-1 text-sm">Stage<SelectField name="stage" defaultValue={value('stage')} options={[{ value: '', label: 'All stages' }, { value: 'unstaged', label: 'Unstaged' }, ...stages.map((stage) => ({ value: stage.id, label: stage.name }))]} /></label>
         <label className="flex flex-col gap-1 text-sm">Owner<SelectField name="owner" defaultValue={value('owner')} options={[{ value: '', label: 'All owners' }, { value: 'unassigned', label: 'Unassigned' }, ...members.map((member) => ({ value: member.id, label: member.displayName }))]} /></label>
@@ -57,8 +57,8 @@ export default async function OpportunityPipelinePage({ params, searchParams }: 
       <div className="min-w-0"><h2 id="pipeline-setup" className="text-base font-semibold">Set up your pipeline</h2><p className="mt-1 text-sm text-muted">Stages organize opportunities from first conversation to won or lost.</p></div>
       {mayConfigureStages ? <ButtonLink tone="primary" href={`/organizations/${organizationId}/${configTarget('opportunity-stages').path}`}>Set up stages</ButtonLink> : <p className="text-sm text-muted">Someone who manages CRM settings sets up stages.</p>}
     </section> : <>
-    {!stages.length ? <p className="mb-3 text-sm text-muted">No opportunity stages yet, so opportunities are Unstaged.</p> : null}
-    <p className="mb-3 text-xs text-muted">{filtered ? 'Up to 100 matching opportunities; counts describe the cards shown. Use List view to page through more.' : 'Up to 10 opportunities per stage, by expected close. Counts and totals include every opportunity.'}</p>
+    {!stages.length ? <p className="text-sm text-muted">No opportunity stages yet, so opportunities are Unstaged.</p> : null}
+    <p className="text-xs text-muted">{filtered ? 'Up to 100 matching opportunities; counts describe the cards shown. Use List view to page through more.' : 'Up to 10 opportunities per stage, by expected close. Counts and totals include every opportunity.'}</p>
     <Board label="Opportunity stages">
       {columns.map((column) => {
         const totals = filtered ? undefined : summary.find((item) => item.stageId === column.id);

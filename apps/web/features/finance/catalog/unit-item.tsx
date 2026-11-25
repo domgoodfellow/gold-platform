@@ -42,14 +42,14 @@ export function UnitItem({ organizationId, economics, deliveryType, mayReadCosts
         summary={<span className="tabular-nums">{formatMoney(item.unitAmountMinor, item.currency)} per {item.unit}</span>}
       />
 
-      <CardSection title="Delivery" className="mt-6">
+      <CardSection title="Delivery">
         <p className="text-sm">
           {deliveryType && typeHref ? <>Delivered as <Link href={typeHref} className="font-medium text-accent-text hover:underline">{deliveryType.name}</Link>{deliveryType.archivedAt ? ' (archived)' : ''}.</> : 'Not delivered as work.'}
         </p>
       </CardSection>
 
       {mayReadCosts ? (
-        <CardSection title="Expected cost" className="mt-6">
+        <CardSection title="Expected cost">
           <div className="flex flex-col gap-6">
             <section aria-labelledby="expected-item-costs" className="flex flex-col gap-2">
               <h3 id="expected-item-costs" className="text-sm font-semibold">Per {item.unit}</h3>

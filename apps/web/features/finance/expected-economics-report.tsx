@@ -35,7 +35,7 @@ export function ExpectedEconomicsReport({ organizationId, currency, month, items
   const base = `/organizations/${organizationId}`;
   return (
     <>
-      <div className="mt-6">
+      <div>
         <OperationalPanel title="Expected margin by item" density="compact" body="edge-to-edge">
           <DataTable
             tableFrom="wide"
@@ -60,7 +60,7 @@ export function ExpectedEconomicsReport({ organizationId, currency, month, items
         </OperationalPanel>
       </div>
 
-      <div className="mt-6">
+      <div>
         <OperationalPanel
           title="Work types: recorded and expected"
           density="compact"

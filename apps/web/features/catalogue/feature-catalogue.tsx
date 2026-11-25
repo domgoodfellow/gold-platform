@@ -68,7 +68,7 @@ export function FeatureCatalogue({ organizationId, features, mayManage }: { orga
   const pageReasons = [...reasonProducts].filter(([, products]) => products.size > 1).map(([reason]) => reason);
 
   return (
-    <div className="mt-4 grid gap-4">
+    <div className="grid gap-4">
       <Toolbar variant="outlined">
         <label className="relative block min-w-56 flex-1">
           <span className="sr-only">Search features</span>

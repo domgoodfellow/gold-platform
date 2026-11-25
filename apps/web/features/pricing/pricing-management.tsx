@@ -34,7 +34,7 @@ export function PricingManagement({ organizationId, items, currency, mayManage, 
   const add = mayAdd ? <Button ref={(node) => { triggers.current.set('new', node); }} size="small" disabled={editing !== null} onClick={() => setEditing('new')}><Plus aria-hidden className="size-4" />Add price item</Button> : null;
 
   return (
-    <section aria-labelledby="price-book-heading" className="@container/prices mt-4 rounded-lg border border-border bg-surface">
+    <section aria-labelledby="price-book-heading" className="@container/prices rounded-lg border border-border bg-surface">
       <div className="flex flex-wrap items-center justify-between gap-3 px-3 py-3">
         <h2 id="price-book-heading" className="font-semibold">Price book <span className="text-sm font-normal text-muted">({items.length})</span></h2>
         {add}

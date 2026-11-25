@@ -46,7 +46,7 @@ export function SenderAddresses({
   domains: { resourceId: string; domain: string; ready: boolean }[];
 }) {
   return (
-    <CardSection title="Sender addresses" className="mt-6">
+    <CardSection title="Sender addresses">
       {senders.length === 0 ? (
         <Hint className="mt-3">No sender address yet.</Hint>
       ) : (

@@ -163,7 +163,7 @@ export function InboxShell({ organizationId, children }: { organizationId: strin
     <div className="@container/conversations overflow-hidden rounded-lg border border-border bg-surface">
       <>
       <div className="flex flex-wrap items-center gap-3 border-b border-border p-3">
-        <ViewNav label="Conversation views" current={view} scroll={false} className="mb-0 max-w-full flex-nowrap! overflow-x-auto" views={VIEWS.map(option => ({ key: option.key, label: <>{option.label}{option.count && counts && counts[option.count] > 0 ? ` (${counts[option.count]})` : ''}</>, href: hrefWith({ view: option.key }) }))} />
+        <ViewNav label="Conversation views" current={view} scroll={false} className="max-w-full flex-nowrap! overflow-x-auto" views={VIEWS.map(option => ({ key: option.key, label: <>{option.label}{option.count && counts && counts[option.count] > 0 ? ` (${counts[option.count]})` : ''}</>, href: hrefWith({ view: option.key }) }))} />
         <PeriodSelect label="Messaging channel" value={channel} size="default" options={CHANNELS.map(option => ({ value: option.key, label: option.label, href: hrefWith({ channel: option.key }) }))} />
         <PeriodSelect label="Conversation status" value={status} size="default" options={STATUSES.map(option => ({ value: option.key, label: option.label, href: hrefWith({ status: option.key }) }))} />
         <div className="ml-auto flex flex-wrap items-center gap-2">

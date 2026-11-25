@@ -84,7 +84,7 @@ export default async function LocationsPage({
         <LocationsViewNav organizationId={organizationId} view={view} />
 
         {filterCustomerId ? (
-          <Hint className="mt-3 flex items-center justify-between gap-3">
+          <Hint className="flex items-center justify-between gap-3">
             <span>
               Showing locations for {filterCustomer?.name ?? 'this customer'} ({visibleLocations.length})
             </span>
@@ -103,7 +103,7 @@ export default async function LocationsPage({
               hidden on the same condition as the create trigger above.
             */}
             {mayAdd ? (
-              <Disclosure summary="Link a customer to a location" className="mt-3">
+              <Disclosure summary="Link a customer to a location">
                 <LinkCustomerLocationForm
                   organizationId={organizationId}
                   customers={customers}

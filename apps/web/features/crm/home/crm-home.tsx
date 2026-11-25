@@ -56,7 +56,7 @@ export function CrmHome({organizationId,timezone,month,overview,relationships,sa
   const allClear=attentionSources&&!attentionTotal;
   const lifecycleTotal=overview?LIFECYCLES.reduce((sum,[key])=>sum+overview.lifecycles[key],0):0;
   return <WorkspaceHome dashboard location={{}} activity actions={actions}>
-    {overview?<section aria-label="Relationship overview" className="mb-6 grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,2fr)]">
+    {overview?<section aria-label="Relationship overview" className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,2fr)]">
       <MetricTile label="Contacts" value={overview.total} detail={<span className="flex flex-wrap gap-x-3 gap-y-1">
         <Link className="underline underline-offset-4" href={`${contacts}?contactType=person`}>{overview.people} {overview.people===1?'person':'people'}</Link>
         <Link className="underline underline-offset-4" href={`${contacts}?contactType=company`}>{overview.companies} {overview.companies===1?'company':'companies'}</Link>
@@ -73,7 +73,7 @@ export function CrmHome({organizationId,timezone,month,overview,relationships,sa
       {attentionSources&&!allClear?<OperationalPanel className="min-w-0" title="Needs attention" action={followUpsEnabled&&followUpOptions.mayManage?<FollowUpSheet {...followUpOptions}/>:null}><NeedsAttention counts={attention} overdue={overdue} today={today} noNext={noNext} unassigned={unassigned} options={followUpOptions} followUpsEnabled={followUpsEnabled} salesEnabled={salesEnabled}/></OperationalPanel>:null}
       {allClear?<p role="status" className="flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm"><CircleCheck aria-hidden className="size-4 text-muted"/><span><span className="font-medium">Needs attention:</span> nothing overdue{followUpsEnabled?' or due today':''}{salesEnabled?', and every open opportunity has an owner':''}.</span></p>:null}
     </div>
-    {calendar?<div className="mb-6 min-w-0">{calendar}</div>:null}
+    {calendar?<div className="min-w-0">{calendar}</div>:null}
     {salesComposition==='setup'?<OperationalPanel title="Opportunities & Pipeline" density="compact"><PanelState kind="not-configured" action={<ButtonLink tone="secondary" href={`${base}/crm/configuration/opportunity-stages`}>Set up opportunity stages</ButtonLink>}>Track specific sales pursuits by naming opportunity stages. CRM works without them.</PanelState></OperationalPanel>:null}
     {sales&&salesEnabled?<SalesSection base={base} month={month} sales={sales} conversionEnabled={conversionEnabled} mayConfigure={mayConfigure} group={relationships.grouped}/>:null}
   </WorkspaceHome>;

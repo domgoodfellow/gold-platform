@@ -84,7 +84,7 @@ export function EmailAddresses({
   allowAdding?: boolean;
 }) {
   return (
-    <Section className="mt-8">
+    <Section>
       <SectionHeading>Addresses</SectionHeading>
       {identities.length === 0 ? (
         <Hint className="mt-3">No address has been named yet.</Hint>

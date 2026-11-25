@@ -35,8 +35,8 @@ export default async function EconomicsPage({ params }: PageProps<'/organization
     <AppPage>
       <PageHeader title="Economics" crumbs={[{ label: 'Finance', href: `/organizations/${organizationId}/finance` }]} />
       <EconomicsViews organizationId={organizationId} current="portfolio" portfolio={portfolioOffered} packages={packagesOffered} />
-      <Hint className="mb-4">{new Date(period.start).toLocaleDateString('en-CA', { month: 'long', year: 'numeric', timeZone: 'UTC' })} · amounts in {reportingCurrency}</Hint>
-      <dl className="mb-5 grid grid-cols-2 gap-x-6 gap-y-3 border-y border-border py-3 text-sm sm:grid-cols-3">
+      <Hint>{new Date(period.start).toLocaleDateString('en-CA', { month: 'long', year: 'numeric', timeZone: 'UTC' })} · amounts in {reportingCurrency}</Hint>
+      <dl className="grid grid-cols-2 gap-x-6 gap-y-3 border-y border-border py-3 text-sm sm:grid-cols-3">
         <div><dt className="text-muted">Owed this month</dt><dd className="font-medium tabular-nums">{formatMoney(totals.obligation, reportingCurrency)}</dd></div>
         <div><dt className="text-muted">Known cost to serve</dt><dd className="font-medium tabular-nums">{formatMoney(totals.knownCost, reportingCurrency)}</dd></div>
         <div><dt className="text-muted">Known contribution</dt><dd className="font-medium tabular-nums">{formatMoney(totals.contribution, reportingCurrency)}</dd></div>

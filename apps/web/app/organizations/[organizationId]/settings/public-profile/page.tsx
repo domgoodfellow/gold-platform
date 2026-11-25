@@ -23,7 +23,7 @@ export default async function PublicProfileSettingsPage({
           <ProfileForm organizationId={organizationId} profile={profile} action={updateProfileAction} />
         </div>
       ) : (
-        <Hint className="mt-4">
+        <Hint>
           Your role, {organization.role}, cannot change what this business says about itself.
         </Hint>
       )}

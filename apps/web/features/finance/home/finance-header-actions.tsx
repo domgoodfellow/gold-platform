@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, type ReactNode } from 'react';
+import { useRef, useState } from 'react';
 import { CreditCard, FileText, LayoutGrid, MoreHorizontal, Plus } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@gold/ui/components/dropdown-menu';
 import { Button } from '@/components/controls/button';
@@ -18,8 +18,8 @@ type Secondary = 'quote' | 'payment' | 'invoice';
  * header never becomes a wall of buttons, while the period, Customize and the primary action stay.
  * A menu closes as its item is chosen, so the dialogs it opens live beside it, not inside it.
  */
-export function FinanceHeaderActions({ organizationId, today, period, firstRun = false, mayQuote, mayRecord, mayInvoice, mayCreateWork, mayManageCatalog }: {
-  organizationId: string; today: string; period: ReactNode;
+export function FinanceHeaderActions({ organizationId, today, firstRun = false, mayQuote, mayRecord, mayInvoice, mayCreateWork, mayManageCatalog }: {
+  organizationId: string; today: string;
   /** Nothing recorded yet: the Dashboard's Getting started panel holds the one next step, so the header offers no primary action to compete with it. */
   firstRun?: boolean;
   mayQuote: boolean; mayRecord: boolean; mayInvoice: boolean; mayCreateWork: boolean; mayManageCatalog: boolean;
@@ -33,7 +33,6 @@ export function FinanceHeaderActions({ organizationId, today, period, firstRun =
   // On a phone, Customize moves into More so the header keeps one row; the menu is therefore always offered there.
   const hasMenu = secondary.length > 0 || Boolean(editing?.available);
   return <>
-    {period}
     <CustomizeDashboardButton className="max-sm:hidden" />
     {/* Wide: everything inline. */}
     <span className="hidden min-[1360px]:contents">

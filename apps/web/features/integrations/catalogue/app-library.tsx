@@ -14,7 +14,7 @@ export function AppLibrary({ organizationId, entries, connected, mayManage, q, c
 }) {
   const base = `/organizations/${organizationId}/settings/connections`;
   const href = (nextPage: number) => `${base}?${new URLSearchParams({catalog:'open',q,category,workspace,page:String(nextPage),filter:connectedOnly?'connected':'all'})}#app-library`;
-  return <CardSection id="app-library" title="App Library" className="mt-6 scroll-mt-20">
+  return <CardSection id="app-library" title="App Library" className="scroll-mt-20">
     <form className="mt-3 flex flex-wrap items-end gap-3" method="get" action={`${base}#app-library`}>
       <input type="hidden" name="catalog" value="open" />
       <label className="w-full text-sm sm:min-w-56 sm:flex-1">Search applications<TextInput name="q" type="search" defaultValue={q} placeholder="Search apps or products" className="mt-1 w-full" /></label>

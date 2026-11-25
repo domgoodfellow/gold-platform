@@ -136,16 +136,16 @@ export function PlanUsageScreen({
       />
 
       {checkoutReturn === 'canceled' ? (
-        <Hint className="mt-4">Checkout was canceled — nothing was charged.</Hint>
+        <Hint>Checkout was canceled — nothing was charged.</Hint>
       ) : checkoutReturn === 'success' ? (
-        <Hint className="mt-4">
+        <Hint>
           {subscription && ['active', 'trialing'].includes(subscription.status)
             ? 'Subscription confirmed.'
             : 'Checkout returned — waiting for billing confirmation…'}
         </Hint>
       ) : null}
 
-      <CardSection title="Plan" className="mt-6">
+      <CardSection title="Plan">
         {basePlan ? (
           <div className="mt-2 text-sm">
             <p className="font-medium">{basePlan.label}</p>
@@ -162,7 +162,7 @@ export function PlanUsageScreen({
       </CardSection>
 
       {billingProvider ? (
-        <CardSection title="Billing" className="mt-6">
+        <CardSection title="Billing">
           {subscription ? (
             <div className="mt-2 text-sm">
               <p>
@@ -214,7 +214,7 @@ export function PlanUsageScreen({
       ) : null}
 
       {canManageBilling ? (
-        <CardSection title="Invoices" className="mt-6">
+        <CardSection title="Invoices">
           {invoices.length === 0 ? (
             <EmptyState className="mt-2">GildOps has not invoiced this business yet.</EmptyState>
           ) : (
@@ -240,7 +240,7 @@ export function PlanUsageScreen({
       ) : null}
 
       {allowances.length > 0 ? (
-        <CardSection title="What’s included" className="mt-6">
+        <CardSection title="What’s included">
           <DividedList as="div" className="mt-2">
             {allowances.map((allowance) => (
               <AllowanceMeter key={allowance.allowanceKey} state={allowance} />
@@ -249,7 +249,7 @@ export function PlanUsageScreen({
         </CardSection>
       ) : null}
 
-      <CardSection title="What’s been bought" className="mt-6">
+      <CardSection title="What’s been bought">
         {terms.length === 0 ? (
           <EmptyState className="mt-2">Nothing recorded yet.</EmptyState>
         ) : (
@@ -269,7 +269,7 @@ export function PlanUsageScreen({
         )}
       </CardSection>
 
-      <CardSection title="Usage" className="mt-6">
+      <CardSection title="Usage">
         {usage.length === 0 ? (
             <EmptyState className="mt-2">No usage reported yet. Reports can arrive late.</EmptyState>
         ) : (
@@ -289,7 +289,7 @@ export function PlanUsageScreen({
         )}
       </CardSection>
 
-      <CardSection title="Calling credit" className="mt-6">
+      <CardSection title="Calling credit">
         {account.priced ? (
           <Hint className="mt-1">
             {formatMinor(account.balanceMinor, currency)} left.

@@ -114,7 +114,7 @@ export default async function SetupPage({
         }
       />
 
-      <div className="space-y-4">
+      <div>
         <GuidedSetup organizationId={organizationId} steps={steps} selected={selected} overview={overview} live={!inSetup}
           business={mayLaunch ? <><OrganizationSettingsForm organizationId={organizationId} name={organization.name} timezone={organization.timezone} currency={organization.currency} identity={identity} /><BusinessProfileSettings organizationId={organizationId} embedded/></> : <Hint>Your role cannot change business information.</Hint>}
           handoff={foundingHandoff ? <FoundingHandoff handoff={foundingHandoff} /> : null}

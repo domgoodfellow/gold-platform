@@ -14,7 +14,7 @@ const date = (iso: string) => new Intl.DateTimeFormat('en-GB', { dateStyle: 'med
  */
 export function SecretsList({ organizationId, references }: { organizationId: string; references: SecretReference[] }) {
   return (
-    <div className="mt-5">
+    <div>
       <Hint className="mb-4">
         Private values GildOps may use on this business’s behalf. A stored value is never shown again, so to change one,
         replace it. Outside accounts you have signed in to are under Connections.

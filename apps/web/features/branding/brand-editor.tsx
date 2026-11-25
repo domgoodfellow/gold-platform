@@ -66,7 +66,7 @@ export function BrandEditor({
   const link = preview('accent') ? organizationPalette({ primary: preview('accent') }).primary.textLight : null;
 
   return (
-    <div className="mt-4 grid items-start gap-8 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
+    <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-8 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
       <div className="flex flex-col gap-8">
         <LogoControls organizationId={organizationId} logoUrl={logoUrl} name={name} readOnly={readOnly} />
 

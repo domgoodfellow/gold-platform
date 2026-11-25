@@ -1,3 +1,4 @@
+import { AppPage } from '@/components/layout/app-page';
 import { PageHeader } from '@/components/headers/page-header';
 import { requireOrganization } from '@/lib/route/organization';
 import { listAutomationRuns } from '@/lib/domain/automation/rules';
@@ -72,7 +73,7 @@ export default async function AutomationRunsPage({
     ids: [...new Set([filters.rule, selectedRuns[0]?.ruleId].filter((id): id is string => !!id))],
   });
   return (
-    <>
+    <AppPage>
       <PageHeader
         title="Runs"
         crumbs={workspaceAncestry(organizationId, 'automation-activity')}
@@ -88,6 +89,6 @@ export default async function AutomationRunsPage({
         presentRuleIds={presentRuleIds}
         next={runs.length > 50 || deliveries.length > 50}
       />
-    </>
+    </AppPage>
   );
 }

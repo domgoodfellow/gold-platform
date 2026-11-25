@@ -88,7 +88,7 @@ export default async function PhoneNumberDetailPage({
         <Hint className="mt-2">{ORIGIN_EXPLANATION[number.origin]} {READINESS_EXPLANATION[number.readiness]}</Hint>
       </section>
 
-      <section className="mt-6">
+      <section>
         <GroupHeading>How this business uses it</GroupHeading>
         {mayManage ? (
           <ConfigureNumberForm organizationId={organizationId} number={number} />
@@ -97,7 +97,7 @@ export default async function PhoneNumberDetailPage({
         )}
       </section>
 
-      <section className="mt-6">
+      <section>
         <GroupHeading>Who dials from it</GroupHeading>
         {ownAssignments.length === 0 && !number.outboundShared ? (
           <EmptyState className="mt-2">Nobody is assigned to this number.</EmptyState>
@@ -132,7 +132,7 @@ export default async function PhoneNumberDetailPage({
         ) : null}
       </section>
 
-      <section className="mt-6">
+      <section>
         <GroupHeading>Where its calls go</GroupHeading>
         {routedBy.length === 0 ? (
           <Hint className="mt-2">No routing is set for this number. Calls to it are not answered by GildOps yet.</Hint>
@@ -146,7 +146,7 @@ export default async function PhoneNumberDetailPage({
         </Hint>
       </section>
 
-      <section className="mt-6">
+      <section>
         <GroupHeading>Recent calls</GroupHeading>
         {!mayCall ? <Hint className="mt-2">Your role cannot view call history.</Hint> :
         recent.items.length === 0 ? (

@@ -42,7 +42,6 @@ export function SendingDomains({
   return (
     <CardSection
       title="Sending domains"
-      className="mt-6"
       action={
         <InfoPopover label="What verifying a domain does">
           It lets this business send from addresses at the domain. It does not create a mailbox: replies and other mail to those

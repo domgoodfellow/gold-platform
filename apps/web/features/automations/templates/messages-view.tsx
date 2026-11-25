@@ -27,7 +27,7 @@ export function MessagesView({
   role: string;
 }) {
   return (
-    <div className="mt-4 flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
       <Hint className="max-w-2xl">
         Every word a customer reads is written here. The platform adds nothing —
         no greeting, no signature, no footer — and puts values where you write{' '}

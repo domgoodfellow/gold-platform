@@ -83,7 +83,7 @@ export default async function CostsPage({ params, searchParams }: PageProps<'/or
           <Button type="submit" tone="secondary" size="small">Filter</Button>
           {filtered ? <ButtonLink href={base} tone="text" size="small">Clear</ButtonLink> : null}
         </form>
-        <div className="mt-5">
+        <div>
           <DataTable rows={shown} rowKey={(rate) => rate.id} empty="No supplier rates recorded." columns={[
             { key: 'provider', header: 'Supplier', cell: (rate) => providerLabel.get(rate.providerKey ?? '') ?? rate.providerKey },
             { key: 'meter', header: 'Service', emphasis: 'primary', cell: (rate) => <SupplierRateDrawer rate={rate} history={allRates.filter((item) => item.providerKey === rate.providerKey && item.costMeterKey === rate.costMeterKey && item.region === rate.region)} label={costMeterByKey.get(rate.costMeterKey)?.label ?? rate.costMeterKey} /> },
@@ -113,7 +113,7 @@ export default async function CostsPage({ params, searchParams }: PageProps<'/or
           <TextInput type="month" name="month" defaultValue={month} aria-label="Month" size="small" />
           <Button type="submit" tone="secondary" size="small">Show</Button>
         </form>
-        <div className="mt-5">
+        <div>
           <DataTable rows={components} rowKey={(row) => row.id} empty="No cost recorded for this month." columns={[
             { key: 'kind', header: 'Kind', emphasis: 'primary', cell: (row) => COST_CATEGORY_LABEL[row.costCategory] ?? row.costCategory },
             { key: 'business', header: 'Business', cell: (row) => (row.organizationId ? (tenantName.get(row.organizationId) ?? row.organizationId) : 'Shared') },
@@ -166,14 +166,14 @@ export default async function CostsPage({ params, searchParams }: PageProps<'/or
         {filtered ? <ButtonLink href={`${base}?view=usage`} tone="text" size="small">Clear</ButtonLink> : null}
       </form>
 
-      <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-3 border-y border-border py-3 text-sm sm:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-x-6 gap-y-3 border-y border-border py-3 text-sm sm:grid-cols-4">
         <div><dt className="text-muted">Known cost</dt><dd className="font-medium tabular-nums">{currencies.size === 1 ? formatMicrosMoney(knownCost, [...currencies][0] ?? null) : currencies.size > 1 ? 'Mixed currencies' : '—'}</dd></div>
         <div><dt className="text-muted">Unknown cost</dt><dd className="font-medium tabular-nums">{unknownCount.toLocaleString()}</dd></div>
         <div><dt className="text-muted">Usage events</dt><dd className="font-medium tabular-nums">{events.length.toLocaleString()}</dd></div>
         <div><dt className="text-muted">Costed</dt><dd className="font-medium tabular-nums">{events.length ? `${Math.round(((events.length - unknownCount) / events.length) * 100)}%` : '—'}</dd></div>
       </dl>
 
-      <div className="mt-5">
+      <div>
         <DataTable
           rows={events}
           rowKey={(event) => event.id}
